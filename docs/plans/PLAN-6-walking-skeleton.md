@@ -42,14 +42,14 @@
 
 **Interfaces:** Produces the repo layout (`src/app/*`, `@/*` alias) every later task assumes.
 
-- [ ] **Step 1: Scaffold in a temp dir** (create-next-app refuses non-empty dirs)
+- [x] **Step 1: Scaffold in a temp dir** (create-next-app refuses non-empty dirs)
 
 ```bash
 cd /Users/krittintrs/Documents/vibe/split-the-bill
 npx create-next-app@latest .tmp-scaffold --ts --tailwind --app --src-dir --eslint --import-alias "@/*" --use-npm --no-git
 ```
 
-- [ ] **Step 2: Merge scaffold into repo root**
+- [x] **Step 2: Merge scaffold into repo root**
 
 ```bash
 cat .gitignore .tmp-scaffold/.gitignore | awk 'NF' | sort -u > .gitignore.merged && mv .gitignore.merged .gitignore
@@ -57,11 +57,11 @@ rm .tmp-scaffold/.gitignore .tmp-scaffold/README.md
 cp -R .tmp-scaffold/. . && rm -rf .tmp-scaffold
 ```
 
-- [ ] **Step 3: Verify dev server boots**
+- [x] **Step 3: Verify dev server boots**
 
 Run: `npm run dev` → expect `✓ Ready` on http://localhost:3000, Ctrl-C after.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A && git commit -m "feat: scaffold next.js app"
