@@ -14,6 +14,10 @@
 - Lunch group templates: recurring peer roster (same team eats daily) pre-fills names
 - Export bill / history to CSV (parity with the old Sheet)
 
+### Polish
+- Landing page should display auth errors (currently `/?error=oauth` and `/?error=auth` params are silently ignored)
+- Publish Google OAuth consent screen (or add peers as test users) before team trial — testing mode blocks unknown logins
+
 ### Later / maybe
 - Peer accounts (claim your name across organizers, see your own debts)
 - Multi-currency

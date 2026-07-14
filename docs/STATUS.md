@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 2 — Walking skeleton live: https://split-the-bill-sable.vercel.app
+**Phase:** 2 — Walking skeleton live (https://split-the-bill-sable.vercel.app) → next: #7 billing engine
 
 ## Frame (decided 2026-07-14)
 
