@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 1 — Spec'd and ticketed, pre-scaffold
+**Phase:** 2 — Walking skeleton live: https://split-the-bill-sable.vercel.app
 
 ## Frame (decided 2026-07-14)
 
@@ -23,7 +23,7 @@ READY 🟢
 
 | Impact | Issue | Description | Blocked by | Who | Status |
 |---|---|---|---|---|---|
-| High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + main session (hands-on) | READY |
+| High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + agy + main session | DONE ✅ |
 | High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | READY |
 | High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | READY |
 | High | #9 | Peer link experience: soft claim, ticking, realtime, lock | #8 | dev agent | READY |
@@ -41,3 +41,4 @@ READY 🟢
 | 2026-07-14 | Money as integer satang in pure `src/lib/billing/` layer | Float-safe math; the sheet's checksum habit becomes an enforced invariant | Main session |
 | 2026-07-14 | Issue tracker = GitHub Issues on a public repo | Learning reference; kit's pr-prep already assumes `gh` | User |
 | 2026-07-14 | Example CSV anonymized to Person A–E before publishing | Friends' real nicknames stay out of a public, indexed repo | User |
+| 2026-07-14 | #6 done: prod live at split-the-bill-sable.vercel.app | Next.js 16.2 (proxy.ts, not middleware.ts), Supabase SG + new publishable-key API, Google OAuth in testing mode (add peers as test users or publish consent screen before team trial) | User + agy |
