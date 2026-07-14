@@ -73,13 +73,13 @@ git add -A && git commit -m "feat: scaffold next.js app"
 
 **Interfaces:** Produces `formatSatang(satang: number): string` (e.g. `18720 → "฿187.20"`); later tickets display money ONLY through this.
 
-- [ ] **Step 1: Install Vitest**
+- [x] **Step 1: Install Vitest**
 
 ```bash
 npm i -D vitest
 ```
 
-- [ ] **Step 2: Create `vitest.config.ts`**
+- [x] **Step 2: Create `vitest.config.ts`**
 
 ```ts
 import { defineConfig } from "vitest/config";
@@ -89,7 +89,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 3: Write the failing test** — `src/lib/billing/money.test.ts`
+- [x] **Step 3: Write the failing test** — `src/lib/billing/money.test.ts`
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -111,11 +111,11 @@ describe("formatSatang", () => {
 });
 ```
 
-- [ ] **Step 4: Run test, verify it fails**
+- [x] **Step 4: Run test, verify it fails**
 
 Run: `npx vitest run` → Expected: FAIL, cannot find `./money`.
 
-- [ ] **Step 5: Implement** — `src/lib/billing/money.ts`
+- [x] **Step 5: Implement** — `src/lib/billing/money.ts`
 
 ```ts
 export function formatSatang(satang: number): string {
@@ -128,11 +128,11 @@ export function formatSatang(satang: number): string {
 }
 ```
 
-- [ ] **Step 6: Run test, verify it passes**
+- [x] **Step 6: Run test, verify it passes**
 
 Run: `npx vitest run` → Expected: 4 passed.
 
-- [ ] **Step 7: Wire `check` script** — in `package.json` `"scripts"`, add/replace:
+- [x] **Step 7: Wire `check` script** — in `package.json` `"scripts"`, add/replace:
 
 ```json
 "typecheck": "tsc --noEmit",
@@ -140,11 +140,11 @@ Run: `npx vitest run` → Expected: 4 passed.
 "check": "npm run lint && npm run typecheck && npm run test"
 ```
 
-- [ ] **Step 8: Verify gate**
+- [x] **Step 8: Verify gate**
 
 Run: `npm run check` → Expected: lint 0 problems, tsc silent, 4 tests pass.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add -A && git commit -m "feat: add check gate and formatSatang"
