@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 0 — Bootstrapped, pre-scaffold
+**Phase:** 1 — Spec'd and ticketed, pre-scaffold
 
 ## Frame (decided 2026-07-14)
 
@@ -13,21 +13,23 @@
 
 ## Roadmap
 
+Spec: [#5](https://github.com/krittintrs/split-the-bill/issues/5). Grilled decisions live in `CONTEXT.md` + `docs/adr/`. Old issues #1–#4 closed as superseded.
+
 ```
 READY 🟢
- 1. Claim URL: create Vercel project + Supabase project, deploy hello-world
- 2. Model hardest problem on mocks: billing engine (pure functions + TDD
-    against the canonical CSV fixture) + bill editor UI on mock data
- 3. Wire real DB: schema + RLS, Google OAuth, shareable links, Realtime ticks
- 4. Iterate features: PromptPay QR, paid tracking, history, unpaid rollup
+ #6 walking skeleton  →  #7 billing engine  →  #8 bill editor
+   →  #9 peer link  →  #10 payback  →  { #11 dashboard, #12 my debts }
 ```
 
 | Impact | Issue | Description | Blocked by | Who | Status |
 |---|---|---|---|---|---|
-| High | #1 | Claim URL (Vercel + Supabase hello-world deploy) | — | user + main session | READY |
-| High | #2 | Billing engine on mocks (TDD) + bill editor UI | — | dev agent | READY |
-| High | #3 | DB schema, RLS, Google OAuth, share links, Realtime | #1, #2 | dev agent | READY |
-| High | #4 | PromptPay QR, paid tracking, history, unpaid rollup | #3 | dev agent | READY |
+| High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + main session (hands-on) | READY |
+| High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | READY |
+| High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | READY |
+| High | #9 | Peer link experience: soft claim, ticking, realtime, lock | #8 | dev agent | READY |
+| High | #10 | Payback: payment info, copy paths, QR image, paid flags | #9 | dev agent | READY |
+| Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
+| Med | #12 | Account Claim + My Debts | #10 | dev agent | READY |
 
 ## Decision Log
 
