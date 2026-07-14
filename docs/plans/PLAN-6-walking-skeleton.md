@@ -154,7 +154,7 @@ git add -A && git commit -m "feat: add check gate and formatSatang"
 
 **Files:** Create: `.env.local` (untracked), `.env.example`.
 
-**Interfaces:** Produces env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` consumed by Task 4.
+**Interfaces:** Produces env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` consumed by Task 4.
 
 - [ ] **Step 1 [HUMAN]:** supabase.com → New project → org personal, name `split-the-bill`, region **Southeast Asia (Singapore)**, generate DB password (store in password manager).
 - [ ] **Step 2 [HUMAN]:** console.cloud.google.com → new project `split-the-bill` → APIs & Services → OAuth consent screen: External, app name `Split the Bill`, your email; scopes: default (email, profile). → Credentials → Create OAuth client ID, type **Web application**:
@@ -165,7 +165,7 @@ git add -A && git commit -m "feat: add check gate and formatSatang"
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://<PROJECT-REF>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<sb_publishable_... key>
 ```
 
 - [ ] **Step 5:** Write `.env.example` with the same keys and placeholder values, then:
@@ -196,7 +196,7 @@ import { createBrowserClient } from "@supabase/ssr";
 export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
   );
 }
 ```
@@ -211,7 +211,7 @@ export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -240,7 +240,7 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -382,7 +382,7 @@ git add -A && git commit -m "feat: google sign-in and dashboard shell" && git pu
 
 **Files:** none (console work) — Modify Supabase/Google settings.
 
-- [ ] **Step 1 [HUMAN]:** vercel.com → Add New Project → Import `krittintrs/split-the-bill` → framework auto-detects Next.js → add env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (all environments) → Deploy. Note prod URL `https://<app>.vercel.app`.
+- [ ] **Step 1 [HUMAN]:** vercel.com → Add New Project → Import `krittintrs/split-the-bill` → framework auto-detects Next.js → add env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (all environments) → Deploy. Note prod URL `https://<app>.vercel.app`.
 - [ ] **Step 2 [HUMAN]:** Supabase → Authentication → URL Configuration: Site URL = prod URL; Additional Redirect URLs: `https://<app>.vercel.app/auth/callback`, `http://localhost:3000/auth/callback`.
 - [ ] **Step 3 [HUMAN]:** Google Cloud → OAuth client → add JavaScript origin `https://<app>.vercel.app`.
 - [ ] **Step 4: Verify production** — open prod URL on phone: sign in with Google → dashboard shows email → sign out. Expected: full loop works in mobile browser.
