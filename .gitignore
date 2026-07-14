@@ -33,3 +33,4 @@ npm-debug.log*
 split-the-bill - Copy.xlsx
 yarn-debug.log*
 yarn-error.log*
+!.env.example
