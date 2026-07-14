@@ -156,19 +156,19 @@ git add -A && git commit -m "feat: add check gate and formatSatang"
 
 **Interfaces:** Produces env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` consumed by Task 4.
 
-- [ ] **Step 1 [HUMAN]:** supabase.com → New project → org personal, name `split-the-bill`, region **Southeast Asia (Singapore)**, generate DB password (store in password manager).
-- [ ] **Step 2 [HUMAN]:** console.cloud.google.com → new project `split-the-bill` → APIs & Services → OAuth consent screen: External, app name `Split the Bill`, your email; scopes: default (email, profile). → Credentials → Create OAuth client ID, type **Web application**:
+- [x] **Step 1 [HUMAN]:** supabase.com → New project → org personal, name `split-the-bill`, region **Southeast Asia (Singapore)**, generate DB password (store in password manager).
+- [x] **Step 2 [HUMAN]:** console.cloud.google.com → new project `split-the-bill` → APIs & Services → OAuth consent screen: External, app name `Split the Bill`, your email; scopes: default (email, profile). → Credentials → Create OAuth client ID, type **Web application**:
   - Authorized JavaScript origins: `http://localhost:3000`
   - Authorized redirect URIs: `https://<PROJECT-REF>.supabase.co/auth/v1/callback` (copy `<PROJECT-REF>` from Supabase project settings)
-- [ ] **Step 3 [HUMAN]:** Supabase → Authentication → Providers → Google: enable, paste Client ID + Secret. Authentication → URL Configuration → Site URL `http://localhost:3000`.
-- [ ] **Step 4:** Write `.env.local` (values from Supabase → Settings → API):
+- [x] **Step 3 [HUMAN]:** Supabase → Authentication → Providers → Google: enable, paste Client ID + Secret. Authentication → URL Configuration → Site URL `http://localhost:3000`.
+- [x] **Step 4:** Write `.env.local` (values from Supabase → Settings → API):
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://<PROJECT-REF>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<sb_publishable_... key>
 ```
 
-- [ ] **Step 5:** Write `.env.example` with the same keys and placeholder values, then:
+- [x] **Step 5:** Write `.env.example` with the same keys and placeholder values, then:
 
 ```bash
 git add .env.example && git commit -m "chore: add env example"
