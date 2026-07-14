@@ -42,14 +42,14 @@
 
 **Interfaces:** Produces the repo layout (`src/app/*`, `@/*` alias) every later task assumes.
 
-- [ ] **Step 1: Scaffold in a temp dir** (create-next-app refuses non-empty dirs)
+- [x] **Step 1: Scaffold in a temp dir** (create-next-app refuses non-empty dirs)
 
 ```bash
 cd /Users/krittintrs/Documents/vibe/split-the-bill
 npx create-next-app@latest .tmp-scaffold --ts --tailwind --app --src-dir --eslint --import-alias "@/*" --use-npm --no-git
 ```
 
-- [ ] **Step 2: Merge scaffold into repo root**
+- [x] **Step 2: Merge scaffold into repo root**
 
 ```bash
 cat .gitignore .tmp-scaffold/.gitignore | awk 'NF' | sort -u > .gitignore.merged && mv .gitignore.merged .gitignore
@@ -57,11 +57,11 @@ rm .tmp-scaffold/.gitignore .tmp-scaffold/README.md
 cp -R .tmp-scaffold/. . && rm -rf .tmp-scaffold
 ```
 
-- [ ] **Step 3: Verify dev server boots**
+- [x] **Step 3: Verify dev server boots**
 
 Run: `npm run dev` → expect `✓ Ready` on http://localhost:3000, Ctrl-C after.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A && git commit -m "feat: scaffold next.js app"
@@ -73,13 +73,13 @@ git add -A && git commit -m "feat: scaffold next.js app"
 
 **Interfaces:** Produces `formatSatang(satang: number): string` (e.g. `18720 → "฿187.20"`); later tickets display money ONLY through this.
 
-- [ ] **Step 1: Install Vitest**
+- [x] **Step 1: Install Vitest**
 
 ```bash
 npm i -D vitest
 ```
 
-- [ ] **Step 2: Create `vitest.config.ts`**
+- [x] **Step 2: Create `vitest.config.ts`**
 
 ```ts
 import { defineConfig } from "vitest/config";
@@ -89,7 +89,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 3: Write the failing test** — `src/lib/billing/money.test.ts`
+- [x] **Step 3: Write the failing test** — `src/lib/billing/money.test.ts`
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -111,11 +111,11 @@ describe("formatSatang", () => {
 });
 ```
 
-- [ ] **Step 4: Run test, verify it fails**
+- [x] **Step 4: Run test, verify it fails**
 
 Run: `npx vitest run` → Expected: FAIL, cannot find `./money`.
 
-- [ ] **Step 5: Implement** — `src/lib/billing/money.ts`
+- [x] **Step 5: Implement** — `src/lib/billing/money.ts`
 
 ```ts
 export function formatSatang(satang: number): string {
@@ -128,11 +128,11 @@ export function formatSatang(satang: number): string {
 }
 ```
 
-- [ ] **Step 6: Run test, verify it passes**
+- [x] **Step 6: Run test, verify it passes**
 
 Run: `npx vitest run` → Expected: 4 passed.
 
-- [ ] **Step 7: Wire `check` script** — in `package.json` `"scripts"`, add/replace:
+- [x] **Step 7: Wire `check` script** — in `package.json` `"scripts"`, add/replace:
 
 ```json
 "typecheck": "tsc --noEmit",
@@ -140,11 +140,11 @@ Run: `npx vitest run` → Expected: 4 passed.
 "check": "npm run lint && npm run typecheck && npm run test"
 ```
 
-- [ ] **Step 8: Verify gate**
+- [x] **Step 8: Verify gate**
 
 Run: `npm run check` → Expected: lint 0 problems, tsc silent, 4 tests pass.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add -A && git commit -m "feat: add check gate and formatSatang"
@@ -154,21 +154,21 @@ git add -A && git commit -m "feat: add check gate and formatSatang"
 
 **Files:** Create: `.env.local` (untracked), `.env.example`.
 
-**Interfaces:** Produces env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` consumed by Task 4.
+**Interfaces:** Produces env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` consumed by Task 4.
 
-- [ ] **Step 1 [HUMAN]:** supabase.com → New project → org personal, name `split-the-bill`, region **Southeast Asia (Singapore)**, generate DB password (store in password manager).
-- [ ] **Step 2 [HUMAN]:** console.cloud.google.com → new project `split-the-bill` → APIs & Services → OAuth consent screen: External, app name `Split the Bill`, your email; scopes: default (email, profile). → Credentials → Create OAuth client ID, type **Web application**:
+- [x] **Step 1 [HUMAN]:** supabase.com → New project → org personal, name `split-the-bill`, region **Southeast Asia (Singapore)**, generate DB password (store in password manager).
+- [x] **Step 2 [HUMAN]:** console.cloud.google.com → new project `split-the-bill` → APIs & Services → OAuth consent screen: External, app name `Split the Bill`, your email; scopes: default (email, profile). → Credentials → Create OAuth client ID, type **Web application**:
   - Authorized JavaScript origins: `http://localhost:3000`
   - Authorized redirect URIs: `https://<PROJECT-REF>.supabase.co/auth/v1/callback` (copy `<PROJECT-REF>` from Supabase project settings)
-- [ ] **Step 3 [HUMAN]:** Supabase → Authentication → Providers → Google: enable, paste Client ID + Secret. Authentication → URL Configuration → Site URL `http://localhost:3000`.
-- [ ] **Step 4:** Write `.env.local` (values from Supabase → Settings → API):
+- [x] **Step 3 [HUMAN]:** Supabase → Authentication → Providers → Google: enable, paste Client ID + Secret. Authentication → URL Configuration → Site URL `http://localhost:3000`.
+- [x] **Step 4:** Write `.env.local` (values from Supabase → Settings → API):
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://<PROJECT-REF>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<sb_publishable_... key>
 ```
 
-- [ ] **Step 5:** Write `.env.example` with the same keys and placeholder values, then:
+- [x] **Step 5:** Write `.env.example` with the same keys and placeholder values, then:
 
 ```bash
 git add .env.example && git commit -m "chore: add env example"
@@ -182,13 +182,13 @@ git add .env.example && git commit -m "chore: add env example"
 
 **Interfaces:** Consumes Task 3 env vars. Produces `createClient()` (server) used by every later authenticated page.
 
-- [ ] **Step 1: Install Supabase libs**
+- [x] **Step 1: Install Supabase libs**
 
 ```bash
 npm i @supabase/supabase-js @supabase/ssr
 ```
 
-- [ ] **Step 2:** `src/lib/supabase/client.ts`
+- [x] **Step 2:** `src/lib/supabase/client.ts`
 
 ```ts
 import { createBrowserClient } from "@supabase/ssr";
@@ -196,12 +196,12 @@ import { createBrowserClient } from "@supabase/ssr";
 export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
   );
 }
 ```
 
-- [ ] **Step 3:** `src/lib/supabase/server.ts`
+- [x] **Step 3:** `src/lib/supabase/server.ts`
 
 ```ts
 import { createServerClient } from "@supabase/ssr";
@@ -211,7 +211,7 @@ export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -230,7 +230,7 @@ export async function createClient() {
 }
 ```
 
-- [ ] **Step 4:** `src/middleware.ts` (session refresh)
+- [x] **Step 4:** `src/proxy.ts` (session refresh, replacing deprecated `src/middleware.ts`)
 
 ```ts
 import { createServerClient } from "@supabase/ssr";
@@ -240,7 +240,7 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -263,7 +263,7 @@ export const config = {
 };
 ```
 
-- [ ] **Step 5:** `src/app/auth/actions.ts`
+- [x] **Step 5:** `src/app/auth/actions.ts`
 
 ```ts
 "use server";
@@ -290,7 +290,7 @@ export async function signOut() {
 }
 ```
 
-- [ ] **Step 6:** `src/app/auth/callback/route.ts`
+- [x] **Step 6:** `src/app/auth/callback/route.ts`
 
 ```ts
 import { NextResponse } from "next/server";
@@ -308,7 +308,7 @@ export async function GET(request: Request) {
 }
 ```
 
-- [ ] **Step 7:** `src/app/page.tsx` (landing)
+- [x] **Step 7:** `src/app/page.tsx` (landing)
 
 ```tsx
 import { redirect } from "next/navigation";
@@ -338,7 +338,7 @@ export default async function Home() {
 }
 ```
 
-- [ ] **Step 8:** `src/app/dashboard/page.tsx` (empty shell)
+- [x] **Step 8:** `src/app/dashboard/page.tsx` (empty shell)
 
 ```tsx
 import { redirect } from "next/navigation";
@@ -368,11 +368,11 @@ export default async function Dashboard() {
 }
 ```
 
-- [ ] **Step 9: Verify locally**
+- [x] **Step 9: Verify locally**
 
 Run: `npm run dev` → on http://localhost:3000 click Sign in with Google → Google consent → lands on `/dashboard` showing your email → Sign out returns to landing. Then `npm run check` → Expected: zero errors.
 
-- [ ] **Step 10: Commit + push**
+- [x] **Step 10: Commit**
 
 ```bash
 git add -A && git commit -m "feat: google sign-in and dashboard shell" && git push
@@ -382,7 +382,7 @@ git add -A && git commit -m "feat: google sign-in and dashboard shell" && git pu
 
 **Files:** none (console work) — Modify Supabase/Google settings.
 
-- [ ] **Step 1 [HUMAN]:** vercel.com → Add New Project → Import `krittintrs/split-the-bill` → framework auto-detects Next.js → add env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (all environments) → Deploy. Note prod URL `https://<app>.vercel.app`.
+- [ ] **Step 1 [HUMAN]:** vercel.com → Add New Project → Import `krittintrs/split-the-bill` → framework auto-detects Next.js → add env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (all environments) → Deploy. Note prod URL `https://<app>.vercel.app`.
 - [ ] **Step 2 [HUMAN]:** Supabase → Authentication → URL Configuration: Site URL = prod URL; Additional Redirect URLs: `https://<app>.vercel.app/auth/callback`, `http://localhost:3000/auth/callback`.
 - [ ] **Step 3 [HUMAN]:** Google Cloud → OAuth client → add JavaScript origin `https://<app>.vercel.app`.
 - [ ] **Step 4: Verify production** — open prod URL on phone: sign in with Google → dashboard shows email → sign out. Expected: full loop works in mobile browser.
