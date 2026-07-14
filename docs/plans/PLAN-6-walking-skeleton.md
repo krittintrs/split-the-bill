@@ -182,13 +182,13 @@ git add .env.example && git commit -m "chore: add env example"
 
 **Interfaces:** Consumes Task 3 env vars. Produces `createClient()` (server) used by every later authenticated page.
 
-- [ ] **Step 1: Install Supabase libs**
+- [x] **Step 1: Install Supabase libs**
 
 ```bash
 npm i @supabase/supabase-js @supabase/ssr
 ```
 
-- [ ] **Step 2:** `src/lib/supabase/client.ts`
+- [x] **Step 2:** `src/lib/supabase/client.ts`
 
 ```ts
 import { createBrowserClient } from "@supabase/ssr";
@@ -201,7 +201,7 @@ export function createClient() {
 }
 ```
 
-- [ ] **Step 3:** `src/lib/supabase/server.ts`
+- [x] **Step 3:** `src/lib/supabase/server.ts`
 
 ```ts
 import { createServerClient } from "@supabase/ssr";
@@ -230,7 +230,7 @@ export async function createClient() {
 }
 ```
 
-- [ ] **Step 4:** `src/middleware.ts` (session refresh)
+- [x] **Step 4:** `src/proxy.ts` (session refresh, replacing deprecated `src/middleware.ts`)
 
 ```ts
 import { createServerClient } from "@supabase/ssr";
@@ -263,7 +263,7 @@ export const config = {
 };
 ```
 
-- [ ] **Step 5:** `src/app/auth/actions.ts`
+- [x] **Step 5:** `src/app/auth/actions.ts`
 
 ```ts
 "use server";
@@ -290,7 +290,7 @@ export async function signOut() {
 }
 ```
 
-- [ ] **Step 6:** `src/app/auth/callback/route.ts`
+- [x] **Step 6:** `src/app/auth/callback/route.ts`
 
 ```ts
 import { NextResponse } from "next/server";
@@ -308,7 +308,7 @@ export async function GET(request: Request) {
 }
 ```
 
-- [ ] **Step 7:** `src/app/page.tsx` (landing)
+- [x] **Step 7:** `src/app/page.tsx` (landing)
 
 ```tsx
 import { redirect } from "next/navigation";
@@ -338,7 +338,7 @@ export default async function Home() {
 }
 ```
 
-- [ ] **Step 8:** `src/app/dashboard/page.tsx` (empty shell)
+- [x] **Step 8:** `src/app/dashboard/page.tsx` (empty shell)
 
 ```tsx
 import { redirect } from "next/navigation";
@@ -368,11 +368,11 @@ export default async function Dashboard() {
 }
 ```
 
-- [ ] **Step 9: Verify locally**
+- [x] **Step 9: Verify locally**
 
 Run: `npm run dev` → on http://localhost:3000 click Sign in with Google → Google consent → lands on `/dashboard` showing your email → Sign out returns to landing. Then `npm run check` → Expected: zero errors.
 
-- [ ] **Step 10: Commit + push**
+- [x] **Step 10: Commit**
 
 ```bash
 git add -A && git commit -m "feat: google sign-in and dashboard shell" && git push
