@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 2 — Walking skeleton live (https://split-the-bill-sable.vercel.app) → next: #7 billing engine
+**Phase:** 3 — Billing engine done (PR #13) → next: #8 bill editor (prototype the bill layout first)
 
 ## Frame (decided 2026-07-14)
 
@@ -24,7 +24,7 @@ READY 🟢
 | Impact | Issue | Description | Blocked by | Who | Status |
 |---|---|---|---|---|---|
 | High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + agy + main session | DONE ✅ |
-| High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | READY |
+| High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | DONE ✅ |
 | High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | READY |
 | High | #9 | Peer link experience: soft claim, ticking, realtime, lock | #8 | dev agent | READY |
 | High | #10 | Payback: payment info, copy paths, QR image, paid flags | #9 | dev agent | READY |
@@ -42,3 +42,4 @@ READY 🟢
 | 2026-07-14 | Issue tracker = GitHub Issues on a public repo | Learning reference; kit's pr-prep already assumes `gh` | User |
 | 2026-07-14 | Example CSV anonymized to Person A–E before publishing | Friends' real nicknames stay out of a public, indexed repo | User |
 | 2026-07-14 | #6 done: prod live at split-the-bill-sable.vercel.app | Next.js 16.2 (proxy.ts, not middleware.ts), Supabase SG + new publishable-key API, Google OAuth in testing mode (add peers as test users or publish consent screen before team trial) | User + agy |
+| 2026-07-15 | #7 billing engine: exact BigInt fractions, results derived never persisted (ADR-0004) | One ceil per Peer Total (ADR-0001); malformed input throws, incomplete-while-editing computes gracefully; tsconfig target ES2020 for BigInt literals | User + dev agent |

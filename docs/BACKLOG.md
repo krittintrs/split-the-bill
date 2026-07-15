@@ -15,6 +15,7 @@
 - Export bill / history to CSV (parity with the old Sheet)
 
 ### Polish
+- Billing engine restricts discount/SC/VAT percents to integers (all 61 real bills used 0/5/7/10) — loosen to fractional % only if a real receipt demands it
 - Landing page should display auth errors (currently `/?error=oauth` and `/?error=auth` params are silently ignored)
 - Publish Google OAuth consent screen (or add peers as test users) before team trial — testing mode blocks unknown logins
 
