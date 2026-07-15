@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 2 — Walking skeleton live (https://split-the-bill-sable.vercel.app) → next: #7 billing engine
+**Phase:** 3 — Billing engine done (PR #13) → next: #8 bill editor (prototype the bill layout first)
 
 ## Frame (decided 2026-07-14)
 
@@ -24,7 +24,7 @@ READY 🟢
 | Impact | Issue | Description | Blocked by | Who | Status |
 |---|---|---|---|---|---|
 | High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + agy + main session | DONE ✅ |
-| High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | READY |
+| High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | DONE ✅ |
 | High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | READY |
 | High | #9 | Peer link experience: soft claim, ticking, realtime, lock | #8 | dev agent | READY |
 | High | #10 | Payback: payment info, copy paths, QR image, paid flags | #9 | dev agent | READY |
