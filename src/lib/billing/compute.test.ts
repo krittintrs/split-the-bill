@@ -261,3 +261,29 @@ describe("service charge then VAT, compounded (ADR-0003)", () => {
     expect(r.surplusSatang).toBe(0);
   });
 });
+
+describe("canonical Katsu fixture (split-the-bill-example.csv)", () => {
+  const katsu: BillInput = {
+    items: [
+      { id: "katsu", unitPriceSatang: 15900, qty: 1, discountPct: 10, tickedBy: ["D"] },
+      { id: "cheesy-don", unitPriceSatang: 19900, qty: 1, discountPct: 10, tickedBy: ["A"] },
+      { id: "chicken-don", unitPriceSatang: 14900, qty: 1, discountPct: 10, tickedBy: ["B"] },
+      { id: "add-on-59", unitPriceSatang: 5900, qty: 1, discountPct: 10, tickedBy: ["B"] },
+      { id: "add-on-89", unitPriceSatang: 8900, qty: 1, discountPct: 10, tickedBy: ["E"] },
+      { id: "a-la-carte-loin", unitPriceSatang: 14900, qty: 1, discountPct: 10, tickedBy: ["E"] },
+      { id: "chicken-katsu-set", unitPriceSatang: 19900, qty: 1, discountPct: 10, tickedBy: ["C"] },
+    ],
+    peerIds: ["A", "B", "C", "D", "E"],
+    serviceChargePct: 0,
+    vatPct: 0,
+  };
+
+  it("reproduces every peer total and the checksum from the real sheet", () => {
+    const r = computeBill(katsu);
+    expect(r.peerTotals).toEqual({ A: 17910, B: 18720, C: 17910, D: 14310, E: 21420 });
+    expect(r.checksumSatang).toBe(90270); // ฿902.70
+    expect(r.receiptTotalSatang).toBe(90270);
+    expect(r.surplusSatang).toBe(0);
+    expect(r.untickedItemIds).toEqual([]);
+  });
+});
