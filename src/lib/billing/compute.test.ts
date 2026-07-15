@@ -287,3 +287,28 @@ describe("canonical Katsu fixture (split-the-bill-example.csv)", () => {
     expect(r.untickedItemIds).toEqual([]);
   });
 });
+
+describe("full pipeline integration (every stage at once)", () => {
+  it("combines qty, item discounts, bill discount, SC and VAT across a shared item", () => {
+    // i1: 100.00 × 2 − 10% = 180.00, split A/B → 90.00 each
+    // i2: 150.00 − 5.00 = 145.00, B only
+    // subtotal 325.00; bill −10% then −2.50 → 290.00 → ratio 58/65
+    // × 1.10 × 1.07; A: 9000×58/65×1.177 = 9452.215… → 9453
+    //                B: 23500×58/65×1.177 = 24680.784… → 24681
+    // receipt: 29000×1.177 = 34133 exact; surplus = 34134 − 34133
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 10000, qty: 2, discountPct: 10, tickedBy: ["A", "B"] },
+        { id: "i2", unitPriceSatang: 15000, qty: 1, discountAmountSatang: 500, tickedBy: ["B"] },
+      ],
+      peerIds: ["A", "B"],
+      billDiscount: { pct: 10, amountSatang: 250 },
+      serviceChargePct: 10,
+      vatPct: 7,
+    });
+    expect(r.peerTotals).toEqual({ A: 9453, B: 24681 });
+    expect(r.checksumSatang).toBe(34134);
+    expect(r.receiptTotalSatang).toBe(34133);
+    expect(r.surplusSatang).toBe(1);
+  });
+});
