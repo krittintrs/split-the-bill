@@ -126,3 +126,40 @@ describe("even split (no discounts, no charges)", () => {
     expect(r.itemSplits).toEqual({ i1: { a: 10000 }, i2: {} });
   });
 });
+
+describe("item discounts (ADR-0003: % first, then amount)", () => {
+  const bill = (items: BillInput["items"]): BillInput => ({
+    items,
+    peerIds: ["a"],
+    serviceChargePct: 0,
+    vatPct: 0,
+  });
+
+  it("applies percentage discount", () => {
+    // 159 baht − 10% = 143.10 (Katsu row 1)
+    const r = computeBill(bill([{ id: "i1", unitPriceSatang: 15900, qty: 1, discountPct: 10, tickedBy: ["a"] }]));
+    expect(r.peerTotals.a).toBe(14310);
+  });
+
+  it("applies % before amount", () => {
+    // 200.00 − 10% = 180.00, then − 5.00 = 175.00
+    const r = computeBill(
+      bill([{ id: "i1", unitPriceSatang: 20000, qty: 1, discountPct: 10, discountAmountSatang: 500, tickedBy: ["a"] }]),
+    );
+    expect(r.peerTotals.a).toBe(17500);
+  });
+
+  it("clamps over-discount to ฿0 instead of throwing (mid-editing state)", () => {
+    const r = computeBill(
+      bill([{ id: "i1", unitPriceSatang: 10000, qty: 1, discountAmountSatang: 15000, tickedBy: ["a"] }]),
+    );
+    expect(r.peerTotals.a).toBe(0);
+    expect(r.receiptTotalSatang).toBe(0);
+  });
+
+  it("carries fractional satang exactly until the final round-up", () => {
+    // 100.01 − 3% = 97.0097 baht = 9700.97 satang → ceil 9701
+    const r = computeBill(bill([{ id: "i1", unitPriceSatang: 10001, qty: 1, discountPct: 3, tickedBy: ["a"] }]));
+    expect(r.peerTotals.a).toBe(9701);
+  });
+});

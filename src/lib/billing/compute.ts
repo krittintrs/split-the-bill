@@ -4,10 +4,15 @@ import type { BillInput, BillResult } from "./types";
 export function computeBill(input: BillInput): BillResult {
   validate(input);
 
-  // Per-item net line total. Item discounts arrive in Task 4.
+  // Per-item net line total after item discounts: % first, then amount (ADR-0003).
   const itemNet = new Map<string, Frac>();
   for (const item of input.items) {
-    itemNet.set(item.id, frac(BigInt(item.unitPriceSatang) * BigInt(item.qty)));
+    const line = BigInt(item.unitPriceSatang) * BigInt(item.qty);
+    const pct = BigInt(item.discountPct ?? 0);
+    const amt = BigInt(item.discountAmountSatang ?? 0);
+    let num = line * (100n - pct) - amt * 100n;
+    if (num < 0n) num = 0n; // over-discount while editing: item clamps to ฿0
+    itemNet.set(item.id, frac(num, 100n));
   }
 
   let subtotal = ZERO;
