@@ -163,3 +163,59 @@ describe("item discounts (ADR-0003: % first, then amount)", () => {
     expect(r.peerTotals.a).toBe(9701);
   });
 });
+
+describe("bill discount allocated proportionally (ADR-0003)", () => {
+  const twoItems = (billDiscount: BillInput["billDiscount"]): BillInput => ({
+    items: [
+      { id: "i1", unitPriceSatang: 10000, qty: 1, tickedBy: ["x"] },
+      { id: "i2", unitPriceSatang: 20000, qty: 1, tickedBy: ["y"] },
+    ],
+    peerIds: ["x", "y"],
+    billDiscount,
+    serviceChargePct: 0,
+    vatPct: 0,
+  });
+
+  it("allocates an amount discount proportionally", () => {
+    // 30.00 off 300.00 → ratio 0.9 → 90.00 / 180.00
+    const r = computeBill(twoItems({ amountSatang: 3000 }));
+    expect(r.peerTotals).toEqual({ x: 9000, y: 18000 });
+    expect(r.receiptTotalSatang).toBe(27000);
+  });
+
+  it("allocates a percentage discount proportionally", () => {
+    const r = computeBill(twoItems({ pct: 10 }));
+    expect(r.peerTotals).toEqual({ x: 9000, y: 18000 });
+  });
+
+  it("applies % before amount at bill level too", () => {
+    // 300.00 − 10% = 270.00, then − 3.00 = 267.00 → ratio 0.89
+    const r = computeBill(twoItems({ pct: 10, amountSatang: 300 }));
+    expect(r.peerTotals).toEqual({ x: 8900, y: 17800 });
+    expect(r.receiptTotalSatang).toBe(26700);
+  });
+
+  it("rounds each allocated share up, surplus goes to organizer", () => {
+    // items 10.00 + 20.00, discount 10.00 → ratio 2/3 → 6.6667/13.3334 → 667 + 1334
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 1000, qty: 1, tickedBy: ["x"] },
+        { id: "i2", unitPriceSatang: 2000, qty: 1, tickedBy: ["y"] },
+      ],
+      peerIds: ["x", "y"],
+      billDiscount: { amountSatang: 1000 },
+      serviceChargePct: 0,
+      vatPct: 0,
+    });
+    expect(r.peerTotals).toEqual({ x: 667, y: 1334 });
+    expect(r.checksumSatang).toBe(2001);
+    expect(r.receiptTotalSatang).toBe(2000);
+    expect(r.surplusSatang).toBe(1);
+  });
+
+  it("clamps bill over-discount to ฿0 (mid-editing state)", () => {
+    const r = computeBill(twoItems({ amountSatang: 99999 }));
+    expect(r.peerTotals).toEqual({ x: 0, y: 0 });
+    expect(r.receiptTotalSatang).toBe(0);
+  });
+});

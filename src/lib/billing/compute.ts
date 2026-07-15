@@ -18,7 +18,16 @@ export function computeBill(input: BillInput): BillResult {
   let subtotal = ZERO;
   for (const net of itemNet.values()) subtotal = add(subtotal, net);
 
-  const ratio = frac(1n); // bill discount arrives in Task 5
+  // Bill discount becomes one ratio applied to every item: proportional allocation (ADR-0003).
+  let ratio = frac(1n);
+  if (input.billDiscount && subtotal.num > 0n) {
+    const pct = BigInt(input.billDiscount.pct ?? 0);
+    const amt = BigInt(input.billDiscount.amountSatang ?? 0);
+    // discounted subtotal S' = S×(100−pct)/100 − amt; ratio = S'/S (S's den cancels)
+    let num = subtotal.num * (100n - pct) - amt * 100n * subtotal.den;
+    if (num < 0n) num = 0n; // bill over-discount while editing: bill clamps to ฿0
+    ratio = frac(num, 100n * subtotal.num);
+  }
   const charge = frac(1n); // SC/VAT arrive in Task 6
 
   const peerTotalFracs = new Map<string, Frac>(input.peerIds.map((id) => [id, ZERO]));
