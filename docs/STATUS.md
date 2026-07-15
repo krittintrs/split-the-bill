@@ -1,11 +1,11 @@
 # Split the Bill — Status
 
-**Phase:** 3 — Billing engine done (PR #13) → next: #8 bill editor (prototype the bill layout first)
+**Phase:** 3 — #8 bill editor: layout + tokens prototyped and locked (branch `prototype/8-bill-editor`), plan ready → dev
 
 ## Frame (decided 2026-07-14)
 
 - **Scale:** personal — organizer signs in with Google (Supabase Auth); peers use unguessable links, no accounts.
-- **Primary actor:** bill payer (organizer): create bill → share link in LINE → collect payback via PromptPay QR.
+- **Primary actor:** bill payer (organizer): create bill → share link in the team chat (Slack) → collect payback via PromptPay QR.
 - **Secondary actor:** peer: open link, tick own items, see own total, mark paid.
 - **MVP (v1):** bill editor (menu items, prices, discounts as amount/% + per-item/whole-bill, service charge, VAT), who-ate-what matrix, per-person totals + checksum, shareable link with peer self-ticking, PromptPay QR per peer with exact amount, paid tracking, bill history, cross-bill "who owes me" rollup by peer name.
 - **Done for v1:** the team uses it for a real lunch instead of the Google Sheet.
@@ -43,3 +43,7 @@ READY 🟢
 | 2026-07-14 | Example CSV anonymized to Person A–E before publishing | Friends' real nicknames stay out of a public, indexed repo | User |
 | 2026-07-14 | #6 done: prod live at split-the-bill-sable.vercel.app | Next.js 16.2 (proxy.ts, not middleware.ts), Supabase SG + new publishable-key API, Google OAuth in testing mode (add peers as test users or publish consent screen before team trial) | User + agy |
 | 2026-07-15 | #7 billing engine: exact BigInt fractions, results derived never persisted (ADR-0004) | One ceil per Peer Total (ADR-0001); malformed input throws, incomplete-while-editing computes gracefully; tsconfig target ES2020 for BigInt literals | User + dev agent |
+| 2026-07-15 | Links shared in Slack, not LINE; desktop is first-class alongside mobile | Team chats in Slack (coworkers, not LINE); constitution amended | User |
+| 2026-07-15 | #8 layout locked via /prototype: matrix (items-rows) ≥lg, stacked cards + name chips <lg; no ฿ in chips | 4 variants compared on real screens; verdict on issue #8; prototype preserved on `prototype/8-bill-editor` | User |
+| 2026-07-15 | Visual identity: vivid cyan + bright wash, Noto Sans Thai, primary-colored ticks, WCAG AA | Full interview + on-screen palette/font comparison (impeccable init); PRODUCT.md + DESIGN.md written; cyan = owner's color, distinct from Thai bank CIs | User |
+| 2026-07-15 | Bill storage: 5 normalized tables + profiles, autosave-per-action (ADR-0005); anon reads via security-definer RPC only (ADR-0006) | Tiny-row writes keep #9 concurrent ticking conflict-free; RLS policies can't check capability, so the RPC is the only anon door | User |
