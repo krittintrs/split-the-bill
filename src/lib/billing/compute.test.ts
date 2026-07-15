@@ -5,8 +5,8 @@ import type { BillInput } from "./types";
 const base: BillInput = {
   items: [],
   peerIds: ["a", "b"],
-  serviceChargePct: 0,
-  vatPct: 0,
+  serviceChargePercent: 0,
+  vatPercent: 0,
 };
 
 const item = (over: Partial<BillInput["items"][number]> = {}) => ({
@@ -33,11 +33,11 @@ describe("computeBill validation (malformed input throws)", () => {
     expect(() => computeBill({ ...base, items: [item({ qty: 1.5 })] })).toThrow("positive integer");
   });
   it("rejects percent outside integer 0-100", () => {
-    expect(() => computeBill({ ...base, items: [item({ discountPct: 150 })] })).toThrow("0-100");
-    expect(() => computeBill({ ...base, items: [item({ discountPct: 7.5 })] })).toThrow("0-100");
-    expect(() => computeBill({ ...base, vatPct: -7 })).toThrow("0-100");
-    expect(() => computeBill({ ...base, serviceChargePct: 101 })).toThrow("0-100");
-    expect(() => computeBill({ ...base, billDiscount: { pct: 200 } })).toThrow("0-100");
+    expect(() => computeBill({ ...base, items: [item({ discountPercent: 150 })] })).toThrow("0-100");
+    expect(() => computeBill({ ...base, items: [item({ discountPercent: 7.5 })] })).toThrow("0-100");
+    expect(() => computeBill({ ...base, vatPercent: -7 })).toThrow("0-100");
+    expect(() => computeBill({ ...base, serviceChargePercent: 101 })).toThrow("0-100");
+    expect(() => computeBill({ ...base, billDiscount: { percent: 200 } })).toThrow("0-100");
   });
   it("rejects ticks by unknown peer", () => {
     expect(() => computeBill({ ...base, items: [item({ tickedBy: ["ghost"] })] })).toThrow(
@@ -75,8 +75,8 @@ describe("even split (no discounts, no charges)", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 30000, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
-      serviceChargePct: 0,
-      vatPct: 0,
+      serviceChargePercent: 0,
+      vatPercent: 0,
     });
     expect(r.peerTotals).toEqual({ a: 10000, b: 10000, c: 10000 });
     expect(r.checksumSatang).toBe(30000);
@@ -89,8 +89,8 @@ describe("even split (no discounts, no charges)", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
-      serviceChargePct: 0,
-      vatPct: 0,
+      serviceChargePercent: 0,
+      vatPercent: 0,
     });
     expect(r.peerTotals).toEqual({ a: 834, b: 834, c: 834 });
     expect(r.checksumSatang).toBe(2502);
@@ -102,8 +102,8 @@ describe("even split (no discounts, no charges)", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 5000, qty: 3, tickedBy: ["a", "b"] }],
       peerIds: ["a", "b"],
-      serviceChargePct: 0,
-      vatPct: 0,
+      serviceChargePercent: 0,
+      vatPercent: 0,
     });
     expect(r.peerTotals).toEqual({ a: 7500, b: 7500 });
   });
@@ -115,8 +115,8 @@ describe("even split (no discounts, no charges)", () => {
         { id: "i2", unitPriceSatang: 5000, qty: 1, tickedBy: [] },
       ],
       peerIds: ["a", "b"],
-      serviceChargePct: 0,
-      vatPct: 0,
+      serviceChargePercent: 0,
+      vatPercent: 0,
     });
     expect(r.peerTotals).toEqual({ a: 10000, b: 0 });
     expect(r.checksumSatang).toBe(10000);
@@ -131,20 +131,20 @@ describe("item discounts (ADR-0003: % first, then amount)", () => {
   const bill = (items: BillInput["items"]): BillInput => ({
     items,
     peerIds: ["a"],
-    serviceChargePct: 0,
-    vatPct: 0,
+    serviceChargePercent: 0,
+    vatPercent: 0,
   });
 
   it("applies percentage discount", () => {
     // 159 baht − 10% = 143.10 (Katsu row 1)
-    const r = computeBill(bill([{ id: "i1", unitPriceSatang: 15900, qty: 1, discountPct: 10, tickedBy: ["a"] }]));
+    const r = computeBill(bill([{ id: "i1", unitPriceSatang: 15900, qty: 1, discountPercent: 10, tickedBy: ["a"] }]));
     expect(r.peerTotals.a).toBe(14310);
   });
 
   it("applies % before amount", () => {
     // 200.00 − 10% = 180.00, then − 5.00 = 175.00
     const r = computeBill(
-      bill([{ id: "i1", unitPriceSatang: 20000, qty: 1, discountPct: 10, discountAmountSatang: 500, tickedBy: ["a"] }]),
+      bill([{ id: "i1", unitPriceSatang: 20000, qty: 1, discountPercent: 10, discountAmountSatang: 500, tickedBy: ["a"] }]),
     );
     expect(r.peerTotals.a).toBe(17500);
   });
@@ -159,7 +159,7 @@ describe("item discounts (ADR-0003: % first, then amount)", () => {
 
   it("carries fractional satang exactly until the final round-up", () => {
     // 100.01 − 3% = 97.0097 baht = 9700.97 satang → ceil 9701
-    const r = computeBill(bill([{ id: "i1", unitPriceSatang: 10001, qty: 1, discountPct: 3, tickedBy: ["a"] }]));
+    const r = computeBill(bill([{ id: "i1", unitPriceSatang: 10001, qty: 1, discountPercent: 3, tickedBy: ["a"] }]));
     expect(r.peerTotals.a).toBe(9701);
   });
 });
@@ -172,8 +172,8 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
     ],
     peerIds: ["x", "y"],
     billDiscount,
-    serviceChargePct: 0,
-    vatPct: 0,
+    serviceChargePercent: 0,
+    vatPercent: 0,
   });
 
   it("allocates an amount discount proportionally", () => {
@@ -184,13 +184,13 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
   });
 
   it("allocates a percentage discount proportionally", () => {
-    const r = computeBill(twoItems({ pct: 10 }));
+    const r = computeBill(twoItems({ percent: 10 }));
     expect(r.peerTotals).toEqual({ x: 9000, y: 18000 });
   });
 
   it("applies % before amount at bill level too", () => {
     // 300.00 − 10% = 270.00, then − 3.00 = 267.00 → ratio 0.89
-    const r = computeBill(twoItems({ pct: 10, amountSatang: 300 }));
+    const r = computeBill(twoItems({ percent: 10, amountSatang: 300 }));
     expect(r.peerTotals).toEqual({ x: 8900, y: 17800 });
     expect(r.receiptTotalSatang).toBe(26700);
   });
@@ -204,8 +204,8 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
       ],
       peerIds: ["x", "y"],
       billDiscount: { amountSatang: 1000 },
-      serviceChargePct: 0,
-      vatPct: 0,
+      serviceChargePercent: 0,
+      vatPercent: 0,
     });
     expect(r.peerTotals).toEqual({ x: 667, y: 1334 });
     expect(r.checksumSatang).toBe(2001);
@@ -221,11 +221,11 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
 });
 
 describe("service charge then VAT, compounded (ADR-0003)", () => {
-  const single = (serviceChargePct: number, vatPct: number, unitPriceSatang = 10000): BillInput => ({
+  const single = (serviceChargePercent: number, vatPercent: number, unitPriceSatang = 10000): BillInput => ({
     items: [{ id: "i1", unitPriceSatang, qty: 1, tickedBy: ["a"] }],
     peerIds: ["a"],
-    serviceChargePct,
-    vatPct,
+    serviceChargePercent,
+    vatPercent,
   });
 
   it("SC only: 10%", () => {
@@ -252,8 +252,8 @@ describe("service charge then VAT, compounded (ADR-0003)", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
-      serviceChargePct: 10,
-      vatPct: 7,
+      serviceChargePercent: 10,
+      vatPercent: 7,
     });
     expect(r.peerTotals).toEqual({ a: 981, b: 981, c: 981 });
     expect(r.checksumSatang).toBe(2943);
@@ -265,17 +265,17 @@ describe("service charge then VAT, compounded (ADR-0003)", () => {
 describe("canonical Katsu fixture (split-the-bill-example.csv)", () => {
   const katsu: BillInput = {
     items: [
-      { id: "katsu", unitPriceSatang: 15900, qty: 1, discountPct: 10, tickedBy: ["D"] },
-      { id: "cheesy-don", unitPriceSatang: 19900, qty: 1, discountPct: 10, tickedBy: ["A"] },
-      { id: "chicken-don", unitPriceSatang: 14900, qty: 1, discountPct: 10, tickedBy: ["B"] },
-      { id: "add-on-59", unitPriceSatang: 5900, qty: 1, discountPct: 10, tickedBy: ["B"] },
-      { id: "add-on-89", unitPriceSatang: 8900, qty: 1, discountPct: 10, tickedBy: ["E"] },
-      { id: "a-la-carte-loin", unitPriceSatang: 14900, qty: 1, discountPct: 10, tickedBy: ["E"] },
-      { id: "chicken-katsu-set", unitPriceSatang: 19900, qty: 1, discountPct: 10, tickedBy: ["C"] },
+      { id: "katsu", unitPriceSatang: 15900, qty: 1, discountPercent: 10, tickedBy: ["D"] },
+      { id: "cheesy-don", unitPriceSatang: 19900, qty: 1, discountPercent: 10, tickedBy: ["A"] },
+      { id: "chicken-don", unitPriceSatang: 14900, qty: 1, discountPercent: 10, tickedBy: ["B"] },
+      { id: "add-on-59", unitPriceSatang: 5900, qty: 1, discountPercent: 10, tickedBy: ["B"] },
+      { id: "add-on-89", unitPriceSatang: 8900, qty: 1, discountPercent: 10, tickedBy: ["E"] },
+      { id: "a-la-carte-loin", unitPriceSatang: 14900, qty: 1, discountPercent: 10, tickedBy: ["E"] },
+      { id: "chicken-katsu-set", unitPriceSatang: 19900, qty: 1, discountPercent: 10, tickedBy: ["C"] },
     ],
     peerIds: ["A", "B", "C", "D", "E"],
-    serviceChargePct: 0,
-    vatPct: 0,
+    serviceChargePercent: 0,
+    vatPercent: 0,
   };
 
   it("reproduces every peer total and the checksum from the real sheet", () => {
@@ -298,13 +298,13 @@ describe("full pipeline integration (every stage at once)", () => {
     // receipt: 29000×1.177 = 34133 exact; surplus = 34134 − 34133
     const r = computeBill({
       items: [
-        { id: "i1", unitPriceSatang: 10000, qty: 2, discountPct: 10, tickedBy: ["A", "B"] },
+        { id: "i1", unitPriceSatang: 10000, qty: 2, discountPercent: 10, tickedBy: ["A", "B"] },
         { id: "i2", unitPriceSatang: 15000, qty: 1, discountAmountSatang: 500, tickedBy: ["B"] },
       ],
       peerIds: ["A", "B"],
-      billDiscount: { pct: 10, amountSatang: 250 },
-      serviceChargePct: 10,
-      vatPct: 7,
+      billDiscount: { percent: 10, amountSatang: 250 },
+      serviceChargePercent: 10,
+      vatPercent: 7,
     });
     expect(r.peerTotals).toEqual({ A: 9453, B: 24681 });
     expect(r.checksumSatang).toBe(34134);

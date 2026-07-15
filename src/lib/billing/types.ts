@@ -2,22 +2,22 @@ export interface LineItemInput {
   id: string;
   unitPriceSatang: number;
   qty: number; // line total = unitPrice × qty
-  discountPct?: number; // integer 0-100, applied first (ADR-0003)
+  discountPercent?: number; // integer 0-100, applied first (ADR-0003)
   discountAmountSatang?: number; // then subtracted
   tickedBy: string[]; // peer ids; [] = unticked
 }
 
 export interface BillDiscount {
-  pct?: number; // integer 0-100, applied first
-  amountSatang?: number; // applied after pct
+  percent?: number; // integer 0-100, applied first
+  amountSatang?: number; // applied after percent
 }
 
 export interface BillInput {
   items: LineItemInput[];
   peerIds: string[];
   billDiscount?: BillDiscount;
-  serviceChargePct: number; // integer 0-100
-  vatPct: number; // integer 0-100
+  serviceChargePercent: number; // integer 0-100
+  vatPercent: number; // integer 0-100
 }
 
 export interface BillResult {
