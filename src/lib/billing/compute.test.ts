@@ -69,3 +69,60 @@ describe("computeBill graceful incomplete states", () => {
     });
   });
 });
+
+describe("even split (no discounts, no charges)", () => {
+  it("splits a line evenly among tickers", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 30000, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePct: 0,
+      vatPct: 0,
+    });
+    expect(r.peerTotals).toEqual({ a: 10000, b: 10000, c: 10000 });
+    expect(r.checksumSatang).toBe(30000);
+    expect(r.receiptTotalSatang).toBe(30000);
+    expect(r.surplusSatang).toBe(0);
+    expect(r.itemSplits).toEqual({ i1: { a: 10000, b: 10000, c: 10000 } });
+  });
+
+  it("rounds each peer UP: 2500 ÷ 3 → 834 each, surplus kept by organizer", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePct: 0,
+      vatPct: 0,
+    });
+    expect(r.peerTotals).toEqual({ a: 834, b: 834, c: 834 });
+    expect(r.checksumSatang).toBe(2502);
+    expect(r.receiptTotalSatang).toBe(2500);
+    expect(r.surplusSatang).toBe(2);
+  });
+
+  it("multiplies qty into the line total before splitting", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 5000, qty: 3, tickedBy: ["a", "b"] }],
+      peerIds: ["a", "b"],
+      serviceChargePct: 0,
+      vatPct: 0,
+    });
+    expect(r.peerTotals).toEqual({ a: 7500, b: 7500 });
+  });
+
+  it("flags unticked items: ฿0 contribution, negative surplus signals shortfall", () => {
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 10000, qty: 1, tickedBy: ["a"] },
+        { id: "i2", unitPriceSatang: 5000, qty: 1, tickedBy: [] },
+      ],
+      peerIds: ["a", "b"],
+      serviceChargePct: 0,
+      vatPct: 0,
+    });
+    expect(r.peerTotals).toEqual({ a: 10000, b: 0 });
+    expect(r.checksumSatang).toBe(10000);
+    expect(r.receiptTotalSatang).toBe(15000); // paper receipt still includes i2
+    expect(r.surplusSatang).toBe(-5000);
+    expect(r.untickedItemIds).toEqual(["i2"]);
+    expect(r.itemSplits).toEqual({ i1: { a: 10000 }, i2: {} });
+  });
+});

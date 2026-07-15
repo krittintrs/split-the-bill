@@ -1,16 +1,58 @@
+import { add, ceilToSatang, frac, mul, ZERO, type Frac } from "./frac";
 import type { BillInput, BillResult } from "./types";
 
 export function computeBill(input: BillInput): BillResult {
   validate(input);
+
+  // Per-item net line total. Item discounts arrive in Task 4.
+  const itemNet = new Map<string, Frac>();
+  for (const item of input.items) {
+    itemNet.set(item.id, frac(BigInt(item.unitPriceSatang) * BigInt(item.qty)));
+  }
+
+  let subtotal = ZERO;
+  for (const net of itemNet.values()) subtotal = add(subtotal, net);
+
+  const ratio = frac(1n); // bill discount arrives in Task 5
+  const charge = frac(1n); // SC/VAT arrive in Task 6
+
+  const peerTotalFracs = new Map<string, Frac>(input.peerIds.map((id) => [id, ZERO]));
+  const itemSplits: Record<string, Record<string, number>> = {};
+  const untickedItemIds: string[] = [];
+
+  for (const item of input.items) {
+    itemSplits[item.id] = {};
+    if (item.tickedBy.length === 0) {
+      untickedItemIds.push(item.id);
+      continue;
+    }
+    const net = itemNet.get(item.id)!;
+    const share = mul(
+      frac(net.num, net.den * BigInt(item.tickedBy.length)),
+      mul(ratio, charge),
+    );
+    for (const peerId of item.tickedBy) {
+      peerTotalFracs.set(peerId, add(peerTotalFracs.get(peerId)!, share));
+      itemSplits[item.id][peerId] = ceilToSatang(share); // display only, rounded per cell
+    }
+  }
+
   const peerTotals: Record<string, number> = {};
-  for (const id of input.peerIds) peerTotals[id] = 0;
+  let checksumSatang = 0;
+  for (const [peerId, total] of peerTotalFracs) {
+    peerTotals[peerId] = ceilToSatang(total); // the single money rounding (ADR-0001)
+    checksumSatang += peerTotals[peerId];
+  }
+
+  const receiptTotalSatang = ceilToSatang(mul(subtotal, mul(ratio, charge)));
+
   return {
     peerTotals,
-    checksumSatang: 0,
-    receiptTotalSatang: 0,
-    surplusSatang: 0,
-    itemSplits: {},
-    untickedItemIds: [],
+    checksumSatang,
+    receiptTotalSatang,
+    surplusSatang: checksumSatang - receiptTotalSatang,
+    itemSplits,
+    untickedItemIds,
   };
 }
 
