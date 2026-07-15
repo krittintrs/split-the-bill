@@ -38,13 +38,13 @@ Untouched: `money.ts`, everything outside `src/lib/billing/`, all app/auth code.
 
 ### Task 0: Branch
 
-- [ ] **Step 1: Create feature branch from up-to-date main**
+- [x] **Step 1: Create feature branch from up-to-date main**
 
 ```bash
 git checkout main && git pull && git checkout -b feat/7-billing-engine
 ```
 
-- [ ] **Step 2: Commit ADR + this plan** (if not already committed)
+- [x] **Step 2: Commit ADR + this plan** (if not already committed)
 
 ```bash
 git add docs/adr/0004-bill-results-derived-not-persisted.md docs/plans/PLAN-7-billing-engine.md
@@ -63,7 +63,7 @@ git commit -m "docs: adr-0004 and plan for #7"
 - Consumes: nothing
 - Produces: `Frac { num: bigint; den: bigint }`, `frac(num, den?)`, `mul(a, b)`, `add(a, b)`, `ZERO`, `ceilToSatang(a): number` — Task 3+ builds the pipeline on these exact names.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // src/lib/billing/frac.test.ts
@@ -113,12 +113,12 @@ describe("ceilToSatang", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/lib/billing/frac.test.ts`
 Expected: FAIL — cannot resolve `./frac`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // src/lib/billing/frac.ts
@@ -150,12 +150,12 @@ export function ceilToSatang(a: Frac): number {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/lib/billing/frac.test.ts`
 Expected: PASS (9 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/billing/frac.ts src/lib/billing/frac.test.ts
@@ -175,7 +175,7 @@ git commit -m "feat: exact fraction math for billing"
 - Consumes: nothing
 - Produces: `BillInput`, `LineItemInput`, `BillDiscount`, `BillResult`, `computeBill(input: BillInput): BillResult` — tickets #8/#9 import these exact names.
 
-- [ ] **Step 1: Write the types** (contract approved in grilling, copy verbatim)
+- [x] **Step 1: Write the types** (contract approved in grilling, copy verbatim)
 
 ```ts
 // src/lib/billing/types.ts
@@ -217,7 +217,7 @@ export interface BillResult {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 ```ts
 // src/lib/billing/compute.test.ts
@@ -294,12 +294,12 @@ describe("computeBill graceful incomplete states", () => {
 });
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: FAIL — cannot resolve `./compute`
 
-- [ ] **Step 4: Implement validation + graceful-zero skeleton**
+- [x] **Step 4: Implement validation + graceful-zero skeleton**
 
 ```ts
 // src/lib/billing/compute.ts
@@ -357,12 +357,12 @@ function assertPct(value: number, label: string): void {
 }
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: PASS (9 tests)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/billing/types.ts src/lib/billing/compute.ts src/lib/billing/compute.test.ts
@@ -381,7 +381,7 @@ git commit -m "feat: computeBill types and validation"
 - Consumes: `Frac` helpers from Task 1, types from Task 2
 - Produces: the full result assembly (peerTotals/checksum/receipt/surplus/itemSplits/unticked) that Tasks 4–6 only refine
 
-- [ ] **Step 1: Append the failing tests**
+- [x] **Step 1: Append the failing tests**
 
 ```ts
 describe("even split (no discounts, no charges)", () => {
@@ -442,12 +442,12 @@ describe("even split (no discounts, no charges)", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify the new ones fail**
+- [x] **Step 2: Run tests to verify the new ones fail**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: FAIL — 4 new tests fail (skeleton returns zeros); Task 2 tests still pass
 
-- [ ] **Step 3: Replace the `computeBill` body** (keep `validate` and helpers untouched)
+- [x] **Step 3: Replace the `computeBill` body** (keep `validate` and helpers untouched)
 
 ```ts
 // src/lib/billing/compute.ts — imports and computeBill become:
@@ -512,12 +512,12 @@ export function computeBill(input: BillInput): BillResult {
 
 Note: the empty-bill test from Task 2 must still pass (empty items → all fractions ZERO → zeros). `itemSplits` for an empty bill stays `{}`.
 
-- [ ] **Step 4: Run tests to verify all pass**
+- [x] **Step 4: Run tests to verify all pass**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: PASS (13 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/billing/compute.ts src/lib/billing/compute.test.ts
@@ -532,7 +532,7 @@ git commit -m "feat: even split with round-up pipeline"
 - Modify: `src/lib/billing/compute.ts` (itemNet block only)
 - Test: `src/lib/billing/compute.test.ts` (append)
 
-- [ ] **Step 1: Append the failing tests**
+- [x] **Step 1: Append the failing tests**
 
 ```ts
 describe("item discounts (ADR-0003: % first, then amount)", () => {
@@ -573,12 +573,12 @@ describe("item discounts (ADR-0003: % first, then amount)", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify the new ones fail**
+- [x] **Step 2: Run tests to verify the new ones fail**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: FAIL — 4 new tests fail (discount fields ignored)
 
-- [ ] **Step 3: Edit the itemNet block.** Replace:
+- [x] **Step 3: Edit the itemNet block.** Replace:
 
 ```ts
   const itemNet = new Map<string, Frac>();
@@ -602,12 +602,12 @@ with:
   }
 ```
 
-- [ ] **Step 4: Run tests to verify all pass**
+- [x] **Step 4: Run tests to verify all pass**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: PASS (17 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/billing/compute.ts src/lib/billing/compute.test.ts
@@ -622,7 +622,7 @@ git commit -m "feat: item discounts, pct then amount"
 - Modify: `src/lib/billing/compute.ts` (ratio line only)
 - Test: `src/lib/billing/compute.test.ts` (append)
 
-- [ ] **Step 1: Append the failing tests**
+- [x] **Step 1: Append the failing tests**
 
 ```ts
 describe("bill discount allocated proportionally (ADR-0003)", () => {
@@ -682,12 +682,12 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify the new ones fail**
+- [x] **Step 2: Run tests to verify the new ones fail**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: FAIL — 5 new tests fail (ratio hardcoded to 1)
 
-- [ ] **Step 3: Edit the ratio line.** Replace:
+- [x] **Step 3: Edit the ratio line.** Replace:
 
 ```ts
   const ratio = frac(1n); // bill discount arrives in Task 5
@@ -708,12 +708,12 @@ with:
   }
 ```
 
-- [ ] **Step 4: Run tests to verify all pass**
+- [x] **Step 4: Run tests to verify all pass**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: PASS (22 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/billing/compute.ts src/lib/billing/compute.test.ts
@@ -728,7 +728,7 @@ git commit -m "feat: proportional bill discount"
 - Modify: `src/lib/billing/compute.ts` (charge line only)
 - Test: `src/lib/billing/compute.test.ts` (append)
 
-- [ ] **Step 1: Append the failing tests** (the four cases from issue #7)
+- [x] **Step 1: Append the failing tests** (the four cases from issue #7)
 
 ```ts
 describe("service charge then VAT, compounded (ADR-0003)", () => {
@@ -774,12 +774,12 @@ describe("service charge then VAT, compounded (ADR-0003)", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify the new ones fail**
+- [x] **Step 2: Run tests to verify the new ones fail**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: FAIL — 6 new tests fail (charge hardcoded to 1)
 
-- [ ] **Step 3: Edit the charge line.** Replace:
+- [x] **Step 3: Edit the charge line.** Replace:
 
 ```ts
   const charge = frac(1n); // SC/VAT arrive in Task 6
@@ -795,12 +795,12 @@ with:
   );
 ```
 
-- [ ] **Step 4: Run tests to verify all pass**
+- [x] **Step 4: Run tests to verify all pass**
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: PASS (28 tests)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/billing/compute.ts src/lib/billing/compute.test.ts
@@ -816,7 +816,7 @@ git commit -m "feat: service charge and vat compounding"
 
 The permanent regression test. Data = `split-the-bill-example.csv` (anonymized real bill: 7 items, all −10%, no SC/VAT).
 
-- [ ] **Step 1: Append the fixture test**
+- [x] **Step 1: Append the fixture test**
 
 ```ts
 describe("canonical Katsu fixture (split-the-bill-example.csv)", () => {
@@ -846,17 +846,17 @@ describe("canonical Katsu fixture (split-the-bill-example.csv)", () => {
 });
 ```
 
-- [ ] **Step 2: Run the fixture test — must pass immediately** (it exercises Tasks 3+4 code)
+- [x] **Step 2: Run the fixture test — must pass immediately** (it exercises Tasks 3+4 code)
 
 Run: `npx vitest run src/lib/billing/compute.test.ts`
 Expected: PASS (29 tests). If this fails, the pipeline is wrong — STOP and debug, do not adjust the fixture numbers; they come from the real sheet.
 
-- [ ] **Step 3: Run the full DoD**
+- [x] **Step 3: Run the full DoD**
 
 Run: `npm run check`
 Expected: lint 0 errors, typecheck 0 errors, all tests pass (money.test.ts + frac.test.ts + compute.test.ts)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib/billing/compute.test.ts
