@@ -12,21 +12,42 @@ export interface EditorItem extends LineItemInput {
   name: string;
 }
 
+export interface BillMeta {
+  billDiscountPercent: number;
+  serviceChargePercent: number;
+  vatPercent: number;
+}
+
 export interface VariantProps {
   items: EditorItem[];
   peers: Peer[];
   result: BillResult;
   receiptText: string;
+  billMeta: BillMeta;
+  chipStyle: "name" | "initial";
+  showChipAmounts: boolean;
   onToggle: (itemId: string, peerId: string) => void;
   onReceiptChange: (text: string) => void;
+  onMetaChange: (meta: BillMeta) => void;
 }
 
-export const PEERS: Peer[] = [
+export const PEERS_FEW: Peer[] = [
   { id: "a", name: "Amy" },
   { id: "b", name: "Ben" },
   { id: "c", name: "Chai" },
   { id: "d", name: "Dow" },
   { id: "e", name: "Earn" },
+];
+
+export const PEERS_MANY: Peer[] = [
+  ...PEERS_FEW,
+  { id: "f", name: "Fern" },
+  { id: "g", name: "Gift" },
+  { id: "h", name: "Hana" },
+  { id: "i", name: "Ice" },
+  { id: "j", name: "Jane" },
+  { id: "k", name: "Kim" },
+  { id: "l", name: "Ling" },
 ];
 
 export const INITIAL_ITEMS: EditorItem[] = [

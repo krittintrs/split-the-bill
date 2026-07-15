@@ -4,14 +4,18 @@
 import { useState } from "react";
 import { formatSatang } from "@/lib/billing/money";
 import { parseThbToSatang, type Peer, type VariantProps } from "./shared";
+import BillMetaFields from "./BillMetaFields";
 
 export default function VariantC({
   items,
   peers,
   result,
   receiptText,
+  billMeta,
+  chipStyle,
   onToggle,
   onReceiptChange,
+  onMetaChange,
 }: VariantProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -34,26 +38,18 @@ export default function VariantC({
         <span>Checksum</span>
         <span>{formatSatang(result.checksumSatang)}</span>
       </div>
-      <div className="flex items-center gap-2 text-sm">
-        <label htmlFor="receipt-c" className="font-medium">
-          Receipt
-        </label>
-        <input
-          id="receipt-c"
-          value={receiptText}
-          onChange={(e) => onReceiptChange(e.target.value)}
-          inputMode="decimal"
-          className="w-24 rounded border border-black/20 bg-transparent p-2 text-right tabular-nums dark:border-white/25"
-        />
-        <span className={`font-bold ${matches ? "text-emerald-600" : "text-red-500"}`}>
-          {matches ? "✓" : "✗"}
-        </span>
-      </div>
+      <BillMetaFields
+        billMeta={billMeta}
+        onMetaChange={onMetaChange}
+        receiptText={receiptText}
+        onReceiptChange={onReceiptChange}
+        checksumSatang={result.checksumSatang}
+      />
     </div>
   );
 
   return (
-    <main className="mx-auto max-w-4xl p-4 pb-40 lg:grid lg:grid-cols-[1fr_300px] lg:gap-6">
+    <main className="mx-auto max-w-4xl p-4 pb-48 lg:grid lg:grid-cols-[1fr_320px] lg:gap-6">
       <div>
         <header className="mb-3">
           <h1 className="text-lg font-bold">Katsu Lunch — 15 Jul</h1>
@@ -73,7 +69,9 @@ export default function VariantC({
                 >
                   <span className="flex-1">
                     <span className="block font-medium">{item.name}</span>
-                    <span className={`block text-xs ${unticked ? "text-red-500" : "opacity-60"}`}>
+                    <span
+                      className={`block text-xs ${unticked ? "text-red-500" : "opacity-60"}`}
+                    >
                       {unticked
                         ? "nobody yet"
                         : item.tickedBy
@@ -90,15 +88,27 @@ export default function VariantC({
                   <div className="flex flex-wrap gap-2 px-3 pb-3">
                     {peers.map((peer) => {
                       const ticked = item.tickedBy.includes(peer.id);
-                      return (
+                      const tickedClasses = "bg-emerald-500 font-semibold text-white";
+                      const idleClasses = "bg-black/5 dark:bg-white/10";
+                      return chipStyle === "initial" ? (
+                        <button
+                          key={peer.id}
+                          type="button"
+                          title={peer.name}
+                          onClick={() => onToggle(item.id, peer.id)}
+                          className={`flex h-10 w-10 items-center justify-center rounded-full text-sm ${
+                            ticked ? tickedClasses : idleClasses
+                          }`}
+                        >
+                          {peer.name[0]}
+                        </button>
+                      ) : (
                         <button
                           key={peer.id}
                           type="button"
                           onClick={() => onToggle(item.id, peer.id)}
                           className={`rounded-full px-3 py-2 text-sm ${
-                            ticked
-                              ? "bg-emerald-500 font-semibold text-white"
-                              : "bg-black/5 dark:bg-white/10"
+                            ticked ? tickedClasses : idleClasses
                           }`}
                         >
                           {peer.name}
@@ -128,12 +138,14 @@ export default function VariantC({
           <span className="font-semibold">
             Checksum {formatSatang(result.checksumSatang)}
           </span>
-          <span className={`text-sm font-bold ${matches ? "text-emerald-600" : "text-red-500"}`}>
+          <span
+            className={`text-sm font-bold ${matches ? "text-emerald-600" : "text-red-500"}`}
+          >
             {matches ? "✓" : "✗"} {sheetOpen ? "▾" : "▴"}
           </span>
         </button>
         {sheetOpen && (
-          <div className="border-t border-black/10 px-4 py-3 dark:border-white/15">
+          <div className="max-h-[55dvh] overflow-y-auto border-t border-black/10 px-4 py-3 dark:border-white/15">
             {totalsPanel}
           </div>
         )}
