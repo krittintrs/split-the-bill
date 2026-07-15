@@ -89,8 +89,15 @@ export default function VariantB({
                   );
                 })}
               </div>
-              {unticked && (
+              {unticked ? (
                 <p className="mt-2 text-xs text-red-500">Nobody ticked this yet</p>
+              ) : (
+                !showChipAmounts && (
+                  <p className="mt-2 text-xs opacity-60 tabular-nums">
+                    ÷ {item.tickedBy.length} ={" "}
+                    {formatSatang(result.itemSplits[item.id]?.[item.tickedBy[0]] ?? 0)} each
+                  </p>
+                )
               )}
             </section>
           );
