@@ -2,7 +2,7 @@
 
 This project follows the Solo Builder Model: one person + AI agents covering every SDLC role.
 
-**What this is:** a mobile-first web app (like ขุนทอง from KBANK) for splitting restaurant bills. Organizer signs in with Google, creates a bill (menu items, prices, discounts, service charge, VAT), shares a link in LINE; peers open the link with no login, tick their own items, and pay back via a generated PromptPay QR. The app tracks paid status per bill and a cross-bill "who still owes me" rollup.
+**What this is:** a responsive web app (like ขุนทอง from KBANK) for splitting restaurant bills. Organizer signs in with Google, creates a bill (menu items, prices, discounts, service charge, VAT), shares a link in the team chat (Slack); peers open the link with no login — on phone or desktop — tick their own items, and pay back via a generated PromptPay QR. The app tracks paid status per bill and a cross-bill "who still owes me" rollup.
 
 ## 🏗️ Core Architecture (Non-Negotiable)
 
@@ -11,7 +11,7 @@ This project follows the Solo Builder Model: one person + AI agents covering eve
 - **Money is integer satang everywhere** (store, compute, transfer). Convert to ฿ decimal only at the display edge. Never do float arithmetic on money.
 - **Two access modes, one rule:** organizer data is protected by Supabase RLS on `auth.uid()`; peers get capability-URL access only (unguessable bill ID, no accounts). Nothing peer-facing may require login.
 - **Supabase is the single source of truth for bill state.** Clients read/subscribe (Realtime) and mutate through defined mutations; no duplicated client-side shadow state.
-- **Mobile-first UI.** Every screen must work one-handed on a phone (peers open links from LINE); desktop is the enhancement, not the baseline.
+- **Responsive UI, mobile and desktop both first-class.** Every screen must work one-handed on a phone AND comfortably on desktop (peers open links from Slack on either); neither is "the enhancement".
 
 ## 🧪 Workflow: TDD Mandate
 
