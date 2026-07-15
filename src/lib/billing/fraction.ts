@@ -1,7 +1,7 @@
 /** Exact rational arithmetic on BigInt. Internal to the billing engine. */
 export interface Fraction {
-  numerator: bigint;
-  denominator: bigint; // always > 0
+  numerator: bigint; // top number — the value being divided (เศษ)
+  denominator: bigint; // bottom number — how many parts it is divided into (ส่วน); always > 0
 }
 
 export function fraction(numerator: bigint, denominator: bigint = 1n): Fraction {
