@@ -42,3 +42,4 @@ READY 🟢
 | 2026-07-14 | Issue tracker = GitHub Issues on a public repo | Learning reference; kit's pr-prep already assumes `gh` | User |
 | 2026-07-14 | Example CSV anonymized to Person A–E before publishing | Friends' real nicknames stay out of a public, indexed repo | User |
 | 2026-07-14 | #6 done: prod live at split-the-bill-sable.vercel.app | Next.js 16.2 (proxy.ts, not middleware.ts), Supabase SG + new publishable-key API, Google OAuth in testing mode (add peers as test users or publish consent screen before team trial) | User + agy |
+| 2026-07-15 | #7 billing engine: exact BigInt fractions, results derived never persisted (ADR-0004) | One ceil per Peer Total (ADR-0001); malformed input throws, incomplete-while-editing computes gracefully; tsconfig target ES2020 for BigInt literals | User + dev agent |
