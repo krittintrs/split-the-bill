@@ -219,3 +219,45 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
     expect(r.receiptTotalSatang).toBe(0);
   });
 });
+
+describe("service charge then VAT, compounded (ADR-0003)", () => {
+  const single = (serviceChargePct: number, vatPct: number, unitPriceSatang = 10000): BillInput => ({
+    items: [{ id: "i1", unitPriceSatang, qty: 1, tickedBy: ["a"] }],
+    peerIds: ["a"],
+    serviceChargePct,
+    vatPct,
+  });
+
+  it("SC only: 10%", () => {
+    expect(computeBill(single(10, 0)).peerTotals.a).toBe(11000);
+  });
+
+  it("VAT only: 7%", () => {
+    expect(computeBill(single(0, 7)).peerTotals.a).toBe(10700);
+  });
+
+  it("5% SC + 7% VAT compound: ×1.05 then ×1.07", () => {
+    expect(computeBill(single(5, 7)).peerTotals.a).toBe(11235);
+  });
+
+  it("10% SC + 7% VAT compound", () => {
+    expect(computeBill(single(10, 7)).peerTotals.a).toBe(11770);
+  });
+
+  it("rounds up after compounding: 99.99 × 1.05 × 1.07 = 112.338765 → 112.34", () => {
+    expect(computeBill(single(5, 7, 9999)).peerTotals.a).toBe(11234);
+  });
+
+  it("compounds after even split: 2500 ÷ 3 × 1.10 × 1.07 → 981 each", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePct: 10,
+      vatPct: 7,
+    });
+    expect(r.peerTotals).toEqual({ a: 981, b: 981, c: 981 });
+    expect(r.checksumSatang).toBe(2943);
+    expect(r.receiptTotalSatang).toBe(2943); // 2942.5 → ceil
+    expect(r.surplusSatang).toBe(0);
+  });
+});

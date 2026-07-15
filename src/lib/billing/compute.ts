@@ -28,7 +28,11 @@ export function computeBill(input: BillInput): BillResult {
     if (num < 0n) num = 0n; // bill over-discount while editing: bill clamps to ฿0
     ratio = frac(num, 100n * subtotal.num);
   }
-  const charge = frac(1n); // SC/VAT arrive in Task 6
+  // × (1 + SC%) × (1 + VAT%), compounded in that order (ADR-0003).
+  const charge = frac(
+    BigInt(100 + input.serviceChargePct) * BigInt(100 + input.vatPct),
+    10000n,
+  );
 
   const peerTotalFracs = new Map<string, Frac>(input.peerIds.map((id) => [id, ZERO]));
   const itemSplits: Record<string, Record<string, number>> = {};
