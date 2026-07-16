@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 3 — #8 bill editor: layout + tokens prototyped and locked (branch `prototype/8-bill-editor`), plan ready → dev
+**Phase:** 3 — #8 bill editor built on `feat/8-bill-editor` (schema live, editor + publish + peer view) → user smoke test, then reviewer/qa/pr
 
 ## Frame (decided 2026-07-14)
 
@@ -47,3 +47,4 @@ READY 🟢
 | 2026-07-15 | #8 layout locked via /prototype: matrix (items-rows) ≥lg, stacked cards + name chips <lg; no ฿ in chips | 4 variants compared on real screens; verdict on issue #8; prototype preserved on `prototype/8-bill-editor` | User |
 | 2026-07-15 | Visual identity: vivid cyan + bright wash, Noto Sans Thai, primary-colored ticks, WCAG AA | Full interview + on-screen palette/font comparison (impeccable init); PRODUCT.md + DESIGN.md written; cyan = owner's color, distinct from Thai bank CIs | User |
 | 2026-07-15 | Bill storage: 5 normalized tables + profiles, autosave-per-action (ADR-0005); anon reads via security-definer RPC only (ADR-0006) | Tiny-row writes keep #9 concurrent ticking conflict-free; RLS policies can't check capability, so the RPC is the only anon door | User |
+| 2026-07-16 | Keep vivid fills at 3.1:1 white-on-primary — documented AA deviation (DESIGN.md Known deviations) | Reviewer measured the failure; AA-passing darker ramp compared on screen and rejected as losing the light & playful identity; rest of the palette stays AA | User |
