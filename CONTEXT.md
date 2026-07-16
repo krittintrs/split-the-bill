@@ -39,8 +39,8 @@ _Avoid_: check, selection, assignment
 The rule that a Line Item's cost divides equally among all Peers who ticked it.
 
 **Draft / Open / Locked**:
-Bill statuses. Draft: organizer still entering, link inactive. Open: peers tick and pay. Locked: organizer froze it; nothing changes.
-_Avoid_: published, finalized, archived
+Bill statuses. Draft: organizer still entering, link inactive. Open: peers tick and pay. Locked: organizer froze item Ticks; totals final, Paid Flags stay toggleable. "Everyone paid" is derived (all Paid Flags on), never a status.
+_Avoid_: published, finalized, archived, settled
 
 ### Money
 
@@ -75,7 +75,7 @@ _Avoid_: bill total, grand total
 How Peers pay the Organizer back: a PromptPay ID and/or bank-account text. Defaults from the Organizer's profile, overridable per Bill.
 
 **Paid Flag**:
-A single per-peer-per-bill toggle meaning "this Peer has paid the Organizer back." Anyone with the link can toggle it.
+A single per-peer-per-bill toggle meaning "this Peer has paid the Organizer back." Anyone with the link can toggle it on any non-draft Bill, including a Locked one (paying back happens after totals freeze).
 _Avoid_: settled, confirmed, payment status
 
 **Unpaid Rollup**:

@@ -8,6 +8,8 @@
 - LINE integration (LIFF mini-app / share message template) so links open natively in the group chat
 - Payment slip upload so peers attach proof when marking paid
 - Peer nudge: one-tap "remind unpaid peers" message text to paste into LINE
+- Soft Claim: peer taps own name → row pins on top, total big, persists per device via localStorage (cut from #9, 2026-07-16: cosmetic only, 5-8 name list scannable; zero structural cost to add later)
+- Two-phase paid confirm: peer marks paid → organizer confirms → peer can no longer untoggle (decided against for #9, 2026-07-16: bank notification is the real confirmation, friend-group trust; promote only if team trial shows false-paid problem)
 
 ### Organizer experience
 - Receipt OCR: photo of the bill → menu items + prices pre-filled
