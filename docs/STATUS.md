@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 3 — #8 bill editor: layout + tokens prototyped and locked (branch `prototype/8-bill-editor`), plan ready → dev
+**Phase:** 3 — #8 bill editor built on `feat/8-bill-editor` (schema live, editor + publish + peer view) → user smoke test, then reviewer/qa/pr
 
 ## Frame (decided 2026-07-14)
 
