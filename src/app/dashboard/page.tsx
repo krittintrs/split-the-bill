@@ -13,13 +13,13 @@ export default async function Dashboard() {
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Split the Bill</h1>
         <form action={signOut}>
-          <button type="submit" className="text-sm underline">
+          <button type="submit" className="text-sm text-primary-ink underline">
             Sign out
           </button>
         </form>
       </header>
-      <p className="text-sm opacity-70">Signed in as {user.email}</p>
-      <p className="mt-8 text-center opacity-50">No bills yet.</p>
+      <p className="text-sm text-ink-muted">Signed in as {user.email}</p>
+      <p className="mt-8 text-center text-ink-muted">No bills yet.</p>
     </main>
   );
 }
