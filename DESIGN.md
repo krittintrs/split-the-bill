@@ -13,7 +13,7 @@ Brand anchor is the owner's personal cyan `#0cc0df` — used decoratively only (
 | Token | Value | Use | Contrast notes |
 |---|---|---|---|
 | `--color-brand` | `#0cc0df` | decorative anchor only | never under text |
-| `--color-primary` | `#069ec8` | buttons, ticked chips, selection, active states | white text 3.1:1 → **bold ≥14px text only** |
+| `--color-primary` | `#069ec8` | buttons, ticked chips, selection, active states | white text 3.1:1 — below AA, accepted deviation (see Known deviations) |
 | `--color-primary-deep` | `#0782a5` | hover/active of primary | |
 | `--color-primary-ink` | `#0e7490` | links, small primary-colored text on light | 5.6:1 on white |
 | `--color-bg` | `#e6f7fb` | page background (the wash) | carries no text directly |
@@ -28,17 +28,21 @@ Brand anchor is the owner's personal cyan `#0cc0df` — used decoratively only (
 
 Rules: **selection ≠ success** — ticked chips are primary cyan; ✓/✗ verdicts are green/red and never rely on color alone (AA). Semantic colors never decorate. One loud element per screen: the primary action gets `--color-primary`; secondary actions are outlined or tinted.
 
+### Known deviations (accepted 2026-07-16)
+
+White text on filled controls measures below WCAG AA's 4.5:1: `#069ec8` primary fills = 3.12:1, `#0782a5` hover = 4.43:1, `#059669` success badges = 3.77:1 (also green-on-white ✓ text at 3.77:1). An AA-passing darker ramp (`#077f9f` / `#066a85` / `#047857`) was built and compared on screen; the owner chose to keep the vivid ramp — the darker one lost the light & playful feel that is the app's identity. Deliberate trade-off, not an oversight; the WCAG large-text exemption does not apply at our sizes. Revisit if real peers report readability problems (outdoor phone use is the likely trigger). Everything else stays AA: body text, muted text, and all non-fill color pairs must still clear 4.5:1.
+
 ## Typography
 
 - **Noto Sans Thai** (weights 400 / 500 / 700) via `next/font/google`, subsets `thai` + `latin` — one family everywhere; no display font.
 - Money is always `tabular-nums`, format `฿1,234.50` (`formatSatang` is the only place satang becomes ฿).
 - Fixed rem scale, ratio ~1.2: 12 / 14 / 16 (body) / 20 / 24. Minimum 12px (constitution).
-- Any white-on-primary text is bold ≥14px (the 3:1 large-text rule); smaller primary-colored text switches to `--color-primary-ink` on light.
+- Any white-on-primary text is bold ≥14px; smaller primary-colored text switches to `--color-primary-ink` on light. (Note: WCAG's large-text exemption starts at 14**pt** bold ≈ 18.66px, so bold 14px does NOT make 3.1:1 pass AA — see Known deviations.)
 
 ## Shape & Spacing
 
 - Cards / inputs / buttons: `rounded-xl` (12px). Chips and pills: `rounded-full`.
-- Touch targets ≥44px (chips are `min-h-10` + padding; matrix tick cells ≥ 40×48px zone).
+- Touch targets ≥44px (chips and icon buttons are `min-h-11` / `h-11 w-11`; matrix tick cells ≥ 44×48px zone).
 - Spacing on the Tailwind 4 default scale; card padding 12–16px; page gutter 16px mobile / centered max-width on desktop.
 
 ## Components (editor vocabulary, from the layout prototype verdict)

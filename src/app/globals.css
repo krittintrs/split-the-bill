@@ -3,7 +3,7 @@
 /* Design tokens — DESIGN.md is the contract; light theme only (dark mode: BACKLOG). */
 @theme {
   --color-brand: #0cc0df; /* decorative anchor only — never under text */
-  --color-primary: #069ec8; /* fills; white text must be bold >=14px (3.1:1) */
+  --color-primary: #069ec8; /* fills; white text = 3.1:1, accepted AA deviation (DESIGN.md Known deviations) */
   --color-primary-deep: #0782a5; /* hover/active of primary */
   --color-primary-ink: #0e7490; /* links & small primary-colored text on light */
   --color-bg: #e6f7fb; /* page wash — carries no text directly */
