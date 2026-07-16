@@ -122,7 +122,7 @@ export default function MatrixView({
         >
           {receipt.label}
         </span>
-        {result.surplusSatang !== 0 && (
+        {result.surplusSatang !== 0 && result.untickedItemIds.length === 0 && (
           <span className="text-ink-muted tabular-nums">
             ส่วนต่างปัดเศษ {formatSatang(Math.abs(result.surplusSatang))}
           </span>

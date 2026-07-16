@@ -130,7 +130,7 @@ export default function CardsView({
                 </li>
               ))}
             </ul>
-            {result.surplusSatang !== 0 && (
+            {result.surplusSatang !== 0 && result.untickedItemIds.length === 0 && (
               <p className="mt-2 text-xs tabular-nums text-ink-muted">
                 ส่วนต่างปัดเศษ {formatSatang(Math.abs(result.surplusSatang))}
               </p>

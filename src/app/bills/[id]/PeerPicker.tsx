@@ -33,14 +33,14 @@ export default function PeerPicker({ peersOnBill, recentPeers, onAdd, onRemove }
           {peersOnBill.map((peer) => (
             <span
               key={peer.id}
-              className="flex min-h-11 items-center gap-1 rounded-full bg-primary py-1 pl-4 pr-1 text-sm font-bold text-white"
+              className="flex min-h-11 items-center gap-1 rounded-full bg-primary pl-4 pr-0.5 text-sm font-bold text-white"
             >
               {peer.name}
               <button
                 type="button"
                 onClick={() => onRemove(peer.id)}
                 aria-label={`เอา ${peer.name} ออกจากบิล`}
-                className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-white"
+                className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-white"
               >
                 ✕
               </button>

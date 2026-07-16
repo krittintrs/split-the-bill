@@ -372,7 +372,7 @@ function ItemRow({
         type="button"
         onClick={() => onRemove(item.id)}
         aria-label={`ลบ ${item.name || "รายการ"}`}
-        className="mb-0.5 flex h-9 w-9 items-center justify-center rounded-lg text-danger hover:bg-surface-tint focus-visible:outline-2 focus-visible:outline-danger"
+        className="flex h-11 w-11 items-center justify-center rounded-lg text-danger hover:bg-surface-tint focus-visible:outline-2 focus-visible:outline-danger"
       >
         ✕
       </button>
