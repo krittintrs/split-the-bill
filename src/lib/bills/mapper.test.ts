@@ -14,6 +14,7 @@ const bill: BillRow = {
   vat_percent: 0,
   receipt_total_satang: 15000,
   payment_info: "",
+  payment_method: "",
 };
 
 const items: LineItemRow[] = [

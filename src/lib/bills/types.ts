@@ -1,4 +1,4 @@
-/** DB row shapes — mirror supabase/migrations/20260716000000_bills.sql exactly. */
+/** DB row shapes — mirror supabase/migrations/ exactly. */
 export interface BillRow {
   id: string;
   restaurant: string;
@@ -10,6 +10,7 @@ export interface BillRow {
   vat_percent: number;
   receipt_total_satang: number;
   payment_info: string;
+  payment_method: string;
 }
 
 export interface LineItemRow {

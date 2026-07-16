@@ -22,24 +22,29 @@ export default async function Dashboard() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 p-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-xl font-bold">Split the Bill</h1>
-        <form action={signOut}>
-          <button type="submit" className="text-sm text-primary-ink underline">
-            Sign out
+        <div className="flex items-baseline gap-3 text-sm text-ink-muted">
+          {user.email}
+          <form action={signOut}>
+            <button type="submit" className="text-primary-ink underline">
+              Sign out
+            </button>
+          </form>
+        </div>
+      </header>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg font-semibold">บิลของฉัน</h2>
+        <form action={createBill}>
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-primary px-6 py-3 font-bold text-white hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink sm:w-auto"
+          >
+            + สร้างบิลใหม่
           </button>
         </form>
-      </header>
-      <p className="text-sm text-ink-muted">Signed in as {user.email}</p>
-
-      <form action={createBill}>
-        <button
-          type="submit"
-          className="w-full rounded-xl bg-primary py-3 font-bold text-white hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink sm:w-auto sm:px-6"
-        >
-          + สร้างบิลใหม่
-        </button>
-      </form>
+      </div>
 
       {bills.length === 0 ? (
         <p className="mt-8 text-center text-ink-muted">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FocusEvent } from "react";
 import Link from "next/link";
 import { computeBill } from "@/lib/billing/compute";
 import { formatSatang } from "@/lib/billing/money";
@@ -21,7 +21,7 @@ import MatrixView from "./MatrixView";
 import CardsView from "./CardsView";
 
 export const inputCls =
-  "rounded-lg border border-border bg-surface p-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary-ink";
+  "min-h-11 rounded-lg border border-border bg-surface p-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary-ink";
 
 export function satangToInput(satang: number): string {
   return satang === 0 ? "" : (satang / 100).toFixed(2);
@@ -34,6 +34,16 @@ function inputToPercent(text: string): number {
   const value = parseInt(text, 10);
   if (Number.isNaN(value)) return 0;
   return Math.min(100, Math.max(0, value));
+}
+
+/** Money fields normalize to 2 decimals on blur (100 → 100.00). */
+function moneyBlur(
+  e: FocusEvent<HTMLInputElement>,
+  save: (satang: number) => void,
+) {
+  const satang = inputToSatang(e.target.value);
+  e.target.value = satangToInput(satang);
+  save(satang);
 }
 
 /** Autosave failed → resync from the DB (Supabase is the source of truth). */
@@ -67,6 +77,7 @@ export default function BillEditor({
     () => computeBill(mapToBillInput(bill, items, peers, ticks)),
     [bill, items, peers, ticks],
   );
+  const receipt = receiptStatus(bill.receipt_total_satang, result.checksumSatang);
 
   function saveBill(patch: Partial<BillRow>) {
     setBill((prev) => ({ ...prev, ...patch }));
@@ -194,73 +205,6 @@ export default function BillEditor({
         </label>
       </section>
 
-      <section className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4">
-        <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          ส่วนลดบิล %
-          <input
-            inputMode="numeric"
-            defaultValue={bill.bill_discount_percent || ""}
-            onBlur={(e) => saveBill({ bill_discount_percent: inputToPercent(e.target.value) })}
-            className={`${inputCls} w-16 text-right tabular-nums`}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          ส่วนลดบิล ฿
-          <input
-            inputMode="decimal"
-            defaultValue={satangToInput(bill.bill_discount_satang)}
-            onBlur={(e) => saveBill({ bill_discount_satang: inputToSatang(e.target.value) })}
-            className={`${inputCls} w-24 text-right tabular-nums`}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          Service charge %
-          <input
-            inputMode="numeric"
-            defaultValue={bill.service_charge_percent || ""}
-            onBlur={(e) => saveBill({ service_charge_percent: inputToPercent(e.target.value) })}
-            className={`${inputCls} w-16 text-right tabular-nums`}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          VAT %
-          <input
-            inputMode="numeric"
-            defaultValue={bill.vat_percent || ""}
-            onBlur={(e) => saveBill({ vat_percent: inputToPercent(e.target.value) })}
-            className={`${inputCls} w-16 text-right tabular-nums`}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          ยอดตามใบเสร็จ ฿
-          <input
-            inputMode="decimal"
-            defaultValue={satangToInput(bill.receipt_total_satang)}
-            onBlur={(e) => saveBill({ receipt_total_satang: inputToSatang(e.target.value) })}
-            className={`${inputCls} w-28 text-right tabular-nums`}
-          />
-        </label>
-        <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs text-ink-muted">
-          ช่องทางรับเงิน (พร้อมเพย์)
-          <input
-            defaultValue={bill.payment_info}
-            placeholder="เบอร์พร้อมเพย์ / เลขบัญชี"
-            onBlur={(e) => {
-              if (e.target.value !== bill.payment_info)
-                saveBill({ payment_info: e.target.value });
-            }}
-            className={inputCls}
-          />
-        </label>
-      </section>
-
-      <PeerPicker
-        peersOnBill={peers}
-        recentPeers={recentPeers}
-        onAdd={onAddPeer}
-        onRemove={onRemovePeer}
-      />
-
       <section className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
         <h2 className="font-semibold">รายการอาหาร</h2>
         {items.length === 0 && (
@@ -277,6 +221,83 @@ export default function BillEditor({
           + เพิ่มเมนู
         </button>
       </section>
+
+      <section className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="mb-2 font-semibold">ส่วนลด · Service charge · VAT</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            ส่วนลดบิล %
+            <input
+              inputMode="numeric"
+              defaultValue={bill.bill_discount_percent || ""}
+              placeholder="0"
+              onBlur={(e) => saveBill({ bill_discount_percent: inputToPercent(e.target.value) })}
+              className={`${inputCls} w-full text-right tabular-nums`}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            ส่วนลดบิล ฿
+            <input
+              inputMode="decimal"
+              defaultValue={satangToInput(bill.bill_discount_satang)}
+              placeholder="0.00"
+              onBlur={(e) => moneyBlur(e, (satang) => saveBill({ bill_discount_satang: satang }))}
+              className={`${inputCls} w-full text-right tabular-nums`}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            Service charge %
+            <input
+              inputMode="numeric"
+              defaultValue={bill.service_charge_percent || ""}
+              placeholder="0"
+              onBlur={(e) => saveBill({ service_charge_percent: inputToPercent(e.target.value) })}
+              className={`${inputCls} w-full text-right tabular-nums`}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            VAT %
+            <input
+              inputMode="numeric"
+              defaultValue={bill.vat_percent || ""}
+              placeholder="0"
+              onBlur={(e) => saveBill({ vat_percent: inputToPercent(e.target.value) })}
+              className={`${inputCls} w-full text-right tabular-nums`}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="mb-2 font-semibold">เช็คกับใบเสร็จ</h2>
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            ยอดตามใบเสร็จ ฿
+            <input
+              inputMode="decimal"
+              defaultValue={satangToInput(bill.receipt_total_satang)}
+              placeholder="0.00"
+              onBlur={(e) => moneyBlur(e, (satang) => saveBill({ receipt_total_satang: satang }))}
+              className={`${inputCls} w-36 text-right tabular-nums`}
+            />
+          </label>
+          <div className="flex flex-col gap-1 pb-1 text-sm">
+            <span className="tabular-nums text-ink-muted">
+              ระบบคำนวณได้ {formatSatang(result.checksumSatang)}
+            </span>
+            <span className={`font-bold ${receipt.matches ? "text-success" : "text-danger"}`}>
+              {receipt.label}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <PeerPicker
+        peersOnBill={peers}
+        recentPeers={recentPeers}
+        onAdd={onAddPeer}
+        onRemove={onRemovePeer}
+      />
 
       <div className="hidden lg:block">
         <MatrixView
@@ -298,6 +319,47 @@ export default function BillEditor({
           onToggle={onToggle}
         />
       </div>
+
+      <section className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="mb-2 font-semibold">ช่องทางรับเงิน</h2>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex w-full flex-col gap-1 text-xs text-ink-muted sm:w-48">
+            ธนาคาร / พร้อมเพย์
+            <input
+              list="payment-methods"
+              defaultValue={bill.payment_method}
+              placeholder="เช่น พร้อมเพย์"
+              onBlur={(e) => {
+                if (e.target.value !== bill.payment_method)
+                  saveBill({ payment_method: e.target.value });
+              }}
+              className={inputCls}
+            />
+            <datalist id="payment-methods">
+              <option value="พร้อมเพย์" />
+              <option value="กสิกรไทย" />
+              <option value="ไทยพาณิชย์" />
+              <option value="กรุงเทพ" />
+              <option value="กรุงไทย" />
+              <option value="กรุงศรี" />
+              <option value="ทีทีบี" />
+              <option value="ออมสิน" />
+            </datalist>
+          </label>
+          <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs text-ink-muted">
+            เบอร์ / เลขบัญชี
+            <input
+              defaultValue={bill.payment_info}
+              placeholder="เบอร์พร้อมเพย์ / เลขบัญชี"
+              onBlur={(e) => {
+                if (e.target.value !== bill.payment_info)
+                  saveBill({ payment_info: e.target.value });
+              }}
+              className={inputCls}
+            />
+          </label>
+        </div>
+      </section>
     </main>
   );
 }
@@ -329,7 +391,8 @@ function ItemRow({
         <input
           inputMode="decimal"
           defaultValue={satangToInput(item.unit_price_satang)}
-          onBlur={(e) => onUpdate(item.id, { unit_price_satang: inputToSatang(e.target.value) })}
+          placeholder="0.00"
+          onBlur={(e) => moneyBlur(e, (satang) => onUpdate(item.id, { unit_price_satang: satang }))}
           className={`${inputCls} w-24 text-right tabular-nums`}
         />
       </label>
@@ -364,7 +427,8 @@ function ItemRow({
         <input
           inputMode="decimal"
           defaultValue={satangToInput(item.discount_satang)}
-          onBlur={(e) => onUpdate(item.id, { discount_satang: inputToSatang(e.target.value) })}
+          placeholder="0.00"
+          onBlur={(e) => moneyBlur(e, (satang) => onUpdate(item.id, { discount_satang: satang }))}
           className={`${inputCls} w-20 text-right tabular-nums`}
         />
       </label>

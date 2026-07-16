@@ -18,6 +18,7 @@ interface GetBillJson {
     vatPercent: number;
     receiptTotalSatang: number;
     paymentInfo: string;
+    paymentMethod: string;
   };
   items: {
     id: string;
@@ -140,7 +141,12 @@ export default async function PublishedBillPage({
       {json.bill.paymentInfo && (
         <section className="rounded-xl border border-border bg-surface p-4">
           <h2 className="mb-1 font-semibold">โอนคืนที่</h2>
-          <p className="text-sm">{json.bill.paymentInfo}</p>
+          <p className="text-sm">
+            {json.bill.paymentMethod && (
+              <span className="font-medium">{json.bill.paymentMethod} · </span>
+            )}
+            {json.bill.paymentInfo}
+          </p>
         </section>
       )}
     </main>
