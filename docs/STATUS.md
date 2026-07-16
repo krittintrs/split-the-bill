@@ -18,7 +18,8 @@ Spec: [#5](https://github.com/krittintrs/split-the-bill/issues/5). Grilled decis
 ```
 READY 🟢
  #6 walking skeleton  →  #7 billing engine  →  #8 bill editor
-   →  #9 peer link  →  #10 payback  →  { #11 dashboard, #12 my debts }
+   →  #9 peer link (+paid flag)  →  #15 UI revamp  →  #10 payback
+   →  { #11 dashboard, #12 my debts }
 ```
 
 | Impact | Issue | Description | Blocked by | Who | Status |
@@ -26,8 +27,9 @@ READY 🟢
 | High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + agy + main session | DONE ✅ |
 | High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | DONE ✅ |
 | High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | DONE ✅ |
-| High | #9 | Peer link experience: soft claim, ticking, realtime, lock | #8 | dev agent | READY |
-| High | #10 | Payback: payment info, copy paths, QR image, paid flags | #9 | dev agent | READY |
+| High | #9 | Peer link experience: soft claim, ticking, realtime, lock, basic paid flag | #8 | dev agent | READY |
+| Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | READY |
+| High | #10 | Payback: payment info, copy paths, QR image, paid attribution | #9 | dev agent | READY |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
 | Med | #12 | Account Claim + My Debts | #10 | dev agent | READY |
 
