@@ -1,5 +1,6 @@
 // PROTOTYPE — Variant A "Receipt": single column, items with tick chips
 // inline (same grammar as #8 cards view), everyone section below.
+// Verdict experiment: when locked, section order flips (totals first).
 "use client";
 
 import { formatSatang } from "@/lib/billing/money";
@@ -16,8 +17,7 @@ export default function VariantA({
 }: VariantProps) {
   const peerName = new Map(peers.map((p) => [p.id, p.name]));
 
-  return (
-    <>
+  const itemsSection = (
       <section className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 font-semibold">รายการ — ติ๊กที่เรากิน</h2>
         <ul className="flex flex-col gap-4">
@@ -62,7 +62,9 @@ export default function VariantA({
           })}
         </ul>
       </section>
+  );
 
+  const everyoneSection = (
       <section className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-2 font-semibold">ทุกคน</h2>
         <ul className="flex flex-col divide-y divide-border">
@@ -91,6 +93,17 @@ export default function VariantA({
           ))}
         </ul>
       </section>
+  );
+
+  return locked ? (
+    <>
+      {everyoneSection}
+      {itemsSection}
+    </>
+  ) : (
+    <>
+      {itemsSection}
+      {everyoneSection}
     </>
   );
 }
