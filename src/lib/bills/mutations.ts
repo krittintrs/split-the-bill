@@ -36,12 +36,16 @@ export async function updateBill(billId: string, patch: BillPatch): Promise<void
   if (error) fail("updateBill", error);
 }
 
+export async function setBillStatus(
+  billId: string,
+  status: "open" | "locked",
+): Promise<void> {
+  const { error } = await createClient().from("bills").update({ status }).eq("id", billId);
+  if (error) fail("setBillStatus", error);
+}
+
 export async function publishBill(billId: string): Promise<void> {
-  const { error } = await createClient()
-    .from("bills")
-    .update({ status: "open" })
-    .eq("id", billId);
-  if (error) fail("publishBill", error);
+  return setBillStatus(billId, "open");
 }
 
 export async function addLineItem(billId: string, position: number): Promise<LineItemRow> {

@@ -5,6 +5,12 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+### Added
+
+- Peer ticking without login (#9): anyone with the `/b/[id]` link can tick their own items and see changes from other devices within ~2s
+- Paid flags: peers mark themselves paid, live for everyone watching the bill
+- Bill lock: organizer freezes ticks while keeping paid toggles live; chip list and matrix layouts flip section order when locked
+
 ## [0.1.0] — 2026-07-16
 
 First usable release: calculate + share. The organizer does everything; peers view.
