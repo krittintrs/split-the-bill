@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 4 — #9 peer link shipped, pending review: peers self-tick + pay + see live sync on `/b/[id]`, organizer can lock a bill → next #15 UI revamp
+**Phase:** 5 — #9 merged (PR #18) as v0.2.0: peers self-tick + mark paid + live sync on `/b/[id]`, organizer lock → next #15 UI revamp (main session + user, impeccable flow)
 
 ## Frame (decided 2026-07-14)
 
@@ -27,7 +27,7 @@ READY 🟢
 | High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + agy + main session | DONE ✅ |
 | High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | DONE ✅ |
 | High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | DONE ✅ |
-| High | #9 | Peer link experience: soft claim, ticking, realtime, lock, basic paid flag | #8 | dev agent | IN REVIEW |
+| High | #9 | Peer link experience: ticking, realtime, lock, basic paid flag | #8 | dev agent | DONE ✅ |
 | Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | READY |
 | High | #10 | Payback: payment info, copy paths, QR image, paid attribution | #9 | dev agent | READY |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
