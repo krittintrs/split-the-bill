@@ -40,7 +40,15 @@ export default function PeerBill({
     // null (draft/deleted mid-session) keeps the last known state on screen.
   }, [billId]);
 
-  useEffect(() => subscribeBillChanged(billId, () => void refetch()), [billId, refetch]);
+  useEffect(() => {
+    const unsubscribe = subscribeBillChanged(billId, () => void refetch());
+    // catch anything that changed between SSR snapshot and channel join
+    const initialSync = setTimeout(() => void refetch(), 0);
+    return () => {
+      clearTimeout(initialSync);
+      unsubscribe();
+    };
+  }, [billId, refetch]);
 
   const tickedByItem = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -132,6 +140,8 @@ export default function PeerBill({
     setPending(true);
     try {
       await setBillStatus(billId, locked ? "open" : "locked");
+    } catch {
+      // RLS denies non-owners; refetch below restores the true status either way
     } finally {
       setPending(false);
       await refetch();
