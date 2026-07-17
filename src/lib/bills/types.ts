@@ -3,7 +3,7 @@ export interface BillRow {
   id: string;
   restaurant: string;
   eaten_at: string;
-  status: "draft" | "open";
+  status: "draft" | "open" | "locked";
   bill_discount_percent: number;
   bill_discount_satang: number;
   service_charge_percent: number;
