@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { createBill } from "./actions";
+import CreateBillButton from "./CreateBillButton";
 import type { BillRow } from "@/lib/bills/types";
 
 const dateFormat = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" });
@@ -37,12 +38,7 @@ export default async function Dashboard() {
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">บิลของฉัน</h2>
         <form action={createBill}>
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-primary px-6 py-3 font-bold text-white hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink sm:w-auto"
-          >
-            + สร้างบิลใหม่
-          </button>
+          <CreateBillButton />
         </form>
       </div>
 
