@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 4 — #8 merged (PR #14) as v0.1.0: organizer creates + ticks + publishes, peers view read-only totals → next #9 peer link (self-tick, realtime)
+**Phase:** 4 — #9 peer link shipped, pending review: peers self-tick + pay + see live sync on `/b/[id]`, organizer can lock a bill → next #15 UI revamp
 
 ## Frame (decided 2026-07-14)
 
@@ -27,7 +27,7 @@ READY 🟢
 | High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + agy + main session | DONE ✅ |
 | High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | DONE ✅ |
 | High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | DONE ✅ |
-| High | #9 | Peer link experience: soft claim, ticking, realtime, lock, basic paid flag | #8 | dev agent | READY |
+| High | #9 | Peer link experience: soft claim, ticking, realtime, lock, basic paid flag | #8 | dev agent | IN REVIEW |
 | Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | READY |
 | High | #10 | Payback: payment info, copy paths, QR image, paid attribution | #9 | dev agent | READY |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
@@ -51,3 +51,4 @@ READY 🟢
 | 2026-07-15 | Bill storage: 5 normalized tables + profiles, autosave-per-action (ADR-0005); anon reads via security-definer RPC only (ADR-0006) | Tiny-row writes keep #9 concurrent ticking conflict-free; RLS policies can't check capability, so the RPC is the only anon door | User |
 | 2026-07-16 | Keep vivid fills at 3.1:1 white-on-primary — documented AA deviation (DESIGN.md Known deviations) | Reviewer measured the failure; AA-passing darker ramp compared on screen and rejected as losing the light & playful identity; rest of the palette stays AA | User |
 | 2026-07-16 | #8 shipped (PR #14) = v0.1.0: calculate + share; paid tracking stays in #10 | Editor reordered to receipt-entry flow after smoke test; `payment_method` column + rebuilt `get_bill` migration applied | User + main session |
+| 2026-07-17 | #9: locked = ticks frozen only, paid stays live; realtime = broadcast ping + refetch (ADR-0007) | postgres_changes dead for anon under ADR-0006; lock/pay ordering | User + main session |
