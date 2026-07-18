@@ -5,6 +5,17 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+### Added
+
+- Hard bill delete (#19): organizer can delete a draft or open bill (confirm dialog, blocked once locked) from the dashboard or the editor
+- Editor → peer-view nav link next to the copy-link button (#19)
+
+### Changed
+
+- Dashboard bill cards show a spinner and dim while navigating instead of feeling unresponsive (#19)
+- Autosave failures in the bill editor show an inline retry banner instead of an `alert()` + full page reload (#19)
+- Consistent hover/press feedback (darker fill on hover, `active:scale-95` on press) across all buttons app-wide (#19)
+
 ## [0.2.0] — 2026-07-17
 
 Better than the Sheet: peers do their own ticking, live.

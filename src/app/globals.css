@@ -23,3 +23,19 @@ body {
   color: var(--color-ink);
   font-family: var(--font-noto-sans-thai), ui-sans-serif, system-ui, sans-serif;
 }
+
+/*
+ * Interactive feedback convention (issue #19).
+ * Every clickable control (button, submit, card link) shows visible hover
+ * and press feedback, layered on top of the existing
+ * disabled:opacity-* / focus-visible:outline-2 states already in use:
+ *   - Hover: one shade darker fill for solid buttons (hover:bg-primary-deep
+ *     on bg-primary; hover:opacity-90 for bg-success/bg-danger), or
+ *     hover:bg-surface-tint / hover:bg-border for bordered, tinted, and
+ *     icon-only buttons.
+ *   - Active/press: active:scale-95 with transition-transform, so a tap on
+ *     mobile visibly registers even without a mouse hover state.
+ * Apply both classes directly alongside each button's existing color
+ * classes; there is no separate component/class for this, so it stays
+ * consistent by convention rather than force.
+ */

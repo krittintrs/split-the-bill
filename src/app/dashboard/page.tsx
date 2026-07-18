@@ -1,12 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { createBill } from "./actions";
 import CreateBillButton from "./CreateBillButton";
+import BillList from "./BillList";
 import type { BillRow } from "@/lib/bills/types";
-
-const dateFormat = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" });
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -28,7 +26,10 @@ export default async function Dashboard() {
         <div className="flex items-baseline gap-3 text-sm text-ink-muted">
           {user.email}
           <form action={signOut}>
-            <button type="submit" className="text-primary-ink underline">
+            <button
+              type="submit"
+              className="text-primary-ink underline transition-transform hover:text-primary-deep active:scale-95"
+            >
               Sign out
             </button>
           </form>
@@ -42,40 +43,7 @@ export default async function Dashboard() {
         </form>
       </div>
 
-      {bills.length === 0 ? (
-        <p className="mt-8 text-center text-ink-muted">
-          ยังไม่มีบิล — สร้างบิลแรกของคุณด้วยปุ่มด้านบน
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {bills.map((bill) => (
-            <li key={bill.id}>
-              <Link
-                href={`/bills/${bill.id}`}
-                className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary-ink"
-              >
-                <span className="font-medium">
-                  {bill.restaurant || "ยังไม่มีชื่อร้าน"}
-                </span>
-                <span className="flex items-center gap-3 text-sm">
-                  <span className="text-ink-muted">
-                    {dateFormat.format(new Date(bill.eaten_at))}
-                  </span>
-                  {bill.status === "open" ? (
-                    <span className="rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
-                      เปิดแล้ว
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-surface-tint px-3 py-1 text-sm font-medium text-primary-ink">
-                      ฉบับร่าง
-                    </span>
-                  )}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <BillList initialBills={bills} />
     </main>
   );
 }
