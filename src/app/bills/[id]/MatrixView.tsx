@@ -82,7 +82,7 @@ export default function MatrixView({
                           onClick={() => onToggle(item.id, peer.id)}
                           aria-label={`${peer.name} ${ticked ? "ยกเลิก" : "ติ๊ก"} ${item.name}`}
                           aria-pressed={ticked}
-                          className={`h-11 w-12 rounded-lg font-bold focus-visible:outline-2 focus-visible:outline-primary-ink ${
+                          className={`h-11 w-12 rounded-lg font-bold transition-transform active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink ${
                             ticked
                               ? "bg-primary text-white hover:bg-primary-deep"
                               : "bg-surface-tint text-ink-muted/50 hover:bg-border"

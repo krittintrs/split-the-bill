@@ -178,8 +178,10 @@ export default function PeerBill({
                       type="button"
                       disabled={locked || pending}
                       onClick={() => onTick(item.id, peer.id)}
-                      className={`min-h-10 rounded-full px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
-                        ticked ? "bg-primary text-white" : "bg-surface-tint text-ink"
+                      className={`min-h-10 rounded-full px-3 py-1.5 text-sm font-medium transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                        ticked
+                          ? "bg-primary text-white hover:bg-primary-deep"
+                          : "bg-surface-tint text-ink hover:bg-border"
                       }`}
                     >
                       {ticked ? "✓ " : ""}
@@ -210,10 +212,10 @@ export default function PeerBill({
                 type="button"
                 disabled={pending}
                 onClick={() => onPaid(peer.id)}
-                className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50 ${
+                className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                   paid[peer.id]
-                    ? "bg-success text-white"
-                    : "border border-border text-ink-muted"
+                    ? "bg-success text-white hover:opacity-90"
+                    : "border border-border text-ink-muted hover:bg-surface-tint"
                 }`}
               >
                 {paid[peer.id] ? "✓ จ่ายแล้ว" : "ยังไม่จ่าย"}
@@ -272,10 +274,10 @@ export default function PeerBill({
                         disabled={locked || pending}
                         onClick={() => onTick(item.id, peer.id)}
                         aria-label={`${peer.name} — ${item.name || "ไม่มีชื่อเมนู"}`}
-                        className={`h-10 w-10 rounded-lg text-lg font-bold transition-colors disabled:opacity-50 ${
+                        className={`h-10 w-10 rounded-lg text-lg font-bold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                           ticked
-                            ? "bg-primary text-white"
-                            : "bg-surface-tint text-transparent"
+                            ? "bg-primary text-white hover:bg-primary-deep"
+                            : "bg-surface-tint text-transparent hover:bg-border"
                         }`}
                       >
                         ✓
@@ -305,8 +307,10 @@ export default function PeerBill({
                   disabled={pending}
                   onClick={() => onPaid(peer.id)}
                   aria-label={`${peer.name} จ่ายแล้ว`}
-                  className={`h-10 w-10 rounded-lg text-lg font-bold disabled:opacity-50 ${
-                    paid[peer.id] ? "bg-success text-white" : "bg-surface-tint text-transparent"
+                  className={`h-10 w-10 rounded-lg text-lg font-bold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    paid[peer.id]
+                      ? "bg-success text-white hover:opacity-90"
+                      : "bg-surface-tint text-transparent hover:bg-border"
                   }`}
                 >
                   ✓
@@ -339,7 +343,7 @@ export default function PeerBill({
               type="button"
               disabled={pending}
               onClick={onLockToggle}
-              className="min-h-10 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-deep disabled:opacity-50"
+              className="min-h-10 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white transition-transform hover:bg-primary-deep active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {locked ? "ปลดล็อกบิล" : "ล็อกบิล"}
             </button>

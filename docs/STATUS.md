@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 5 — #9 merged (PR #18) as v0.2.0: peers self-tick + mark paid + live sync on `/b/[id]`, organizer lock → next #15 UI revamp (main session + user, impeccable flow)
+**Phase:** 5 — #9 merged (PR #18) as v0.2.0: peers self-tick + mark paid + live sync on `/b/[id]`, organizer lock → next #15 UI revamp (main session + user, impeccable flow); #19 (items #1-3: loading feedback, editor→peer nav, hard delete) implemented on `claude/issue-19-recap-w69f9g`, pending review
 
 ## Frame (decided 2026-07-14)
 

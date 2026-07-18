@@ -48,6 +48,12 @@ export async function publishBill(billId: string): Promise<void> {
   return setBillStatus(billId, "open");
 }
 
+/** Hard delete a bill; DB cascade removes its line_items/bill_peers/ticks. */
+export async function deleteBill(billId: string): Promise<void> {
+  const { error } = await createClient().from("bills").delete().eq("id", billId);
+  if (error) fail("deleteBill", error);
+}
+
 export async function addLineItem(billId: string, position: number): Promise<LineItemRow> {
   const { data, error } = await createClient()
     .from("line_items")

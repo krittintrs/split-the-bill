@@ -40,7 +40,7 @@ export default function PeerPicker({ peersOnBill, recentPeers, onAdd, onRemove }
                 type="button"
                 onClick={() => onRemove(peer.id)}
                 aria-label={`เอา ${peer.name} ออกจากบิล`}
-                className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-white"
+                className="flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:bg-primary-deep active:scale-95 focus-visible:outline-2 focus-visible:outline-white"
               >
                 ✕
               </button>
@@ -57,7 +57,7 @@ export default function PeerPicker({ peersOnBill, recentPeers, onAdd, onRemove }
               key={peer.id}
               type="button"
               onClick={() => onAdd(peer.name)}
-              className="min-h-11 rounded-full bg-surface-tint px-4 py-2 text-sm font-medium text-primary-ink hover:bg-border focus-visible:outline-2 focus-visible:outline-primary-ink"
+              className="min-h-11 rounded-full bg-surface-tint px-4 py-2 text-sm font-medium text-primary-ink transition-transform hover:bg-border active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
             >
               + {peer.name}
             </button>
@@ -81,7 +81,7 @@ export default function PeerPicker({ peersOnBill, recentPeers, onAdd, onRemove }
         <button
           type="submit"
           disabled={!name.trim()}
-          className="min-h-11 rounded-lg bg-primary px-4 text-sm font-bold text-white hover:bg-primary-deep disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
+          className="min-h-11 rounded-lg bg-primary px-4 text-sm font-bold text-white transition-transform hover:bg-primary-deep active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
         >
           เพิ่ม
         </button>
