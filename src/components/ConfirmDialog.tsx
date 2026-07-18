@@ -45,10 +45,13 @@ export default function ConfirmDialog({
       ref={ref}
       onCancel={(e) => {
         e.preventDefault();
+        if (busy) return;
         onCancel();
       }}
-      onClose={onCancel}
-      className="w-full max-w-sm rounded-xl border border-border bg-surface p-5 text-ink backdrop:bg-ink/40 open:flex open:flex-col open:gap-4"
+      onClose={() => {
+        if (!busy) onCancel();
+      }}
+      className="w-[calc(100%-2rem)] max-w-sm rounded-xl border border-border bg-surface p-5 text-ink backdrop:bg-ink/40 open:flex open:flex-col open:gap-4"
     >
       <h2 className="text-base font-bold">{title}</h2>
       <p className="text-sm text-ink-muted">{message}</p>

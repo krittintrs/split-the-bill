@@ -48,10 +48,23 @@ export async function publishBill(billId: string): Promise<void> {
   return setBillStatus(billId, "open");
 }
 
-/** Hard delete a bill; DB cascade removes its line_items/bill_peers/ticks. */
+/**
+ * Hard delete a bill; DB cascade removes its line_items/bill_peers/ticks.
+ * Guarded server-side against deleting a locked (settled) bill — the UI
+ * hides the delete action for locked bills, but this guard is the one that
+ * actually enforces it, since RLS alone would allow it.
+ */
 export async function deleteBill(billId: string): Promise<void> {
-  const { error } = await createClient().from("bills").delete().eq("id", billId);
+  const { data, error } = await createClient()
+    .from("bills")
+    .delete()
+    .eq("id", billId)
+    .neq("status", "locked")
+    .select("id");
   if (error) fail("deleteBill", error);
+  if (!data || data.length === 0) {
+    throw new Error("deleteBill: bill is locked and can no longer be deleted");
+  }
 }
 
 export async function addLineItem(billId: string, position: number): Promise<LineItemRow> {

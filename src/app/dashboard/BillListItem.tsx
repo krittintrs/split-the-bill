@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Link, { useLinkStatus } from "next/link";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import Spinner from "@/components/Spinner";
 import { deleteBill } from "@/lib/bills/mutations";
@@ -11,10 +11,38 @@ const dateFormat = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" });
 
 export type BillSummary = Pick<BillRow, "id" | "restaurant" | "eaten_at" | "status">;
 
+/** useLinkStatus only works inside a child of <Link>, not the Link's own renderer. */
+function CardBody({ bill }: { bill: BillSummary }) {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      className={`flex flex-1 items-center justify-between gap-3 ${pending ? "opacity-50" : ""}`}
+    >
+      <span className="font-medium">{bill.restaurant || "ยังไม่มีชื่อร้าน"}</span>
+      <span className="flex items-center gap-3 text-sm">
+        <span className="text-ink-muted">
+          {dateFormat.format(new Date(bill.eaten_at))}
+        </span>
+        {bill.status === "open" ? (
+          <span className="rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
+            เปิดแล้ว
+          </span>
+        ) : (
+          <span className="rounded-full bg-surface-tint px-3 py-1 text-sm font-medium text-primary-ink">
+            ฉบับร่าง
+          </span>
+        )}
+        {pending && <Spinner className="text-primary-ink" />}
+      </span>
+    </span>
+  );
+}
+
 /**
- * One dashboard bill row. Navigates via useTransition so a tap visibly dims
- * and disables re-click while the route change is pending (issue #19), and
- * offers a hard-delete gated on status (locked bills never show it).
+ * One dashboard bill row. A real <Link> (preserves cmd/ctrl/middle-click and
+ * right-click), with useLinkStatus driving a dim + spinner while the route
+ * change is pending (issue #19). Offers a hard-delete gated on status
+ * (locked bills never show it).
  */
 export default function BillListItem({
   bill,
@@ -23,17 +51,9 @@ export default function BillListItem({
   bill: BillSummary;
   onDeleted: (id: string) => void;
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function open() {
-    startTransition(() => {
-      router.push(`/bills/${bill.id}`);
-    });
-  }
 
   async function onConfirmDelete() {
     if (deleting) return;
@@ -51,32 +71,12 @@ export default function BillListItem({
   return (
     <li className="flex flex-col gap-1">
       <div className="flex items-stretch gap-2">
-        <button
-          type="button"
-          onClick={open}
-          disabled={isPending}
-          aria-busy={isPending}
-          className={`flex min-h-14 flex-1 items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-transform hover:border-primary hover:bg-surface-tint active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-primary-ink disabled:cursor-wait ${
-            isPending ? "opacity-50" : ""
-          }`}
+        <Link
+          href={`/bills/${bill.id}`}
+          className="flex min-h-14 flex-1 items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-transform hover:border-primary hover:bg-surface-tint active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-primary-ink"
         >
-          <span className="font-medium">{bill.restaurant || "ยังไม่มีชื่อร้าน"}</span>
-          <span className="flex items-center gap-3 text-sm">
-            <span className="text-ink-muted">
-              {dateFormat.format(new Date(bill.eaten_at))}
-            </span>
-            {bill.status === "open" ? (
-              <span className="rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
-                เปิดแล้ว
-              </span>
-            ) : (
-              <span className="rounded-full bg-surface-tint px-3 py-1 text-sm font-medium text-primary-ink">
-                ฉบับร่าง
-              </span>
-            )}
-            {isPending && <Spinner className="text-primary-ink" />}
-          </span>
-        </button>
+          <CardBody bill={bill} />
+        </Link>
 
         {bill.status !== "locked" && (
           <button

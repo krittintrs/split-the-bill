@@ -85,8 +85,14 @@ export default function BillEditor({
   );
   const receipt = receiptStatus(bill.receipt_total_satang, result.checksumSatang);
 
-  /** Autosave failed → surface an inline banner instead of forcing a reload. */
+  /**
+   * Autosave failed → surface an inline banner instead of forcing a reload.
+   * Clearing saveError at the start of every attempt (not just on success)
+   * stops a stale "retry" from a superseded failure firing after a newer
+   * edit already saved successfully.
+   */
   function runMutation(action: () => Promise<void>) {
+    setSaveError(null);
     action().catch((error: unknown) => {
       setSaveError({
         message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
@@ -101,6 +107,7 @@ export default function BillEditor({
   }
 
   async function onAddItem() {
+    setSaveError(null);
     const position = items.reduce((max, item) => Math.max(max, item.position), 0) + 1;
     try {
       const row = await addLineItem(bill.id, position);
@@ -127,6 +134,7 @@ export default function BillEditor({
   }
 
   async function onAddPeer(name: string) {
+    setSaveError(null);
     try {
       const peer = await addPeerToBill(bill.id, name);
       setPeers((prev) => (prev.some((p) => p.id === peer.id) ? prev : [...prev, peer]));
@@ -172,6 +180,7 @@ export default function BillEditor({
 
   async function onConfirmDelete() {
     if (deleting) return;
+    setSaveError(null);
     setDeleting(true);
     try {
       await deleteBill(bill.id);
@@ -214,13 +223,13 @@ export default function BillEditor({
               <button
                 type="button"
                 onClick={onCopyLink}
-                className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-primary-ink transition-transform hover:border-primary hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
+                className="flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-primary-ink transition-transform hover:border-primary hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
               >
                 {copied ? "คัดลอกลิงก์แล้ว ✓" : "คัดลอกลิงก์"}
               </button>
               <Link
                 href={`/b/${bill.id}`}
-                className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-primary-ink transition-transform hover:border-primary hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
+                className="flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-primary-ink transition-transform hover:border-primary hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
               >
                 ดูหน้าเพื่อน
               </Link>
@@ -230,7 +239,7 @@ export default function BillEditor({
             <button
               type="button"
               onClick={() => setConfirmDeleteOpen(true)}
-              className="rounded-xl border border-danger px-4 py-2 text-sm font-medium text-danger transition-transform hover:bg-danger/10 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
+              className="flex min-h-11 items-center rounded-xl border border-danger px-4 py-2 text-sm font-medium text-danger transition-transform hover:bg-danger/10 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
             >
               ลบบิล
             </button>
@@ -239,28 +248,21 @@ export default function BillEditor({
       </header>
 
       {saveError && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-danger bg-danger/10 p-3 text-sm text-danger">
-          <span>บันทึกไม่สำเร็จ: {saveError.message}</span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                const retry = saveError.retry;
-                setSaveError(null);
-                retry();
-              }}
-              className="rounded-lg bg-danger px-3 py-1.5 text-xs font-bold text-white transition-transform hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
-            >
-              ลองอีกครั้ง
-            </button>
-            <button
-              type="button"
-              onClick={() => setSaveError(null)}
-              className="rounded-lg border border-danger px-3 py-1.5 text-xs font-medium text-danger transition-transform hover:bg-danger/10 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
-            >
-              ปิด
-            </button>
-          </div>
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-danger bg-danger/10 p-3 text-sm text-danger"
+        >
+          <span>บันทึกไม่สำเร็จ: {saveError.message} — การเปลี่ยนแปลงนี้ยังไม่ถูกบันทึก</span>
+          <button
+            type="button"
+            onClick={() => {
+              const retry = saveError.retry;
+              retry();
+            }}
+            className="rounded-lg bg-danger px-3 py-1.5 text-xs font-bold text-white transition-transform hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
+          >
+            ลองอีกครั้ง
+          </button>
         </div>
       )}
 
