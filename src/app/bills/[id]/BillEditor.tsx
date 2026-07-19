@@ -77,6 +77,7 @@ export default function BillEditor({
   const [ticks, setTicks] = useState(initialTicks);
   const [copied, setCopied] = useState(false);
   const [saveError, setSaveError] = useState<SaveError | null>(null);
+  const [saved, setSaved] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -94,12 +95,14 @@ export default function BillEditor({
    */
   function runMutation(action: () => Promise<void>) {
     setSaveError(null);
-    action().catch((error: unknown) => {
-      setSaveError({
-        message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
-        retry: () => runMutation(action),
+    action()
+      .then(() => setSaved(true))
+      .catch((error: unknown) => {
+        setSaveError({
+          message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
+          retry: () => runMutation(action),
+        });
       });
-    });
   }
 
   function saveBill(patch: Partial<BillRow>) {
@@ -113,6 +116,7 @@ export default function BillEditor({
     try {
       const row = await addLineItem(bill.id, position);
       setItems((prev) => [...prev, row]);
+      setSaved(true);
     } catch (error) {
       setSaveError({
         message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
@@ -139,6 +143,7 @@ export default function BillEditor({
     try {
       const peer = await addPeerToBill(bill.id, name);
       setPeers((prev) => (prev.some((p) => p.id === peer.id) ? prev : [...prev, peer]));
+      setSaved(true);
     } catch (error) {
       setSaveError({
         message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
@@ -199,12 +204,19 @@ export default function BillEditor({
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 pb-44 lg:pb-8">
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <Link
-          href="/dashboard"
-          className="text-sm text-primary-ink underline transition-transform hover:text-primary-deep active:scale-95"
-        >
-          ← บิลทั้งหมด
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="text-sm text-primary-ink underline transition hover:text-primary-deep active:scale-95"
+          >
+            ← บิลทั้งหมด
+          </Link>
+          {saved && !saveError && (
+            <span aria-live="polite" className="text-xs text-ink-muted">
+              บันทึกแล้ว ✓
+            </span>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {bill.status === "draft" ? (
             <button
@@ -274,7 +286,7 @@ export default function BillEditor({
               const retry = saveError.retry;
               retry();
             }}
-            className="rounded-lg bg-danger px-3 py-1.5 text-xs font-bold text-white transition-transform hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
+            className="rounded-lg bg-danger px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
           >
             ลองอีกครั้ง
           </button>
@@ -334,7 +346,7 @@ export default function BillEditor({
         <button
           type="button"
           onClick={onAddItem}
-          className="mt-1 self-start rounded-lg border border-border bg-surface-tint px-4 py-2.5 text-sm font-medium text-primary-ink transition-transform hover:border-primary hover:bg-border active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
+          className="mt-1 self-start rounded-lg border border-border bg-surface-tint px-4 py-2.5 text-sm font-medium text-primary-ink transition hover:border-primary hover:bg-border active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
         >
           + เพิ่มเมนู
         </button>
@@ -554,7 +566,7 @@ function ItemRow({
         type="button"
         onClick={() => onRemove(item.id)}
         aria-label={`ลบ ${item.name || "รายการ"}`}
-        className="flex h-11 w-11 items-center justify-center rounded-lg text-danger transition-transform hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
+        className="flex h-11 w-11 items-center justify-center rounded-lg text-danger transition hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
       >
         ✕
       </button>

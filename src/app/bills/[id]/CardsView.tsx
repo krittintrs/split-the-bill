@@ -79,7 +79,7 @@ export default function CardsView({
                       type="button"
                       onClick={() => onToggle(item.id, peer.id)}
                       aria-pressed={ticked}
-                      className={`min-h-11 rounded-full px-4 py-2 text-sm transition-transform active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink ${
+                      className={`min-h-11 rounded-full px-4 py-2 text-sm transition active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink ${
                         ticked
                           ? "bg-primary font-bold text-white hover:bg-primary-deep"
                           : "bg-surface-tint font-medium text-primary-ink hover:bg-border"

@@ -28,7 +28,7 @@ export default async function Dashboard() {
           <form action={signOut}>
             <button
               type="submit"
-              className="text-primary-ink underline transition-transform hover:text-primary-deep active:scale-95"
+              className="text-primary-ink underline transition hover:text-primary-deep active:scale-95"
             >
               Sign out
             </button>
