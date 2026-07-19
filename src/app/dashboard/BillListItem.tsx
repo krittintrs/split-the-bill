@@ -16,7 +16,9 @@ function CardBody({ bill }: { bill: BillSummary }) {
     <span
       className={`flex flex-1 items-center justify-between gap-3 ${pending ? "opacity-50" : ""}`}
     >
-      <span className="font-medium">{bill.restaurant || "ยังไม่มีชื่อร้าน"}</span>
+      <span className="min-w-0 truncate font-medium">
+        {bill.restaurant || "ยังไม่มีชื่อร้าน"}
+      </span>
       <span className="flex items-center gap-3 text-sm">
         <span className="whitespace-nowrap text-ink-muted">
           {dateFormat.format(new Date(bill.eaten_at))}

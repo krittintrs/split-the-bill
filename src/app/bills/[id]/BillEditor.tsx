@@ -203,21 +203,32 @@ export default function BillEditor({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 pb-44 lg:pb-8">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="text-sm text-primary-ink underline transition hover:text-primary-deep active:scale-95"
-          >
-            ← บิลทั้งหมด
-          </Link>
-          {saved && !saveError && (
-            <span aria-live="polite" className="text-xs text-ink-muted">
-              บันทึกแล้ว ✓
+      <header className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="text-sm text-primary-ink underline transition hover:text-primary-deep active:scale-95"
+            >
+              ← บิลทั้งหมด
+            </Link>
+            {saved && !saveError && (
+              <span aria-live="polite" className="text-xs text-ink-muted">
+                บันทึกแล้ว ✓
+              </span>
+            )}
+          </div>
+          {bill.status === "locked" ? (
+            <span className="whitespace-nowrap rounded-full bg-ink-muted px-3 py-1 text-sm font-bold text-white">
+              🔒 ล็อกแล้ว
             </span>
-          )}
+          ) : bill.status === "open" ? (
+            <span className="whitespace-nowrap rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
+              ✓ เปิดแล้ว
+            </span>
+          ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {bill.status === "draft" ? (
             <button
               type="button"
@@ -230,15 +241,6 @@ export default function BillEditor({
             </button>
           ) : (
             <>
-              {bill.status === "locked" ? (
-                <span className="whitespace-nowrap rounded-full bg-ink-muted px-3 py-1 text-sm font-bold text-white">
-                  🔒 ล็อกแล้ว
-                </span>
-              ) : (
-                <span className="whitespace-nowrap rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
-                  ✓ เปิดแล้ว
-                </span>
-              )}
               <button
                 type="button"
                 onClick={onCopyLink}
