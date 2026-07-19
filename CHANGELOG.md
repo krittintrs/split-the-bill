@@ -8,13 +8,20 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 ### Added
 
 - Hard bill delete (#19): organizer can delete a draft or open bill (confirm dialog, blocked once locked) from the dashboard or the editor
+- Route loading skeletons for dashboard, editor, and peer page (#15)
+- "บันทึกแล้ว ✓" autosave confirmation in the editor header (#15)
 - Editor → peer-view nav link next to the copy-link button (#19)
 
 ### Changed
 
 - Dashboard bill cards show a spinner and dim while navigating instead of feeling unresponsive (#19)
+- Dashboard row actions moved into a ⋯ menu; locked bills show a disabled delete entry and a 🔒 ล็อกแล้ว badge instead of masquerading as drafts (#15)
+- Peer page tick and paid cells get a visible idle affordance (bordered square with faint ✓) instead of blank squares (#15)
+- Editor header: copy-link promoted to the primary button, delete tucked into the ⋯ menu, status pill moved to the top row (#15)
+- Receipt check: "Checksum" label replaced with Thai "ยอดรวม", not-yet-entered state shown neutral instead of red, duplicate status line removed (#15)
+- Delete-confirm dialog properly centered (#15)
 - Autosave failures in the bill editor show an inline retry banner instead of an `alert()` + full page reload (#19)
-- Consistent hover/press feedback (darker fill on hover, `active:scale-95` on press) across all buttons app-wide (#19)
+- Consistent hover/press feedback (darker fill on hover, `active:scale-95` on press) across all buttons app-wide (#19); hover fills now fade instead of snapping (#15)
 
 ## [0.2.0] — 2026-07-17
 
