@@ -178,7 +178,7 @@ export default function PeerBill({
                       type="button"
                       disabled={locked || pending}
                       onClick={() => onTick(item.id, peer.id)}
-                      className={`min-h-10 rounded-full px-3 py-1.5 text-sm font-medium transition-[transform,background-color,color] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      className={`min-h-10 rounded-full px-3 py-1.5 text-sm font-medium transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                         ticked
                           ? "bg-primary text-white hover:bg-primary-deep"
                           : "bg-surface-tint text-ink hover:bg-border"
@@ -212,7 +212,7 @@ export default function PeerBill({
                 type="button"
                 disabled={pending}
                 onClick={() => onPaid(peer.id)}
-                className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold transition-[transform,background-color,color] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                   paid[peer.id]
                     ? "bg-success text-white hover:opacity-90"
                     : "border border-border text-ink-muted hover:bg-surface-tint"
@@ -274,10 +274,10 @@ export default function PeerBill({
                         disabled={locked || pending}
                         onClick={() => onTick(item.id, peer.id)}
                         aria-label={`${peer.name} — ${item.name || "ไม่มีชื่อเมนู"}`}
-                        className={`h-10 w-10 rounded-lg text-lg font-bold transition-[transform,background-color,color] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`h-10 w-10 rounded-lg border text-lg font-bold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                           ticked
-                            ? "bg-primary text-white hover:bg-primary-deep"
-                            : "bg-surface-tint text-transparent hover:bg-border"
+                            ? "border-transparent bg-primary text-white hover:bg-primary-deep"
+                            : "border-border bg-surface text-ink-muted/40 hover:border-primary hover:bg-surface-tint"
                         }`}
                       >
                         ✓
@@ -307,10 +307,10 @@ export default function PeerBill({
                   disabled={pending}
                   onClick={() => onPaid(peer.id)}
                   aria-label={`${peer.name} จ่ายแล้ว`}
-                  className={`h-10 w-10 rounded-lg text-lg font-bold transition-[transform,background-color,color] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                  className={`h-10 w-10 rounded-lg border text-lg font-bold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                     paid[peer.id]
-                      ? "bg-success text-white hover:opacity-90"
-                      : "bg-surface-tint text-transparent hover:bg-border"
+                      ? "border-transparent bg-success text-white hover:opacity-90"
+                      : "border-border bg-surface text-ink-muted/40 hover:border-primary hover:bg-surface-tint"
                   }`}
                 >
                   ✓
@@ -336,14 +336,14 @@ export default function PeerBill({
               locked ? "bg-ink text-white" : "bg-surface-tint text-primary-ink"
             }`}
           >
-            {locked ? "ล็อกแล้ว" : "เปิดอยู่"}
+            {locked ? "🔒 ล็อกแล้ว" : "✓ เปิดอยู่"}
           </span>
           {isOwner && (
             <button
               type="button"
               disabled={pending}
               onClick={onLockToggle}
-              className="min-h-10 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white transition-[transform,background-color,color] hover:bg-primary-deep active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-10 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-deep active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {locked ? "ปลดล็อกบิล" : "ล็อกบิล"}
             </button>
@@ -353,7 +353,7 @@ export default function PeerBill({
 
       {locked && (
         <p className="rounded-xl bg-surface-tint p-3 text-sm text-primary-ink">
-          บิลถูกล็อกแล้ว ยอดเป็นอันสุดท้าย — ติ๊กรายการไม่ได้ แต่ยังกด &quot;จ่ายแล้ว&quot; ได้
+          บิลถูกล็อกแล้ว ยอดเป็นอันสุดท้าย ติ๊กรายการไม่ได้ แต่ยังกด &quot;จ่ายแล้ว&quot; ได้
         </p>
       )}
 
