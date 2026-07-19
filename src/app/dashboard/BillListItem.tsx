@@ -29,7 +29,7 @@ function CardBody({ bill }: { bill: BillSummary }) {
           </span>
         ) : bill.status === "locked" ? (
           <span className="whitespace-nowrap rounded-full bg-ink-muted px-3 py-1 text-sm font-bold text-white">
-            🔒 ล็อกแล้ว
+            💰 พร้อมเก็บเงิน
           </span>
         ) : (
           <span className="whitespace-nowrap rounded-full bg-surface-tint px-3 py-1 text-sm font-medium text-primary-ink">
@@ -57,10 +57,10 @@ export default function BillListItem({
   onRequestDelete: (bill: BillSummary) => void;
 }) {
   return (
-    <li className="flex items-stretch gap-2">
+    <li className="flex min-h-14 items-center gap-1 rounded-xl border border-border bg-surface pr-2 transition hover:border-primary has-[a:active]:scale-[0.98]">
       <Link
         href={`/bills/${bill.id}`}
-        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition hover:border-primary hover:bg-surface-tint active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-primary-ink"
+        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-xl p-4 text-left transition hover:bg-surface-tint focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink"
       >
         <CardBody bill={bill} />
       </Link>
@@ -75,7 +75,7 @@ export default function BillListItem({
                 disabled
                 className={`${kebabItemCls} text-danger`}
               >
-                ลบไม่ได้ (บิลถูกล็อก)
+                ลบไม่ได้ (สรุปยอดแล้ว)
               </button>
             ) : (
               <button

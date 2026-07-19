@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { computeBill } from "@/lib/billing/compute";
 import { itemShareSatang, itemTotalSatang } from "@/lib/billing/itemShare";
 import { formatSatang } from "@/lib/billing/money";
@@ -336,24 +337,32 @@ export default function PeerBill({
               locked ? "bg-ink text-white" : "bg-surface-tint text-primary-ink"
             }`}
           >
-            {locked ? "🔒 ล็อกแล้ว" : "✓ เปิดอยู่"}
+            {locked ? "💰 พร้อมเก็บเงิน" : "✓ เปิดแล้ว"}
           </span>
           {isOwner && (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={onLockToggle}
-              className="min-h-10 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-deep active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {locked ? "ปลดล็อกบิล" : "ล็อกบิล"}
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/bills/${billId}`}
+                className="flex min-h-10 items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-primary-ink transition hover:border-primary hover:bg-surface-tint active:scale-95"
+              >
+                แก้ไขบิล
+              </Link>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={onLockToggle}
+                className="min-h-10 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-deep active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {locked ? "ปลดล็อกรายการ" : "ล็อกรายการ"}
+              </button>
+            </div>
           )}
         </div>
       </header>
 
       {locked && (
         <p className="rounded-xl bg-surface-tint p-3 text-sm text-primary-ink">
-          บิลถูกล็อกแล้ว ยอดเป็นอันสุดท้าย ติ๊กรายการไม่ได้ แต่ยังกด &quot;จ่ายแล้ว&quot; ได้
+          สรุปยอดแล้ว บิลพร้อมเก็บเงิน กด &quot;จ่ายแล้ว&quot; ได้เลย
         </p>
       )}
 

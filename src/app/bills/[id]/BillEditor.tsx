@@ -220,7 +220,7 @@ export default function BillEditor({
           </div>
           {bill.status === "locked" ? (
             <span className="whitespace-nowrap rounded-full bg-ink-muted px-3 py-1 text-sm font-bold text-white">
-              🔒 ล็อกแล้ว
+              💰 พร้อมเก็บเงิน
             </span>
           ) : bill.status === "open" ? (
             <span className="whitespace-nowrap rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
@@ -240,21 +240,26 @@ export default function BillEditor({
               เปิดบิล · Publish
             </button>
           ) : (
-            <>
+            /* Split-button: one visual unit, two verbs on the same object (the
+               bill link) — copy it, or open it (issue #15). */
+            <div className="flex items-stretch overflow-hidden rounded-xl bg-primary">
               <button
                 type="button"
                 onClick={onCopyLink}
-                className="flex min-h-11 items-center rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-deep active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
+                className="flex min-h-11 items-center px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
               >
                 {copied ? "คัดลอกลิงก์แล้ว ✓" : "คัดลอกลิงก์"}
               </button>
+              <span aria-hidden className="w-px bg-white/30" />
               <Link
                 href={`/b/${bill.id}`}
-                className="flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-primary-ink transition hover:border-primary hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
+                aria-label="ดูยอดต่อคน"
+                title="ดูยอดต่อคน"
+                className="flex items-center px-3 text-lg font-bold text-white transition hover:bg-primary-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
               >
-                ดูหน้าเพื่อน
+                ↗
               </Link>
-            </>
+            </div>
           )}
           {bill.status !== "locked" && (
             <KebabMenu label="ตัวเลือกบิล">
