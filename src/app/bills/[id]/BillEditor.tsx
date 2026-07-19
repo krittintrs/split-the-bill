@@ -403,7 +403,7 @@ export default function BillEditor({
             <span className="tabular-nums text-ink-muted">
               ระบบคำนวณได้ {formatSatang(result.checksumSatang)}
             </span>
-            <span className={`font-bold ${receipt.matches ? "text-success" : "text-danger"}`}>
+            <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
               {receipt.label}
             </span>
           </div>
@@ -562,11 +562,20 @@ function ItemRow({
   );
 }
 
+/** Display-only status: the not-yet-entered state is neutral, not an error. */
 export function receiptStatus(receiptTotalSatang: number, checksumSatang: number) {
-  if (receiptTotalSatang === 0) return { matches: false, label: "ยังไม่ได้กรอกยอดใบเสร็จ" };
-  if (receiptTotalSatang === checksumSatang) return { matches: true, label: "✓ ตรงกับใบเสร็จ" };
+  if (receiptTotalSatang === 0)
+    return { state: "empty" as const, label: "ยังไม่ได้กรอกยอดใบเสร็จ" };
+  if (receiptTotalSatang === checksumSatang)
+    return { state: "match" as const, label: "✓ ตรงกับใบเสร็จ" };
   return {
-    matches: false,
+    state: "mismatch" as const,
     label: `✗ ต่างจากใบเสร็จ ${formatSatang(Math.abs(checksumSatang - receiptTotalSatang))}`,
   };
+}
+
+export function receiptStatusCls(state: "empty" | "match" | "mismatch"): string {
+  if (state === "match") return "text-success";
+  if (state === "mismatch") return "text-danger";
+  return "text-ink-muted";
 }
