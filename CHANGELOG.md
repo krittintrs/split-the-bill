@@ -10,12 +10,15 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 - Hard bill delete (#19): organizer can delete a draft or open bill (confirm dialog, blocked once locked) from the dashboard or the editor
 - Route loading skeletons for dashboard, editor, and peer page (#15)
 - "บันทึกแล้ว ✓" autosave confirmation in the editor header (#15)
+- Owner-only "แก้ไขบิล" button on the peer page linking back to the editor (#15)
 - Editor → peer-view nav link next to the copy-link button (#19)
 
 ### Changed
 
 - Dashboard bill cards show a spinner and dim while navigating instead of feeling unresponsive (#19)
-- Dashboard row actions moved into a ⋯ menu; locked bills show a disabled delete entry and a 🔒 ล็อกแล้ว badge instead of masquerading as drafts (#15)
+- Dashboard row actions moved into a ⋯ menu inside the bill card; locked bills show a disabled delete entry instead of a silently missing one (#15)
+- Status copy speaks in lifecycle phases: locked bills badge as "💰 พร้อมเก็บเงิน" everywhere (was a draft-lookalike), lock buttons say ล็อกรายการ/ปลดล็อกรายการ, peer banner reads "สรุปยอดแล้ว บิลพร้อมเก็บเงิน กด จ่ายแล้ว ได้เลย" (#15)
+- Editor copy-link and open-peer-view merged into one primary split-button [คัดลอกลิงก์ | ↗] (#15)
 - Peer page tick and paid cells get a visible idle affordance (bordered square with faint ✓) instead of blank squares (#15)
 - Editor header: copy-link promoted to the primary button, delete tucked into the ⋯ menu, status pill moved to the top row (#15)
 - Receipt check: "Checksum" label replaced with Thai "ยอดรวม", not-yet-entered state shown neutral instead of red, duplicate status line removed (#15)
