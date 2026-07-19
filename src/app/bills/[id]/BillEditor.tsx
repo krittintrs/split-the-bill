@@ -4,6 +4,7 @@ import { useMemo, useState, type FocusEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import KebabMenu, { kebabItemCls } from "@/components/KebabMenu";
 import { computeBill } from "@/lib/billing/compute";
 import { formatSatang } from "@/lib/billing/money";
 import { mapToBillInput } from "@/lib/bills/mapper";
@@ -76,6 +77,7 @@ export default function BillEditor({
   const [ticks, setTicks] = useState(initialTicks);
   const [copied, setCopied] = useState(false);
   const [saveError, setSaveError] = useState<SaveError | null>(null);
+  const [saved, setSaved] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -93,12 +95,14 @@ export default function BillEditor({
    */
   function runMutation(action: () => Promise<void>) {
     setSaveError(null);
-    action().catch((error: unknown) => {
-      setSaveError({
-        message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
-        retry: () => runMutation(action),
+    action()
+      .then(() => setSaved(true))
+      .catch((error: unknown) => {
+        setSaveError({
+          message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
+          retry: () => runMutation(action),
+        });
       });
-    });
   }
 
   function saveBill(patch: Partial<BillRow>) {
@@ -112,6 +116,7 @@ export default function BillEditor({
     try {
       const row = await addLineItem(bill.id, position);
       setItems((prev) => [...prev, row]);
+      setSaved(true);
     } catch (error) {
       setSaveError({
         message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
@@ -138,6 +143,7 @@ export default function BillEditor({
     try {
       const peer = await addPeerToBill(bill.id, name);
       setPeers((prev) => (prev.some((p) => p.id === peer.id) ? prev : [...prev, peer]));
+      setSaved(true);
     } catch (error) {
       setSaveError({
         message: error instanceof Error ? error.message : "บันทึกไม่สำเร็จ",
@@ -197,52 +203,80 @@ export default function BillEditor({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 pb-44 lg:pb-8">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <Link
-          href="/dashboard"
-          className="text-sm text-primary-ink underline transition-transform hover:text-primary-deep active:scale-95"
-        >
-          ← บิลทั้งหมด
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
+      <header className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="text-sm text-primary-ink underline transition hover:text-primary-deep active:scale-95"
+            >
+              ← บิลทั้งหมด
+            </Link>
+            {saved && !saveError && (
+              <span aria-live="polite" className="text-xs text-ink-muted">
+                บันทึกแล้ว ✓
+              </span>
+            )}
+          </div>
+          {bill.status === "locked" ? (
+            <span className="whitespace-nowrap rounded-full bg-ink-muted px-3 py-1 text-sm font-bold text-white">
+              💰 พร้อมเก็บเงิน
+            </span>
+          ) : bill.status === "open" ? (
+            <span className="whitespace-nowrap rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
+              ✓ เปิดแล้ว
+            </span>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {bill.status === "draft" ? (
             <button
               type="button"
               onClick={onPublish}
               disabled={items.length === 0}
-              className="rounded-xl bg-primary px-6 py-3 font-bold text-white transition-transform hover:bg-primary-deep active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
+              className="rounded-xl bg-primary px-6 py-3 font-bold text-white transition hover:bg-primary-deep active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink"
               title={items.length === 0 ? "เพิ่มรายการอาหารก่อนเปิดบิล" : undefined}
             >
               เปิดบิล · Publish
             </button>
           ) : (
-            <>
-              <span className="rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
-                เปิดแล้ว
-              </span>
+            /* Split-button: one visual unit, two verbs on the same object (the
+               bill link) — copy it, or open it (issue #15). */
+            <div className="flex items-stretch overflow-hidden rounded-xl bg-primary">
               <button
                 type="button"
                 onClick={onCopyLink}
-                className="flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-primary-ink transition-transform hover:border-primary hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
+                className="flex min-h-11 items-center px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
               >
                 {copied ? "คัดลอกลิงก์แล้ว ✓" : "คัดลอกลิงก์"}
               </button>
+              <span aria-hidden className="w-px bg-white/30" />
               <Link
                 href={`/b/${bill.id}`}
-                className="flex min-h-11 items-center rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-primary-ink transition-transform hover:border-primary hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
+                aria-label="ดูยอดต่อคน"
+                title="ดูยอดต่อคน"
+                className="flex items-center px-3 text-lg font-bold text-white transition hover:bg-primary-deep focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
               >
-                ดูหน้าเพื่อน
+                ↗
               </Link>
-            </>
+            </div>
           )}
           {bill.status !== "locked" && (
-            <button
-              type="button"
-              onClick={() => setConfirmDeleteOpen(true)}
-              className="flex min-h-11 items-center rounded-xl border border-danger px-4 py-2 text-sm font-medium text-danger transition-transform hover:bg-danger/10 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
-            >
-              ลบบิล
-            </button>
+            <KebabMenu label="ตัวเลือกบิล">
+              {(close) => (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    close();
+                    setConfirmDeleteOpen(true);
+                  }}
+                  className={`${kebabItemCls} text-danger`}
+                >
+                  ลบบิล
+                </button>
+              )}
+            </KebabMenu>
           )}
         </div>
       </header>
@@ -259,7 +293,7 @@ export default function BillEditor({
               const retry = saveError.retry;
               retry();
             }}
-            className="rounded-lg bg-danger px-3 py-1.5 text-xs font-bold text-white transition-transform hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
+            className="rounded-lg bg-danger px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
           >
             ลองอีกครั้ง
           </button>
@@ -319,7 +353,7 @@ export default function BillEditor({
         <button
           type="button"
           onClick={onAddItem}
-          className="mt-1 self-start rounded-lg border border-border bg-surface-tint px-4 py-2.5 text-sm font-medium text-primary-ink transition-transform hover:border-primary hover:bg-border active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
+          className="mt-1 self-start rounded-lg border border-border bg-surface-tint px-4 py-2.5 text-sm font-medium text-primary-ink transition hover:border-primary hover:bg-border active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink"
         >
           + เพิ่มเมนู
         </button>
@@ -388,7 +422,7 @@ export default function BillEditor({
             <span className="tabular-nums text-ink-muted">
               ระบบคำนวณได้ {formatSatang(result.checksumSatang)}
             </span>
-            <span className={`font-bold ${receipt.matches ? "text-success" : "text-danger"}`}>
+            <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
               {receipt.label}
             </span>
           </div>
@@ -539,7 +573,7 @@ function ItemRow({
         type="button"
         onClick={() => onRemove(item.id)}
         aria-label={`ลบ ${item.name || "รายการ"}`}
-        className="flex h-11 w-11 items-center justify-center rounded-lg text-danger transition-transform hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
+        className="flex h-11 w-11 items-center justify-center rounded-lg text-danger transition hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
       >
         ✕
       </button>
@@ -547,11 +581,20 @@ function ItemRow({
   );
 }
 
+/** Display-only status: the not-yet-entered state is neutral, not an error. */
 export function receiptStatus(receiptTotalSatang: number, checksumSatang: number) {
-  if (receiptTotalSatang === 0) return { matches: false, label: "ยังไม่ได้กรอกยอดใบเสร็จ" };
-  if (receiptTotalSatang === checksumSatang) return { matches: true, label: "✓ ตรงกับใบเสร็จ" };
+  if (receiptTotalSatang === 0)
+    return { state: "empty" as const, label: "ยังไม่ได้กรอกยอดใบเสร็จ" };
+  if (receiptTotalSatang === checksumSatang)
+    return { state: "match" as const, label: "✓ ตรงกับใบเสร็จ" };
   return {
-    matches: false,
+    state: "mismatch" as const,
     label: `✗ ต่างจากใบเสร็จ ${formatSatang(Math.abs(checksumSatang - receiptTotalSatang))}`,
   };
+}
+
+export function receiptStatusCls(state: "empty" | "match" | "mismatch"): string {
+  if (state === "match") return "text-success";
+  if (state === "mismatch") return "text-danger";
+  return "text-ink-muted";
 }

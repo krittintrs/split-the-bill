@@ -3,7 +3,7 @@
 import { formatSatang } from "@/lib/billing/money";
 import type { BillResult } from "@/lib/billing/types";
 import type { LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
-import { receiptStatus } from "./BillEditor";
+import { receiptStatus, receiptStatusCls } from "./BillEditor";
 
 interface Props {
   items: LineItemRow[];
@@ -82,7 +82,7 @@ export default function MatrixView({
                           onClick={() => onToggle(item.id, peer.id)}
                           aria-label={`${peer.name} ${ticked ? "ยกเลิก" : "ติ๊ก"} ${item.name}`}
                           aria-pressed={ticked}
-                          className={`h-11 w-12 rounded-lg font-bold transition-transform active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink ${
+                          className={`h-11 w-12 rounded-lg font-bold transition active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink ${
                             ticked
                               ? "bg-primary text-white hover:bg-primary-deep"
                               : "bg-surface-tint text-ink-muted/50 hover:bg-border"
@@ -114,12 +114,7 @@ export default function MatrixView({
       </div>
 
       <div className="flex flex-wrap items-center gap-4 border-t border-border pt-3 text-sm">
-        <span className="font-semibold tabular-nums">
-          Checksum {formatSatang(result.checksumSatang)}
-        </span>
-        <span
-          className={`font-bold ${receipt.matches ? "text-success" : "text-danger"}`}
-        >
+        <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
           {receipt.label}
         </span>
         {result.surplusSatang !== 0 && result.untickedItemIds.length === 0 && (

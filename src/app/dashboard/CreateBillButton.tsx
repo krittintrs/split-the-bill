@@ -10,7 +10,7 @@ export default function CreateBillButton() {
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className="w-full rounded-xl bg-primary px-6 py-3 font-bold text-white transition-transform hover:bg-primary-deep active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+      className="w-full rounded-xl bg-primary px-6 py-3 font-bold text-white transition hover:bg-primary-deep active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-ink disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
     >
       {pending ? "กำลังสร้าง…" : "+ สร้างบิลใหม่"}
     </button>

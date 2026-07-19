@@ -40,7 +40,8 @@ The rule that a Line Item's cost divides equally among all Peers who ticked it.
 
 **Draft / Open / Locked**:
 Bill statuses. Draft: organizer still entering, link inactive. Open: peers tick and pay. Locked: organizer froze item Ticks; totals final, Paid Flags stay toggleable. "Everyone paid" is derived (all Paid Flags on), never a status.
-_Avoid_: published, finalized, archived, settled
+UI speaks in lifecycle phases, not mechanisms (decided with #15): Draft = "ฉบับร่าง", Open = "✓ เปิดแล้ว", Locked = "💰 พร้อมเก็บเงิน" (the payback phase locking puts you in). The lock/unlock *buttons* name the mechanism precisely: "ล็อกรายการ" / "ปลดล็อกรายการ" (item Ticks freeze, Paid Flags stay live).
+_Avoid_: published, finalized, archived, settled, ปิดยอด (sounds like everyone already paid)
 
 ### Money
 

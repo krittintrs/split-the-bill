@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link, { useLinkStatus } from "next/link";
-import ConfirmDialog from "@/components/ConfirmDialog";
+import KebabMenu, { kebabItemCls } from "@/components/KebabMenu";
 import Spinner from "@/components/Spinner";
-import { deleteBill } from "@/lib/bills/mutations";
 import type { BillRow } from "@/lib/bills/types";
 
 const dateFormat = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium" });
@@ -16,19 +14,25 @@ function CardBody({ bill }: { bill: BillSummary }) {
   const { pending } = useLinkStatus();
   return (
     <span
-      className={`flex flex-1 items-center justify-between gap-3 ${pending ? "opacity-50" : ""}`}
+      className={`flex min-w-0 flex-1 items-center justify-between gap-3 ${pending ? "opacity-50" : ""}`}
     >
-      <span className="font-medium">{bill.restaurant || "ยังไม่มีชื่อร้าน"}</span>
+      <span className="min-w-0 truncate font-medium">
+        {bill.restaurant || "ยังไม่มีชื่อร้าน"}
+      </span>
       <span className="flex items-center gap-3 text-sm">
-        <span className="text-ink-muted">
+        <span className="whitespace-nowrap text-ink-muted">
           {dateFormat.format(new Date(bill.eaten_at))}
         </span>
         {bill.status === "open" ? (
-          <span className="rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
-            เปิดแล้ว
+          <span className="whitespace-nowrap rounded-full bg-success px-3 py-1 text-sm font-bold text-white">
+            ✓ เปิดแล้ว
+          </span>
+        ) : bill.status === "locked" ? (
+          <span className="whitespace-nowrap rounded-full bg-ink-muted px-3 py-1 text-sm font-bold text-white">
+            💰 พร้อมเก็บเงิน
           </span>
         ) : (
-          <span className="rounded-full bg-surface-tint px-3 py-1 text-sm font-medium text-primary-ink">
+          <span className="whitespace-nowrap rounded-full bg-surface-tint px-3 py-1 text-sm font-medium text-primary-ink">
             ฉบับร่าง
           </span>
         )}
@@ -41,72 +45,54 @@ function CardBody({ bill }: { bill: BillSummary }) {
 /**
  * One dashboard bill row. A real <Link> (preserves cmd/ctrl/middle-click and
  * right-click), with useLinkStatus driving a dim + spinner while the route
- * change is pending (issue #19). Offers a hard-delete gated on status
- * (locked bills never show it).
+ * change is pending (issue #19). Row actions live in a ⋯ menu so every row
+ * keeps the same width; a locked bill shows a disabled delete entry instead
+ * of a silently missing one (issue #15). The confirm dialog lives in BillList.
  */
 export default function BillListItem({
   bill,
-  onDeleted,
+  onRequestDelete,
 }: {
   bill: BillSummary;
-  onDeleted: (id: string) => void;
+  onRequestDelete: (bill: BillSummary) => void;
 }) {
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function onConfirmDelete() {
-    if (deleting) return;
-    setDeleting(true);
-    try {
-      await deleteBill(bill.id);
-      onDeleted(bill.id);
-    } catch (err) {
-      setDeleting(false);
-      setConfirmOpen(false);
-      setError(err instanceof Error ? err.message : "ลบไม่สำเร็จ");
-    }
-  }
-
   return (
-    <li className="flex flex-col gap-1">
-      <div className="flex items-stretch gap-2">
-        <Link
-          href={`/bills/${bill.id}`}
-          className="flex min-h-14 flex-1 items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-transform hover:border-primary hover:bg-surface-tint active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-primary-ink"
-        >
-          <CardBody bill={bill} />
-        </Link>
+    <li className="flex min-h-14 items-center gap-1 rounded-xl border border-border bg-surface pr-2 transition hover:border-primary has-[a:active]:scale-[0.98]">
+      <Link
+        href={`/bills/${bill.id}`}
+        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-xl p-4 text-left transition hover:bg-surface-tint focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink"
+      >
+        <CardBody bill={bill} />
+      </Link>
 
-        {bill.status !== "locked" && (
-          <button
-            type="button"
-            onClick={() => setConfirmOpen(true)}
-            aria-label={`ลบบิล ${bill.restaurant || "ยังไม่มีชื่อร้าน"}`}
-            className="flex min-h-14 w-11 items-center justify-center rounded-xl border border-border text-danger transition-transform hover:bg-danger/10 active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
-          >
-            ✕
-          </button>
-        )}
+      <div className="flex items-center">
+        <KebabMenu label={`ตัวเลือกบิล ${bill.restaurant || "ยังไม่มีชื่อร้าน"}`}>
+          {(close) =>
+            bill.status === "locked" ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled
+                className={`${kebabItemCls} text-danger`}
+              >
+                ลบไม่ได้ (สรุปยอดแล้ว)
+              </button>
+            ) : (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  close();
+                  onRequestDelete(bill);
+                }}
+                className={`${kebabItemCls} text-danger`}
+              >
+                ลบบิล
+              </button>
+            )
+          }
+        </KebabMenu>
       </div>
-
-      {error && <p className="px-1 text-xs text-danger">{error}</p>}
-
-      <ConfirmDialog
-        open={confirmOpen}
-        title="ลบบิลนี้?"
-        message={
-          bill.status === "open"
-            ? "บิลนี้แชร์ไปแล้ว เพื่อนอาจติ๊กหรือจ่ายเงินไปแล้ว การลบจะทำให้ข้อมูลทั้งหมดหายถาวร"
-            : "บิลนี้จะถูกลบถาวร"
-        }
-        confirmLabel={deleting ? "กำลังลบ…" : "ลบถาวร"}
-        cancelLabel="ยกเลิก"
-        danger
-        busy={deleting}
-        onCancel={() => setConfirmOpen(false)}
-        onConfirm={onConfirmDelete}
-      />
     </li>
   );
 }
