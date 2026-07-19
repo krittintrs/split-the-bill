@@ -5,6 +5,10 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-07-19
+
+Polish pass: the app stops feeling like an engineer built it. Critique-driven fixes (#15) on top of the mobile-agent UX round (#19).
+
 ### Added
 
 - Hard bill delete (#19): organizer can delete a draft or open bill (confirm dialog, blocked once locked) from the dashboard or the editor

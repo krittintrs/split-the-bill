@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 5 — #9 merged (PR #18) as v0.2.0: peers self-tick + mark paid + live sync on `/b/[id]`, organizer lock → next #15 UI revamp (main session + user, impeccable flow); #19 (items #1-3: loading feedback, editor→peer nav, hard delete) implemented on `claude/issue-19-recap-w69f9g`, pending review
+**Phase:** 6 — #19 (PR #22) + #15 (PR #23) shipped as v0.2.1: UX fixes + impeccable polish pass (critique 28/40, all 11 findings fixed, phase-language copy, kebab menus, split share button) → next: grill #21 (create-flow slowness), then #10 payback
 
 ## Frame (decided 2026-07-14)
 
@@ -28,7 +28,7 @@ READY 🟢
 | High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | DONE ✅ |
 | High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | DONE ✅ |
 | High | #9 | Peer link experience: ticking, realtime, lock, basic paid flag | #8 | dev agent | DONE ✅ |
-| Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | READY |
+| Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | DONE ✅ |
 | High | #10 | Payback: payment info, copy paths, QR image, paid attribution | #9 | dev agent | READY |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
 | Med | #12 | Account Claim + My Debts | #10 | dev agent | READY |
@@ -52,3 +52,4 @@ READY 🟢
 | 2026-07-16 | Keep vivid fills at 3.1:1 white-on-primary — documented AA deviation (DESIGN.md Known deviations) | Reviewer measured the failure; AA-passing darker ramp compared on screen and rejected as losing the light & playful identity; rest of the palette stays AA | User |
 | 2026-07-16 | #8 shipped (PR #14) = v0.1.0: calculate + share; paid tracking stays in #10 | Editor reordered to receipt-entry flow after smoke test; `payment_method` column + rebuilt `get_bill` migration applied | User + main session |
 | 2026-07-17 | #9: locked = ticks frozen only, paid stays live; realtime = broadcast ping + refetch (ADR-0007) | postgres_changes dead for anon under ADR-0006; lock/pay ordering | User + main session |
+| 2026-07-19 | #15: UI speaks lifecycle phases, not mechanisms — locked shows as "💰 พร้อมเก็บเงิน", lock buttons name the mechanism (ล็อกรายการ) | "Locked"/ปิดยอด confuse (freeze vs settled); phase language scales to #10 QR and a derived "ครบแล้ว" state; glossary in CONTEXT.md | User + main session |
