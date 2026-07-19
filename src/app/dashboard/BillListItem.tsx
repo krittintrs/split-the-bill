@@ -14,7 +14,7 @@ function CardBody({ bill }: { bill: BillSummary }) {
   const { pending } = useLinkStatus();
   return (
     <span
-      className={`flex flex-1 items-center justify-between gap-3 ${pending ? "opacity-50" : ""}`}
+      className={`flex min-w-0 flex-1 items-center justify-between gap-3 ${pending ? "opacity-50" : ""}`}
     >
       <span className="min-w-0 truncate font-medium">
         {bill.restaurant || "ยังไม่มีชื่อร้าน"}
@@ -60,7 +60,7 @@ export default function BillListItem({
     <li className="flex items-stretch gap-2">
       <Link
         href={`/bills/${bill.id}`}
-        className="flex min-h-14 flex-1 items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition hover:border-primary hover:bg-surface-tint active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-primary-ink"
+        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left transition hover:border-primary hover:bg-surface-tint active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-primary-ink"
       >
         <CardBody bill={bill} />
       </Link>
