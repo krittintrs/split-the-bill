@@ -4,6 +4,7 @@
 !.yarn/versions
 .DS_Store
 .env*
+.playwright-mcp/
 .pnp.*
 .pnpm-debug.log*
 .vercel
