@@ -84,6 +84,21 @@ describe("round-tripping between the two entry directions", () => {
     }
   });
 
+  it("compounds the round-up if a settled total is re-settled at a new qty", () => {
+    // Why the editor holds the figure the organizer TYPED rather than re-reading
+    // the box: the box shows the settled total, and settling that again at a
+    // different qty stacks a second round-up on top of the first.
+    const typed = 10000; // receipt line reads ฿100.00
+    const unitAtThree = unitPriceFromTotalSatang(typed, 3); // ฿33.34
+    const settledAtThree = totalFromUnitPriceSatang(unitAtThree, 3); // ฿100.02
+
+    // Re-settling the settled figure at qty 4 drifts ฿0.04 above the receipt.
+    expect(unitPriceFromTotalSatang(settledAtThree, 4)).toBe(2501);
+    // Re-settling what was typed lands exactly on it.
+    expect(unitPriceFromTotalSatang(typed, 4)).toBe(2500);
+    expect(totalFromUnitPriceSatang(2500, 4)).toBe(typed);
+  });
+
   it("never settles below what the user typed", () => {
     // Rounding up is what keeps the organizer whole; assert the direction.
     for (const qty of qtys) {
