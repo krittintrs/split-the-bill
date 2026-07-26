@@ -10,8 +10,10 @@ export interface GetBillJson {
     serviceChargePercent: number;
     vatPercent: number;
     receiptTotalSatang: number;
-    paymentInfo: string;
-    paymentMethod: string;
+    promptpayId: string;
+    bankName: string;
+    bankAccount: string;
+    accountName: string;
   };
   items: {
     id: string;

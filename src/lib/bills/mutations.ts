@@ -16,7 +16,10 @@ type BillPatch = Partial<
     | "service_charge_percent"
     | "vat_percent"
     | "receipt_total_satang"
-    | "payment_info"
+    | "promptpay_id"
+    | "bank_name"
+    | "bank_account"
+    | "account_name"
   >
 >;
 
