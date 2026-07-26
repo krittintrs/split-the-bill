@@ -344,12 +344,35 @@ export default function PeerBill({
       <table className="w-full min-w-[560px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-border">
-            <th className="sticky left-0 bg-surface p-3 text-left font-semibold">รายการ</th>
-            {bill.peers.map((peer) => (
-              <th key={peer.id} className="p-2 text-center font-semibold">
-                {peer.name}
-              </th>
-            ))}
+            <th className="sticky left-0 bg-surface p-3 text-left font-semibold">
+              รายการ
+              <span className="block text-xs font-normal text-ink-muted">
+                แตะชื่อคุณเพื่อรับ QR
+              </span>
+            </th>
+            {bill.peers.map((peer) => {
+              const isClaimed = claimedId === peer.id;
+              return (
+                <th key={peer.id} className="p-2 text-center font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => claim(peer.id)}
+                    className={`inline-flex min-h-9 items-center gap-1 rounded-lg px-2 py-1 transition active:scale-95 ${
+                      isClaimed
+                        ? "bg-primary text-white"
+                        : "text-ink-muted hover:bg-surface-tint hover:text-ink"
+                    }`}
+                  >
+                    {peer.name}
+                    {isClaimed && (
+                      <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-semibold">
+                        คุณ
+                      </span>
+                    )}
+                  </button>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
