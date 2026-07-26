@@ -5,12 +5,17 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-26
+
+Payback: peers get a PromptPay QR with their exact amount and one-tap copy paths; the organizer stores payment info once on a new profile page. Plus organizer navigation.
+
 ### Added
 
-- Payback (#10): each peer taps their own name in the "ทุกคน" list (a device-local claim, no login) to reveal a payback panel pinned at the top — a PromptPay QR generated with their exact amount, plus copy-amount, copy-number, and a paid toggle
+- Payback (#10): each peer taps their own name (a device-local claim, no login) to reveal a payback panel pinned at the top — a PromptPay QR generated with their exact amount, plus copy-amount, copy-number, and a paid toggle. Works on mobile (the "ทุกคน" list) and desktop (clickable matrix column headers)
 - Profile page (`/profile`): organizer stores typed payment info (account name, PromptPay ID, bank name + account) once, with a static QR preview to scan-check their own ID
 - PromptPay QR generated entirely client-side from an in-house EMVCo payload builder (`src/lib/billing/promptpay.ts`, golden-vector tested) — no upload, no bank API (ADR-0008/0009)
 - Bill editor "ใช้ข้อมูลจากโปรไฟล์" toggle snapshots profile payment info onto a bill, with a per-bill override
+- Organizer top-bar navigation: wordmark returns to the bill list, an account menu holds Profile and Sign out; mounted on organizer pages only (peer link pages stay login-free)
 
 ### Changed
 

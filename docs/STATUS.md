@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 6 — #19 (PR #22) + #15 (PR #23) shipped as v0.2.1: UX fixes + impeccable polish pass (critique 28/40, all 11 findings fixed, phase-language copy, kebab menus, split share button). #10 payback grilled + planned (ADR-0008/0009, `docs/plans/PLAN-v0.3-payback.md`) → next: execute #10, then grill #21 (create-flow slowness)
+**Phase:** 7 — #10 payback shipped as v0.3.0 (PR #29): typed payment model + carry-over migration (applied), in-house EMVCo PromptPay QR (ADR-0008/0009), `/profile` editor, follow-profile snapshot, peer tap-to-claim payback panel (design C+, works mobile + desktop matrix), and an organizer top-bar nav (Bills/Profile/Sign out). → next: grill #21 (create-flow slowness), then { #11 dashboard, #12 my debts }
 
 ## Frame (decided 2026-07-14)
 
@@ -29,7 +29,7 @@ READY 🟢
 | High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | DONE ✅ |
 | High | #9 | Peer link experience: ticking, realtime, lock, basic paid flag | #8 | dev agent | DONE ✅ |
 | Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | DONE ✅ |
-| High | #10 | Payback: payment info, copy paths, QR image, paid attribution | #9 | dev agent | READY |
+| High | #10 | Payback: payment info, copy paths, QR image, tap-to-claim | #9 | main session + user | DONE ✅ |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
 | Med | #12 | Account Claim + My Debts | #10 | dev agent | READY |
 
