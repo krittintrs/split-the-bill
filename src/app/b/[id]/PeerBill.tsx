@@ -106,11 +106,20 @@ export default function PeerBill({
   // #26: never render from bill.peers directly. get_bill orders peers, but a
   // realtime refetch must not be able to reshuffle columns under someone mid-tap,
   // so we re-sort on the same (addedAt, id) key the server used.
+  //
+  // Plain < / > rather than localeCompare: these are ISO timestamps and UUIDs,
+  // and ICU collation orders "." before "+", so localeCompare ranks
+  // "…:25+00:00" after "…:25.5+00:00" and disagrees across browser locales.
+  // Byte order matches Postgres. Missing addedAt (payload predating the
+  // ordering migration) degrades to the id tiebreak instead of throwing.
   const peersSorted = useMemo(
     () =>
-      [...bill.peers].sort(
-        (a, b) => a.addedAt.localeCompare(b.addedAt) || a.id.localeCompare(b.id),
-      ),
+      [...bill.peers].sort((a, b) => {
+        const aAdded = a.addedAt ?? "";
+        const bAdded = b.addedAt ?? "";
+        if (aAdded !== bAdded) return aAdded < bAdded ? -1 : 1;
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      }),
     [bill.peers],
   );
 

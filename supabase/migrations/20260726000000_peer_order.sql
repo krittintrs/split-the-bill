@@ -3,10 +3,12 @@
 -- The peers aggregate below had no ORDER BY, and jsonb_agg has no defined order
 -- without one, so every refetch could hand back a different peer order. Items
 -- were already ordered by position; the organizer's own page has always ordered
--- peers by bill_peers.added_at. This makes the anon door agree with both.
+-- peers by bill_peers.added_at. This gives the anon door that same key.
 --
--- added_at alone is not a total order (two peers added in the same statement
--- share a timestamp), so p.id breaks ties and pins the order completely.
+-- added_at alone is not a total order in principle, so p.id breaks ties. In
+-- practice addPeerToBill upserts one row per call and each peer gets its own
+-- now(), so the tiebreak is belt-and-braces rather than load-bearing (the
+-- organizer's page orders on added_at alone and is fine).
 -- addedAt ships in the payload so the client can re-sort on the same key,
 -- mirroring how items are ordered server-side and re-sorted client-side.
 create or replace function get_bill(p_bill_id uuid)
