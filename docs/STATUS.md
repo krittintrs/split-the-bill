@@ -1,6 +1,8 @@
 # Split the Bill — Status
 
-**Phase:** 7 — #10 payback shipped as v0.3.0 (PR #29): typed payment model + carry-over migration (applied), in-house EMVCo PromptPay QR (ADR-0008/0009), `/profile` editor, follow-profile snapshot, peer tap-to-claim payback panel (design C+, works mobile + desktop matrix), and an organizer top-bar nav (Bills/Profile/Sign out). → next: grill #21 (create-flow slowness), then { #11 dashboard, #12 my debts }
+**Phase:** 7 — #10 payback shipped as v0.3.0 (PR #29): typed payment model + carry-over migration (applied), in-house EMVCo PromptPay QR (ADR-0008/0009), `/profile` editor, follow-profile snapshot, peer tap-to-claim payback panel (design C+, works mobile + desktop matrix), and an organizer top-bar nav (Bills/Profile/Sign out). → next: #26 (peer order bug, ready-for-agent), then grill #21 (create-flow slowness) and #24 (owner self-select, needs a rollup semantics call), then { #11 dashboard, #12 my debts }
+
+**Triaged 2026-07-26** (not yet scheduled into the pipeline below): #20 calculation visibility, #24 owner can't self-select, #25 total-amount line item input, #26 peer order instability. See issues for agent briefs / open questions. #27 (Microsoft sign-in) triaged as needs-triage, pending a go/no-go against the Google-only decision above.
 
 ## Frame (decided 2026-07-14)
 
@@ -32,6 +34,11 @@ READY 🟢
 | High | #10 | Payback: payment info, copy paths, QR image, tap-to-claim | #9 | main session + user | DONE ✅ |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
 | Med | #12 | Account Claim + My Debts | #10 | dev agent | READY |
+| High | #26 | Bug: peer view order reshuffles (no stable ORDER BY on peers) | — | dev agent | READY (ready-for-agent) |
+| High | #24 | Bug: bill owner can't self-select items they ate | — | needs a rollup semantics call first | NEEDS-TRIAGE |
+| Med | #21 | Rework bill creation flow to avoid perceived slowness | — | needs grilling | NEEDS-TRIAGE |
+| Med | #25 | Enhancement: total-amount input mode for line items (supersedes duplicate #28) | — | dev agent | READY (ready-for-agent) |
+| Med | #20 | Enhancement: per-peer calculation breakdown (subtotal/discount/service/VAT) | — | dev agent | READY (ready-for-agent) |
 
 ## Decision Log
 
