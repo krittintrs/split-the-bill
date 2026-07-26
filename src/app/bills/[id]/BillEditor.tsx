@@ -88,11 +88,20 @@ export default function BillEditor({
   const [saved, setSaved] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // "Follow profile" starts on when the bill's payment matches the profile
-  // (a fresh bill is snapshotted at creation); an existing per-bill override
-  // reads as off so its custom values stay editable.
+  // "Follow profile" only makes sense once the profile has something to follow.
+  // An empty profile disables the toggle entirely — otherwise ticking it would
+  // silently wipe the bill's payment info (and every peer's QR) with blanks.
+  const profileEmpty =
+    !profile.promptpay_id &&
+    !profile.bank_name &&
+    !profile.bank_account &&
+    !profile.account_name;
+  // Starts on when the bill's payment matches a non-empty profile (a fresh bill
+  // is snapshotted at creation); a per-bill override reads as off so its custom
+  // values stay editable.
   const [followProfile, setFollowProfile] = useState(
-    initialBill.promptpay_id === profile.promptpay_id &&
+    !profileEmpty &&
+      initialBill.promptpay_id === profile.promptpay_id &&
       initialBill.bank_name === profile.bank_name &&
       initialBill.bank_account === profile.bank_account &&
       initialBill.account_name === profile.account_name,
@@ -490,15 +499,24 @@ export default function BillEditor({
       <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold">ช่องทางรับเงิน</h2>
-          <label className="flex items-center gap-2 text-sm text-ink-muted">
-            <input
-              type="checkbox"
-              checked={followProfile}
-              onChange={(e) => toggleFollowProfile(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            ใช้ข้อมูลจากโปรไฟล์
-          </label>
+          {profileEmpty ? (
+            <Link
+              href="/profile"
+              className="text-sm text-primary-ink underline transition hover:text-primary-deep"
+            >
+              ตั้งค่าโปรไฟล์เพื่อใช้ซ้ำ
+            </Link>
+          ) : (
+            <label className="flex items-center gap-2 text-sm text-ink-muted">
+              <input
+                type="checkbox"
+                checked={followProfile}
+                onChange={(e) => toggleFollowProfile(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              ใช้ข้อมูลจากโปรไฟล์
+            </label>
+          )}
         </div>
 
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -525,8 +543,9 @@ export default function BillEditor({
             inputMode="numeric"
             placeholder="เช่น 0812345678"
             onBlur={(e) => {
-              if (e.target.value !== bill.promptpay_id)
-                saveBill({ promptpay_id: e.target.value });
+              // Store digits only so a formatted number still drives a QR.
+              const digits = e.target.value.replace(/\D/g, "");
+              if (digits !== bill.promptpay_id) saveBill({ promptpay_id: digits });
             }}
             className={`${inputCls} disabled:opacity-60`}
           />

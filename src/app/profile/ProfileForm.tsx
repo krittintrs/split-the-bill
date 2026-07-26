@@ -19,6 +19,7 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
     bank_account: profile.bank_account,
   });
   const [saved, setSaved] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [previewQr, setPreviewQr] = useState("");
   // What's currently persisted, so blur only writes real changes.
   const [stored, setStored] = useState({
@@ -28,13 +29,22 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
     bank_account: profile.bank_account,
   });
 
-  // Persist a field on blur only when it changed from what's stored.
+  // Persist a field on blur only when it changed from what's stored. `stored`
+  // advances only on success so a failed save stays retryable on the next blur.
   async function commit(field: Field, value: string) {
-    if (value === stored[field]) return;
-    setStored((s) => ({ ...s, [field]: value }));
-    await saveProfile({ [field]: value });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+    // Store promptpay as digits only so a formatted number still drives a QR.
+    const next = field === "promptpay_id" ? value.replace(/\D/g, "") : value;
+    if (next === stored[field]) return;
+    try {
+      await saveProfile({ [field]: next });
+      setStored((s) => ({ ...s, [field]: next }));
+      if (next !== value) setValues((v) => ({ ...v, [field]: next })); // show normalized
+      setSaveFailed(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch {
+      setSaveFailed(true);
+    }
   }
 
   useEffect(() => {
@@ -131,12 +141,18 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
 
       <div className="flex items-center gap-2 text-xs text-ink-muted">
         <span>กรอกอย่างน้อยหนึ่งช่องทาง</span>
-        <span
-          className={`text-success transition-opacity ${saved ? "opacity-100" : "opacity-0"}`}
-          aria-live="polite"
-        >
-          ✓ บันทึกแล้ว
-        </span>
+        {saveFailed ? (
+          <span className="font-medium text-danger" aria-live="polite">
+            ⚠ บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง
+          </span>
+        ) : (
+          <span
+            className={`text-success transition-opacity ${saved ? "opacity-100" : "opacity-0"}`}
+            aria-live="polite"
+          >
+            ✓ บันทึกแล้ว
+          </span>
+        )}
       </div>
     </div>
   );

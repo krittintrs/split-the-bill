@@ -272,6 +272,7 @@ export default function PeerBill({
       <ul className="flex flex-col divide-y divide-border">
         {bill.peers.map((peer) => {
           const isClaimed = claimedId === peer.id;
+          const peerTotal = result.peerTotals[peer.id] ?? 0;
           return (
             <li key={peer.id} className="flex items-center gap-2 py-1">
               <button
@@ -290,17 +291,21 @@ export default function PeerBill({
                   </span>
                 )}
                 <span className="ml-auto font-semibold tabular-nums">
-                  {formatSatang(result.peerTotals[peer.id] ?? 0)}
+                  {formatSatang(peerTotal)}
                 </span>
               </button>
               {isClaimed ? (
-                <span
-                  className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold ${
-                    paid[peer.id] ? "text-success" : "text-ink-muted"
-                  }`}
-                >
-                  {paid[peer.id] ? "✓ จ่ายแล้ว" : "จ่ายด้านบน"}
-                </span>
+                // Claimed peer's pay control lives in the top panel; here we only
+                // echo status, and only when there is actually something to pay.
+                (paid[peer.id] || peerTotal > 0) && (
+                  <span
+                    className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold ${
+                      paid[peer.id] ? "text-success" : "text-ink-muted"
+                    }`}
+                  >
+                    {paid[peer.id] ? "✓ จ่ายแล้ว" : "จ่ายด้านบน"}
+                  </span>
+                )
               ) : (
                 <button
                   type="button"
