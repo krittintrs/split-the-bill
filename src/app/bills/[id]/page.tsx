@@ -1,7 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { BillRow, LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
+import type {
+  BillRow,
+  LineItemRow,
+  PeerRow,
+  ProfileRow,
+  TickRow,
+} from "@/lib/bills/types";
 import BillEditor from "./BillEditor";
+import AppBar from "@/components/AppBar";
 
 export default async function BillPage({
   params,
@@ -23,7 +30,7 @@ export default async function BillPage({
     .maybeSingle();
   if (!bill) notFound();
 
-  const [itemsRes, billPeersRes, recentRes] = await Promise.all([
+  const [itemsRes, billPeersRes, recentRes, profileRes] = await Promise.all([
     supabase.from("line_items").select("*").eq("bill_id", id).order("position"),
     supabase.from("bill_peers").select("added_at, peers (id, name)").eq("bill_id", id).order("added_at"),
     supabase
@@ -31,7 +38,20 @@ export default async function BillPage({
       .select("id, name, last_used_at")
       .order("last_used_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("profiles")
+      .select("user_id, promptpay_id, bank_name, bank_account, account_name")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
+
+  const profile: ProfileRow = profileRes.data ?? {
+    user_id: user.id,
+    promptpay_id: "",
+    bank_name: "",
+    bank_account: "",
+    account_name: "",
+  };
 
   const items = (itemsRes.data ?? []) as LineItemRow[];
   const peersOnBill = (billPeersRes.data ?? [])
@@ -50,12 +70,16 @@ export default async function BillPage({
         ).data ?? []);
 
   return (
-    <BillEditor
-      initialBill={bill as BillRow}
-      initialItems={items}
-      initialPeers={peersOnBill}
-      initialTicks={ticks}
-      recentPeers={(recentRes.data ?? []) as PeerRow[]}
-    />
+    <>
+      <AppBar email={user.email ?? ""} />
+      <BillEditor
+        initialBill={bill as BillRow}
+        initialItems={items}
+        initialPeers={peersOnBill}
+        initialTicks={ticks}
+        recentPeers={(recentRes.data ?? []) as PeerRow[]}
+        profile={profile}
+      />
+    </>
   );
 }

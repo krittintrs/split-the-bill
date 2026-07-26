@@ -13,8 +13,10 @@ const bill: BillRow = {
   service_charge_percent: 0,
   vat_percent: 0,
   receipt_total_satang: 15000,
-  payment_info: "",
-  payment_method: "",
+  promptpay_id: "",
+  bank_name: "",
+  bank_account: "",
+  account_name: "",
 };
 
 const items: LineItemRow[] = [

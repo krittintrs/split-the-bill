@@ -1,7 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
+import PaybackControls from "./PaybackControls";
 import { computeBill } from "@/lib/billing/compute";
 import { itemShareSatang, itemTotalSatang } from "@/lib/billing/itemShare";
 import { formatSatang } from "@/lib/billing/money";
@@ -12,6 +20,19 @@ import { setPaid as setPaidRpc, setTick as setTickRpc, subscribeBillChanged } fr
 import { createClient } from "@/lib/supabase/client";
 
 const dateFormat = new Intl.DateTimeFormat("th-TH", { dateStyle: "long" });
+
+// The device-local claim ("which name is mine") lives in localStorage, read as
+// an external store so it stays SSR-safe (server snapshot = null) without a
+// setState-in-effect. claim() writes then notifies same-tab subscribers.
+const claimListeners = new Set<() => void>();
+function subscribeClaim(cb: () => void): () => void {
+  claimListeners.add(cb);
+  if (typeof window !== "undefined") window.addEventListener("storage", cb);
+  return () => {
+    claimListeners.delete(cb);
+    if (typeof window !== "undefined") window.removeEventListener("storage", cb);
+  };
+}
 
 interface DisplayItem {
   id: string;
@@ -34,6 +55,22 @@ export default function PeerBill({
 }) {
   const [bill, setBill] = useState<GetBillJson>(initial);
   const [pending, setPending] = useState(false);
+  // Device-local "which name is mine" — no login (design C+, ADR-0002).
+  const claimKey = `claim:${billId}`;
+  const claimedId = useSyncExternalStore(
+    subscribeClaim,
+    () => localStorage.getItem(claimKey),
+    () => null,
+  );
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  function claim(peerId: string) {
+    localStorage.setItem(claimKey, peerId);
+    claimListeners.forEach((cb) => cb()); // notify same-tab subscribers
+    requestAnimationFrame(() =>
+      panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }
 
   const refetch = useCallback(async () => {
     const json = await fetchBill(createClient(), billId);
@@ -152,6 +189,37 @@ export default function PeerBill({
   const paid: Record<string, boolean> = {};
   for (const peer of bill.peers) paid[peer.id] = peer.paidAt != null;
 
+  // Ignore a stale claim whose peer was removed from the bill.
+  const validClaimId =
+    claimedId && bill.peers.some((peer) => peer.id === claimedId) ? claimedId : null;
+
+  const paybackPanel = validClaimId ? (
+    <div ref={panelRef}>
+      <PaybackControls
+        peerName={peerName.get(validClaimId) ?? ""}
+        totalSatang={result.peerTotals[validClaimId] ?? 0}
+        promptpayId={bill.bill.promptpayId}
+        bankName={bill.bill.bankName}
+        bankAccount={bill.bill.bankAccount}
+        accountName={bill.bill.accountName}
+        paid={paid[validClaimId] ?? false}
+        onPaid={() => onPaid(validClaimId)}
+        pending={pending}
+      />
+    </div>
+  ) : (
+    <div
+      ref={panelRef}
+      className="rounded-2xl border-2 border-dashed border-border bg-surface-tint/60 p-6 text-center"
+    >
+      <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-surface-tint text-xl text-primary-ink">
+        ↓
+      </div>
+      <p className="font-bold">แตะชื่อของคุณด้านล่าง</p>
+      <p className="text-sm text-ink-muted">เพื่อรับ QR และยอดที่ต้องจ่าย</p>
+    </div>
+  );
+
   const itemsSection = (
     <section className="rounded-xl border border-border bg-surface p-4">
       <h2 className="mb-3 font-semibold">รายการ — ติ๊กที่เรากิน</h2>
@@ -200,30 +268,61 @@ export default function PeerBill({
 
   const everyoneSection = (
     <section className="rounded-xl border border-border bg-surface p-4">
-      <h2 className="mb-2 font-semibold">ทุกคน</h2>
+      <h2 className="mb-2 font-semibold">ทุกคน — แตะชื่อคุณเพื่อรับ QR</h2>
       <ul className="flex flex-col divide-y divide-border">
-        {bill.peers.map((peer) => (
-          <li key={peer.id} className="flex items-center justify-between gap-3 py-2">
-            <span className={paid[peer.id] ? "text-ink-muted" : ""}>{peerName.get(peer.id)}</span>
-            <span className="flex items-center gap-3">
-              <span className="font-semibold tabular-nums">
-                {formatSatang(result.peerTotals[peer.id] ?? 0)}
-              </span>
+        {bill.peers.map((peer) => {
+          const isClaimed = claimedId === peer.id;
+          const peerTotal = result.peerTotals[peer.id] ?? 0;
+          return (
+            <li key={peer.id} className="flex items-center gap-2 py-1">
               <button
                 type="button"
-                disabled={pending}
-                onClick={() => onPaid(peer.id)}
-                className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
-                  paid[peer.id]
-                    ? "bg-success text-white hover:opacity-90"
-                    : "border border-border text-ink-muted hover:bg-surface-tint"
+                onClick={() => claim(peer.id)}
+                className={`flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left transition active:scale-[0.99] ${
+                  isClaimed ? "bg-surface-tint" : "hover:bg-surface-tint"
                 }`}
               >
-                {paid[peer.id] ? "✓ จ่ายแล้ว" : "ยังไม่จ่าย"}
+                <span className={paid[peer.id] ? "text-ink-muted" : ""}>
+                  {peerName.get(peer.id)}
+                </span>
+                {isClaimed && (
+                  <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                    คุณ
+                  </span>
+                )}
+                <span className="ml-auto font-semibold tabular-nums">
+                  {formatSatang(peerTotal)}
+                </span>
               </button>
-            </span>
-          </li>
-        ))}
+              {isClaimed ? (
+                // Claimed peer's pay control lives in the top panel; here we only
+                // echo status, and only when there is actually something to pay.
+                (paid[peer.id] || peerTotal > 0) && (
+                  <span
+                    className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold ${
+                      paid[peer.id] ? "text-success" : "text-ink-muted"
+                    }`}
+                  >
+                    {paid[peer.id] ? "✓ จ่ายแล้ว" : "จ่ายด้านบน"}
+                  </span>
+                )
+              ) : (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => onPaid(peer.id)}
+                  className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    paid[peer.id]
+                      ? "bg-success text-white hover:opacity-90"
+                      : "border border-border text-ink-muted hover:bg-surface-tint"
+                  }`}
+                >
+                  {paid[peer.id] ? "✓ จ่ายแล้ว" : "ยังไม่จ่าย"}
+                </button>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -245,12 +344,35 @@ export default function PeerBill({
       <table className="w-full min-w-[560px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-border">
-            <th className="sticky left-0 bg-surface p-3 text-left font-semibold">รายการ</th>
-            {bill.peers.map((peer) => (
-              <th key={peer.id} className="p-2 text-center font-semibold">
-                {peer.name}
-              </th>
-            ))}
+            <th className="sticky left-0 bg-surface p-3 text-left font-semibold">
+              รายการ
+              <span className="block text-xs font-normal text-ink-muted">
+                แตะชื่อคุณเพื่อรับ QR
+              </span>
+            </th>
+            {bill.peers.map((peer) => {
+              const isClaimed = claimedId === peer.id;
+              return (
+                <th key={peer.id} className="p-2 text-center font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => claim(peer.id)}
+                    className={`inline-flex min-h-9 items-center gap-1 rounded-lg px-2 py-1 transition active:scale-95 ${
+                      isClaimed
+                        ? "bg-primary text-white"
+                        : "text-ink-muted hover:bg-surface-tint hover:text-ink"
+                    }`}
+                  >
+                    {peer.name}
+                    {isClaimed && (
+                      <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-semibold">
+                        คุณ
+                      </span>
+                    )}
+                  </button>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -366,24 +488,14 @@ export default function PeerBill({
         </p>
       )}
 
+      {paybackPanel}
+
       <div className="hidden lg:block">{matrixView}</div>
       <div className="lg:hidden">{chipListView}</div>
 
       <p className="text-right text-sm font-semibold tabular-nums">
         รวมทั้งบิล {formatSatang(result.checksumSatang)}
       </p>
-
-      {bill.bill.paymentInfo && (
-        <section className="rounded-xl border border-border bg-surface p-4">
-          <h2 className="mb-1 font-semibold">โอนคืนที่</h2>
-          <p className="text-sm">
-            {bill.bill.paymentMethod && (
-              <span className="font-medium">{bill.bill.paymentMethod} · </span>
-            )}
-            {bill.bill.paymentInfo}
-          </p>
-        </section>
-      )}
     </main>
   );
 }

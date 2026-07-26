@@ -5,6 +5,18 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+### Added
+
+- Payback (#10): each peer taps their own name in the "ทุกคน" list (a device-local claim, no login) to reveal a payback panel pinned at the top — a PromptPay QR generated with their exact amount, plus copy-amount, copy-number, and a paid toggle
+- Profile page (`/profile`): organizer stores typed payment info (account name, PromptPay ID, bank name + account) once, with a static QR preview to scan-check their own ID
+- PromptPay QR generated entirely client-side from an in-house EMVCo payload builder (`src/lib/billing/promptpay.ts`, golden-vector tested) — no upload, no bank API (ADR-0008/0009)
+- Bill editor "ใช้ข้อมูลจากโปรไฟล์" toggle snapshots profile payment info onto a bill, with a per-bill override
+
+### Changed
+
+- Payment info moved from free-form `payment_info`/`payment_method` to typed columns (`promptpay_id`, `bank_name`, `bank_account`, `account_name`) on both profiles and bills; legacy values carried over then dropped, `get_bill` rebuilt (#10)
+- Peer page "ทุกคน" rows are now selectable; the old plain "โอนคืนที่" text block is replaced by the generated QR panel
+
 ## [0.2.1] — 2026-07-19
 
 Polish pass: the app stops feeling like an engineer built it. Critique-driven fixes (#15) on top of the mobile-agent UX round (#19).

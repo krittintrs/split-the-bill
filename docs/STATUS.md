@@ -1,6 +1,6 @@
 # Split the Bill — Status
 
-**Phase:** 6 — #19 (PR #22) + #15 (PR #23) shipped as v0.2.1: UX fixes + impeccable polish pass (critique 28/40, all 11 findings fixed, phase-language copy, kebab menus, split share button) → next: grill #21 (create-flow slowness), then #10 payback
+**Phase:** 6 — #19 (PR #22) + #15 (PR #23) shipped as v0.2.1: UX fixes + impeccable polish pass (critique 28/40, all 11 findings fixed, phase-language copy, kebab menus, split share button). #10 payback grilled + planned (ADR-0008/0009, `docs/plans/PLAN-v0.3-payback.md`) → next: execute #10, then grill #21 (create-flow slowness)
 
 ## Frame (decided 2026-07-14)
 
@@ -52,4 +52,6 @@ READY 🟢
 | 2026-07-16 | Keep vivid fills at 3.1:1 white-on-primary — documented AA deviation (DESIGN.md Known deviations) | Reviewer measured the failure; AA-passing darker ramp compared on screen and rejected as losing the light & playful identity; rest of the palette stays AA | User |
 | 2026-07-16 | #8 shipped (PR #14) = v0.1.0: calculate + share; paid tracking stays in #10 | Editor reordered to receipt-entry flow after smoke test; `payment_method` column + rebuilt `get_bill` migration applied | User + main session |
 | 2026-07-17 | #9: locked = ticks frozen only, paid stays live; realtime = broadcast ping + refetch (ADR-0007) | postgres_changes dead for anon under ADR-0006; lock/pay ordering | User + main session |
+| 2026-07-25 | #10 payback: generate PromptPay QR client-side per peer (not upload), typed payment fields, in-house EMV builder | ADR-0008 (upload leaks name/branding, can't carry per-peer amount; client-side adds no attack surface), ADR-0009 (free-form can't drive QR; frozen standard = no dep needed); attribution deferred to #12 | User + main session (grill) |
+| 2026-07-25 | #10 peer UI = design "C+" (locked via /impeccable): no separate claim strip — the "ทุกคน" list is the selector; tap your name (device-local localStorage claim, no login) → payback panel pins to top + auto-scroll. #9 never shipped soft-claim, so #10 absorbs a minimal claim. Profile page gets a static QR preview | Copy buttons (required path) read cleaner in a top panel than crammed in a row; reuses existing list; on-brand "one loud thing"; mock confirmed on phone | User + main session (impeccable craft) |
 | 2026-07-19 | #15: UI speaks lifecycle phases, not mechanisms — locked shows as "💰 พร้อมเก็บเงิน", lock buttons name the mechanism (ล็อกรายการ) | "Locked"/ปิดยอด confuse (freeze vs settled); phase language scales to #10 QR and a derived "ครบแล้ว" state; glossary in CONTEXT.md | User + main session |

@@ -73,7 +73,11 @@ _Avoid_: bill total, grand total
 ### Payback
 
 **Payment Info**:
-How Peers pay the Organizer back: a PromptPay ID and/or bank-account text. Defaults from the Organizer's profile, overridable per Bill.
+How Peers pay the Organizer back, stored as typed fields (ADR-0009): a **PromptPay ID** (drives the generated QR + copy-number) and/or a **bank account** (bank name + account number, the copyable fallback), plus an **account holder name** shown for payer confirmation. Defaults from the Organizer's profile, snapshot onto the Bill at publish via a "follow profile" toggle (default on), overridable per Bill.
+_Avoid_: payment method (the old free-form label; superseded by typed fields)
+
+**PromptPay QR**:
+A payback QR generated in the Peer's browser (never uploaded) encoding the Organizer's PromptPay ID and that Peer's *exact satang amount* (EMVCo standard, ADR-0008). A Peer owing ฿0 gets no QR and no payback controls.
 
 **Paid Flag**:
 A single per-peer-per-bill toggle meaning "this Peer has paid the Organizer back." Anyone with the link can toggle it on any non-draft Bill, including a Locked one (paying back happens after totals freeze).

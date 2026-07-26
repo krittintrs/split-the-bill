@@ -1,0 +1,11 @@
+# Payback QR is generated per peer, never an uploaded image
+
+A peer's payback QR is **generated in the peer's browser** from the organizer's PromptPay ID and *that peer's exact satang amount* (EMVCo Merchant-Presented Mode standard). The organizer never uploads a QR screenshot. The required copy paths (copy-number, copy-amount) and a copyable bank-account fallback sit alongside it; the QR is the optional enhancement (ADR-0001 amounts feed it directly).
+
+Why generate rather than let the organizer upload their bank-app QR: a static uploaded image cannot carry a **per-peer amount**, so it re-introduces the exact pain the app exists to remove — peers hand-typing `179.10` from a float total (Problem Statement, #5). Generation bakes the computed satang amount into every peer's QR, so scanning pre-fills the transfer.
+
+Why it is *more* private, not less: a QR is not a secret — it decodes straight back to the account ID, so uploading an image hides nothing, while a **bank-app screenshot additionally leaks the owner's name and bank UI**. Generation stores the *minimum* — just the PromptPay ID — and adds no anon-readable binary store. The account identifier is peer-visible either way (payback requires it); the unguessable capability URL (ADR-0002) governs that exposure, and `get_bill` already returns payment info to the client for the copy-number path.
+
+Why client-side and not server-rendered: the ID is already delivered to the browser for copy-number, and the payload is deterministic from `(id, amount)`, so server generation buys no security — integrity comes from **writes being organizer-only** (a peer with the link can only read, never change payment info), and any XSS that could swap a client-built QR could equally swap a server-rendered image on the page. The real anti-phishing defense is the displayed `account_name` plus the bank's own registry-name-on-scan, not the render location.
+
+**Considered options:** upload a static QR image (no per-peer amount, leaks name/branding, needs a Storage bucket + anon-read policy on binaries); server-side QR generation (no security gain since the ID is already client-side; extra endpoint touching the ID; worse privacy); generate + keep upload as a fallback (rejected — bank-account *text* is the cleaner, lighter fallback for anyone without a PromptPay ID).

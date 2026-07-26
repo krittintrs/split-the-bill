@@ -19,7 +19,13 @@ import {
   updateBill,
   updateLineItem,
 } from "@/lib/bills/mutations";
-import type { BillRow, LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
+import type {
+  BillRow,
+  LineItemRow,
+  PeerRow,
+  ProfileRow,
+  TickRow,
+} from "@/lib/bills/types";
 import PeerPicker from "./PeerPicker";
 import MatrixView from "./MatrixView";
 import CardsView from "./CardsView";
@@ -61,6 +67,7 @@ interface Props {
   initialPeers: PeerRow[];
   initialTicks: TickRow[];
   recentPeers: PeerRow[];
+  profile: ProfileRow;
 }
 
 export default function BillEditor({
@@ -69,6 +76,7 @@ export default function BillEditor({
   initialPeers,
   initialTicks,
   recentPeers,
+  profile,
 }: Props) {
   const router = useRouter();
   const [bill, setBill] = useState(initialBill);
@@ -80,6 +88,37 @@ export default function BillEditor({
   const [saved, setSaved] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // "Follow profile" only makes sense once the profile has something to follow.
+  // An empty profile disables the toggle entirely — otherwise ticking it would
+  // silently wipe the bill's payment info (and every peer's QR) with blanks.
+  const profileEmpty =
+    !profile.promptpay_id &&
+    !profile.bank_name &&
+    !profile.bank_account &&
+    !profile.account_name;
+  // Starts on when the bill's payment matches a non-empty profile (a fresh bill
+  // is snapshotted at creation); a per-bill override reads as off so its custom
+  // values stay editable.
+  const [followProfile, setFollowProfile] = useState(
+    !profileEmpty &&
+      initialBill.promptpay_id === profile.promptpay_id &&
+      initialBill.bank_name === profile.bank_name &&
+      initialBill.bank_account === profile.bank_account &&
+      initialBill.account_name === profile.account_name,
+  );
+
+  function toggleFollowProfile(checked: boolean) {
+    setFollowProfile(checked);
+    if (checked) {
+      // Snapshot the profile's four values onto this bill.
+      saveBill({
+        promptpay_id: profile.promptpay_id,
+        bank_name: profile.bank_name,
+        bank_account: profile.bank_account,
+        account_name: profile.account_name,
+      });
+    }
+  }
 
   const result = useMemo(
     () => computeBill(mapToBillInput(bill, items, peers, ticks)),
@@ -457,23 +496,77 @@ export default function BillEditor({
         />
       </div>
 
-      <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-2 font-semibold">ช่องทางรับเงิน</h2>
+      <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">ช่องทางรับเงิน</h2>
+          {profileEmpty ? (
+            <Link
+              href="/profile"
+              className="text-sm text-primary-ink underline transition hover:text-primary-deep"
+            >
+              ตั้งค่าโปรไฟล์เพื่อใช้ซ้ำ
+            </Link>
+          ) : (
+            <label className="flex items-center gap-2 text-sm text-ink-muted">
+              <input
+                type="checkbox"
+                checked={followProfile}
+                onChange={(e) => toggleFollowProfile(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              ใช้ข้อมูลจากโปรไฟล์
+            </label>
+          )}
+        </div>
+
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          ชื่อบัญชี
+          <input
+            key={`name-${followProfile}-${bill.account_name}`}
+            defaultValue={bill.account_name}
+            disabled={followProfile}
+            placeholder="ชื่อที่โชว์ให้เพื่อน"
+            onBlur={(e) => {
+              if (e.target.value !== bill.account_name)
+                saveBill({ account_name: e.target.value });
+            }}
+            className={`${inputCls} disabled:opacity-60`}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          พร้อมเพย์ (เบอร์ / เลขบัตรประชาชน)
+          <input
+            key={`ppid-${followProfile}-${bill.promptpay_id}`}
+            defaultValue={bill.promptpay_id}
+            disabled={followProfile}
+            inputMode="numeric"
+            placeholder="เช่น 0812345678"
+            onBlur={(e) => {
+              // Store digits only so a formatted number still drives a QR.
+              const digits = e.target.value.replace(/\D/g, "");
+              if (digits !== bill.promptpay_id) saveBill({ promptpay_id: digits });
+            }}
+            className={`${inputCls} disabled:opacity-60`}
+          />
+        </label>
+
         <div className="flex flex-wrap gap-3">
           <label className="flex w-full flex-col gap-1 text-xs text-ink-muted sm:w-48">
-            ธนาคาร / พร้อมเพย์
+            ธนาคาร (ถ้าไม่มีพร้อมเพย์)
             <input
+              key={`bank-${followProfile}-${bill.bank_name}`}
               list="payment-methods"
-              defaultValue={bill.payment_method}
-              placeholder="เช่น พร้อมเพย์"
+              defaultValue={bill.bank_name}
+              disabled={followProfile}
+              placeholder="เช่น กสิกรไทย"
               onBlur={(e) => {
-                if (e.target.value !== bill.payment_method)
-                  saveBill({ payment_method: e.target.value });
+                if (e.target.value !== bill.bank_name)
+                  saveBill({ bank_name: e.target.value });
               }}
-              className={inputCls}
+              className={`${inputCls} disabled:opacity-60`}
             />
             <datalist id="payment-methods">
-              <option value="พร้อมเพย์" />
               <option value="กสิกรไทย" />
               <option value="ไทยพาณิชย์" />
               <option value="กรุงเทพ" />
@@ -484,18 +577,34 @@ export default function BillEditor({
             </datalist>
           </label>
           <label className="flex min-w-48 flex-1 flex-col gap-1 text-xs text-ink-muted">
-            เบอร์ / เลขบัญชี
+            เลขบัญชี
             <input
-              defaultValue={bill.payment_info}
-              placeholder="เบอร์พร้อมเพย์ / เลขบัญชี"
+              key={`acct-${followProfile}-${bill.bank_account}`}
+              defaultValue={bill.bank_account}
+              disabled={followProfile}
+              inputMode="numeric"
+              placeholder="เลขบัญชี"
               onBlur={(e) => {
-                if (e.target.value !== bill.payment_info)
-                  saveBill({ payment_info: e.target.value });
+                if (e.target.value !== bill.bank_account)
+                  saveBill({ bank_account: e.target.value });
               }}
-              className={inputCls}
+              className={`${inputCls} disabled:opacity-60`}
             />
           </label>
         </div>
+
+        {followProfile && (
+          <p className="text-xs text-ink-muted">
+            ดึงจาก{" "}
+            <Link
+              href="/profile"
+              className="text-primary-ink underline transition hover:text-primary-deep"
+            >
+              โปรไฟล์
+            </Link>{" "}
+            เอาเครื่องหมายถูกออกเพื่อแก้เฉพาะบิลนี้
+          </p>
+        )}
       </section>
     </main>
   );

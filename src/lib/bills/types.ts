@@ -9,8 +9,18 @@ export interface BillRow {
   service_charge_percent: number;
   vat_percent: number;
   receipt_total_satang: number;
-  payment_info: string;
-  payment_method: string;
+  promptpay_id: string;
+  bank_name: string;
+  bank_account: string;
+  account_name: string;
+}
+
+export interface ProfileRow {
+  user_id: string;
+  promptpay_id: string;
+  bank_name: string;
+  bank_account: string;
+  account_name: string;
 }
 
 export interface LineItemRow {
