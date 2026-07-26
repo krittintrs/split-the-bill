@@ -677,7 +677,7 @@ function ItemRow({
         />
       </label>
       {/* The three linked boxes stay together when the row wraps on a phone. */}
-      <div className="flex items-end gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
           ราคา ฿
           <input
@@ -758,7 +758,7 @@ function ItemRow({
         </label>
       </div>
       {/* Likewise the discount pair, so ลด ฿ never wraps away from ลด %. */}
-      <div className="flex items-end gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
           ลด %
           <input

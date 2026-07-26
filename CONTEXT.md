@@ -29,6 +29,7 @@ _Avoid_: sheet, session, event
 
 **Line Item**:
 One dish or product on the Bill: name, unit price, quantity. The same dish may appear as multiple Line Items.
+Unit price is the stored truth and the only thing the engine multiplies out. The editor also shows a **line total** (unit price × quantity, _before_ the item's own discount) that can be typed instead, since receipts often print only that figure; typing it back-derives the unit price, rounded up per ADR-0001.
 _Avoid_: menu, entry, row
 
 **Tick**:
