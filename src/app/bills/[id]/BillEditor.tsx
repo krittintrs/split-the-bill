@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, type FocusEvent } from "react";
+import { useMemo, useRef, useState, type FocusEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import KebabMenu, { kebabItemCls } from "@/components/KebabMenu";
 import { computeBill } from "@/lib/billing/compute";
+import { totalFromUnitPriceSatang, unitPriceFromTotalSatang } from "@/lib/billing/lineEntry";
 import { formatSatang } from "@/lib/billing/money";
 import { mapToBillInput } from "@/lib/bills/mapper";
 import {
@@ -619,6 +620,43 @@ function ItemRow({
   onUpdate: (id: string, patch: Partial<LineItemRow>) => void;
   onRemove: (id: string) => void;
 }) {
+  // Price, qty and total are three views of two stored fields, so the boxes are
+  // written imperatively (same idiom as moneyBlur) rather than made controlled:
+  // it keeps the derived box in step without remounting an input mid-tab.
+  const priceRef = useRef<HTMLInputElement>(null);
+  const totalRef = useRef<HTMLInputElement>(null);
+  const qtyRef = useRef<HTMLInputElement>(null);
+  // Which box was typed in last decides what a qty change holds fixed. On a
+  // receipt the line total is the fact and the qty is the typo, so if they typed
+  // the total we re-derive the unit price, not the other way round.
+  const lastEdited = useRef<"price" | "total">("price");
+  const [roundedUp, setRoundedUp] = useState<string | null>(null);
+
+  function currentQty(): number {
+    const qty = parseInt(qtyRef.current?.value ?? "", 10);
+    return Number.isNaN(qty) || qty < 1 ? item.qty : qty;
+  }
+  function writePrice(satang: number) {
+    if (priceRef.current) priceRef.current.value = satangToInput(satang);
+  }
+  function writeTotal(satang: number) {
+    if (totalRef.current) totalRef.current.value = satangToInput(satang);
+  }
+
+  /** Back-calculate the stored unit price from a typed total, surfacing any round-up. */
+  function settleFromTotal(typedSatang: number, qty: number): number {
+    const unit = unitPriceFromTotalSatang(typedSatang, qty);
+    const settled = totalFromUnitPriceSatang(unit, qty);
+    writePrice(unit);
+    writeTotal(settled);
+    setRoundedUp(
+      settled === typedSatang
+        ? null
+        : `ปัดขึ้น: ${formatSatang(unit)} × ${qty} = ${formatSatang(settled)}`,
+    );
+    return unit;
+  }
+
   return (
     <div className="flex flex-wrap items-end gap-2 border-b border-border pb-3 last:border-b-0 last:pb-0">
       <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-ink-muted">
@@ -635,23 +673,64 @@ function ItemRow({
       <label className="flex flex-col gap-1 text-xs text-ink-muted">
         ราคา ฿
         <input
+          ref={priceRef}
           inputMode="decimal"
           defaultValue={satangToInput(item.unit_price_satang)}
           placeholder="0.00"
-          onBlur={(e) => moneyBlur(e, (satang) => onUpdate(item.id, { unit_price_satang: satang }))}
+          onBlur={(e) =>
+            moneyBlur(e, (satang) => {
+              // Unit price typed: the total is the derived side, exact, no rounding.
+              lastEdited.current = "price";
+              setRoundedUp(null);
+              writeTotal(totalFromUnitPriceSatang(satang, currentQty()));
+              if (satang !== item.unit_price_satang) {
+                onUpdate(item.id, { unit_price_satang: satang });
+              }
+            })
+          }
           className={`${inputCls} w-24 text-right tabular-nums`}
         />
       </label>
       <label className="flex flex-col gap-1 text-xs text-ink-muted">
         จำนวน
         <input
+          ref={qtyRef}
           inputMode="numeric"
           defaultValue={item.qty}
           onBlur={(e) => {
-            const qty = parseInt(e.target.value, 10);
-            onUpdate(item.id, { qty: Number.isNaN(qty) || qty < 1 ? 1 : qty });
+            const parsed = parseInt(e.target.value, 10);
+            const qty = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+            e.target.value = String(qty);
+            if (lastEdited.current === "total") {
+              const unit = settleFromTotal(inputToSatang(totalRef.current?.value ?? ""), qty);
+              onUpdate(item.id, { qty, unit_price_satang: unit });
+            } else {
+              writeTotal(totalFromUnitPriceSatang(item.unit_price_satang, qty));
+              onUpdate(item.id, { qty });
+            }
           }}
           className={`${inputCls} w-14 text-right tabular-nums`}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-ink-muted">
+        รวม ฿
+        <input
+          ref={totalRef}
+          inputMode="decimal"
+          defaultValue={satangToInput(
+            totalFromUnitPriceSatang(item.unit_price_satang, item.qty),
+          )}
+          placeholder="0.00"
+          onBlur={(e) => {
+            // Receipts often print only this box; the unit price is what we store.
+            const typed = inputToSatang(e.target.value);
+            const unit = settleFromTotal(typed, currentQty());
+            lastEdited.current = "total";
+            if (unit !== item.unit_price_satang) {
+              onUpdate(item.id, { unit_price_satang: unit });
+            }
+          }}
+          className={`${inputCls} w-24 text-right tabular-nums`}
         />
       </label>
       <label className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -686,6 +765,11 @@ function ItemRow({
       >
         ✕
       </button>
+      {roundedUp && (
+        <p role="status" className="w-full text-xs text-ink-muted tabular-nums">
+          {roundedUp}
+        </p>
+      )}
     </div>
   );
 }
