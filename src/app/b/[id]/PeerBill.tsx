@@ -103,6 +103,17 @@ export default function PeerBill({
     [bill.items],
   );
 
+  // #26: never render from bill.peers directly. get_bill orders peers, but a
+  // realtime refetch must not be able to reshuffle columns under someone mid-tap,
+  // so we re-sort on the same (addedAt, id) key the server used.
+  const peersSorted = useMemo(
+    () =>
+      [...bill.peers].sort(
+        (a, b) => a.addedAt.localeCompare(b.addedAt) || a.id.localeCompare(b.id),
+      ),
+    [bill.peers],
+  );
+
   const displayItems: DisplayItem[] = useMemo(
     () =>
       itemsSorted.map((item) => ({
@@ -120,7 +131,7 @@ export default function PeerBill({
   const billInput: BillInput = useMemo(
     () => ({
       items: displayItems,
-      peerIds: bill.peers.map((peer) => peer.id),
+      peerIds: peersSorted.map((peer) => peer.id),
       billDiscount: {
         percent: bill.bill.billDiscountPercent,
         amountSatang: bill.bill.billDiscountSatang,
@@ -128,12 +139,12 @@ export default function PeerBill({
       serviceChargePercent: bill.bill.serviceChargePercent,
       vatPercent: bill.bill.vatPercent,
     }),
-    [displayItems, bill.peers, bill.bill],
+    [displayItems, peersSorted, bill.bill],
   );
 
   const result = useMemo(() => computeBill(billInput), [billInput]);
   const locked = bill.bill.status === "locked";
-  const peerName = new Map(bill.peers.map((peer) => [peer.id, peer.name]));
+  const peerName = new Map(peersSorted.map((peer) => [peer.id, peer.name]));
 
   async function onTick(itemId: string, peerId: string) {
     if (locked) return;
@@ -155,7 +166,7 @@ export default function PeerBill({
   }
 
   async function onPaid(peerId: string) {
-    const wasPaid = bill.peers.find((peer) => peer.id === peerId)?.paidAt != null;
+    const wasPaid = peersSorted.find((peer) => peer.id === peerId)?.paidAt != null;
     setBill((prev) => ({
       ...prev,
       peers: prev.peers.map((peer) =>
@@ -187,11 +198,11 @@ export default function PeerBill({
   }
 
   const paid: Record<string, boolean> = {};
-  for (const peer of bill.peers) paid[peer.id] = peer.paidAt != null;
+  for (const peer of peersSorted) paid[peer.id] = peer.paidAt != null;
 
   // Ignore a stale claim whose peer was removed from the bill.
   const validClaimId =
-    claimedId && bill.peers.some((peer) => peer.id === claimedId) ? claimedId : null;
+    claimedId && peersSorted.some((peer) => peer.id === claimedId) ? claimedId : null;
 
   const paybackPanel = validClaimId ? (
     <div ref={panelRef}>
@@ -239,7 +250,7 @@ export default function PeerBill({
                   : `${formatSatang(share)} / คน × ${item.tickedBy.length}`}
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {bill.peers.map((peer) => {
+                {peersSorted.map((peer) => {
                   const ticked = item.tickedBy.includes(peer.id);
                   return (
                     <button
@@ -270,7 +281,7 @@ export default function PeerBill({
     <section className="rounded-xl border border-border bg-surface p-4">
       <h2 className="mb-2 font-semibold">ทุกคน — แตะชื่อคุณเพื่อรับ QR</h2>
       <ul className="flex flex-col divide-y divide-border">
-        {bill.peers.map((peer) => {
+        {peersSorted.map((peer) => {
           const isClaimed = claimedId === peer.id;
           const peerTotal = result.peerTotals[peer.id] ?? 0;
           return (
@@ -350,7 +361,7 @@ export default function PeerBill({
                 แตะชื่อคุณเพื่อรับ QR
               </span>
             </th>
-            {bill.peers.map((peer) => {
+            {peersSorted.map((peer) => {
               const isClaimed = claimedId === peer.id;
               return (
                 <th key={peer.id} className="p-2 text-center font-semibold">
@@ -388,7 +399,7 @@ export default function PeerBill({
                     {share !== null && ` · ${formatSatang(share)}/คน`}
                   </span>
                 </td>
-                {bill.peers.map((peer) => {
+                {peersSorted.map((peer) => {
                   const ticked = item.tickedBy.includes(peer.id);
                   return (
                     <td key={peer.id} className="p-1 text-center">
@@ -415,7 +426,7 @@ export default function PeerBill({
         <tfoot>
           <tr className="border-b border-border">
             <td className="sticky left-0 bg-surface p-3 font-semibold">ยอดต่อคน</td>
-            {bill.peers.map((peer) => (
+            {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
                 {formatSatang(result.peerTotals[peer.id] ?? 0)}
               </td>
@@ -423,7 +434,7 @@ export default function PeerBill({
           </tr>
           <tr>
             <td className="sticky left-0 bg-surface p-3 font-semibold">จ่ายแล้ว</td>
-            {bill.peers.map((peer) => (
+            {peersSorted.map((peer) => (
               <td key={peer.id} className="p-1 text-center">
                 <button
                   type="button"

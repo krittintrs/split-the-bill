@@ -24,7 +24,8 @@ export interface GetBillJson {
     discountSatang: number;
     position: number;
   }[];
-  peers: { id: string; name: string; paidAt: string | null }[];
+  /** Server-ordered by (addedAt, id); re-sort on the same key before rendering. */
+  peers: { id: string; name: string; paidAt: string | null; addedAt: string }[];
   ticks: { lineItemId: string; peerId: string }[];
 }
 
