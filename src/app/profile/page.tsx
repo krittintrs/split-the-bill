@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import ProfileForm from "./ProfileForm";
+import AppBar from "@/components/AppBar";
 import type { ProfileRow } from "@/lib/bills/types";
 
 export default async function ProfilePage() {
@@ -26,20 +26,17 @@ export default async function ProfilePage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 p-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-xl font-bold">ช่องทางรับเงิน</h1>
-        <Link
-          href="/dashboard"
-          className="text-sm text-primary-ink underline transition hover:text-primary-deep active:scale-95"
-        >
-          กลับหน้าบิล
-        </Link>
-      </header>
-      <p className="text-sm text-ink-muted">
-        ตั้งค่าครั้งเดียว บิลใหม่จะดึงไปใช้อัตโนมัติ (แก้เป็นรายบิลได้)
-      </p>
-      <ProfileForm profile={profile} />
-    </main>
+    <>
+      <AppBar email={user.email ?? ""} />
+      <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 p-6">
+        <div>
+          <h1 className="text-xl font-bold">ช่องทางรับเงิน</h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            ตั้งค่าครั้งเดียว บิลใหม่จะดึงไปใช้อัตโนมัติ (แก้เป็นรายบิลได้)
+          </p>
+        </div>
+        <ProfileForm profile={profile} />
+      </main>
+    </>
   );
 }

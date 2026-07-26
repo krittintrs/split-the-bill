@@ -8,6 +8,7 @@ import type {
   TickRow,
 } from "@/lib/bills/types";
 import BillEditor from "./BillEditor";
+import AppBar from "@/components/AppBar";
 
 export default async function BillPage({
   params,
@@ -69,13 +70,16 @@ export default async function BillPage({
         ).data ?? []);
 
   return (
-    <BillEditor
-      initialBill={bill as BillRow}
-      initialItems={items}
-      initialPeers={peersOnBill}
-      initialTicks={ticks}
-      recentPeers={(recentRes.data ?? []) as PeerRow[]}
-      profile={profile}
-    />
+    <>
+      <AppBar email={user.email ?? ""} />
+      <BillEditor
+        initialBill={bill as BillRow}
+        initialItems={items}
+        initialPeers={peersOnBill}
+        initialTicks={ticks}
+        recentPeers={(recentRes.data ?? []) as PeerRow[]}
+        profile={profile}
+      />
+    </>
   );
 }
