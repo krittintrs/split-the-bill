@@ -26,6 +26,7 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
   });
   const [saved, setSaved] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [nameConflict, setNameConflict] = useState(false);
   const [previewQr, setPreviewQr] = useState("");
   // What's currently persisted, so blur only writes real changes.
   const [stored, setStored] = useState({
@@ -39,11 +40,20 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
   // Persist a field on blur only when it changed from what's stored. `stored`
   // advances only on success so a failed save stays retryable on the next blur.
   async function commit(field: Field, value: string) {
-    // Store promptpay as digits only so a formatted number still drives a QR.
-    const next = field === "promptpay_id" ? value.replace(/\D/g, "") : value;
+    // Store promptpay as digits only so a formatted number still drives a QR,
+    // and the display name trimmed so the stored value matches the peer name
+    // (saveProfile trims before writing it) rather than differing by whitespace.
+    const next =
+      field === "promptpay_id"
+        ? value.replace(/\D/g, "")
+        : field === "display_name"
+          ? value.trim()
+          : value;
     if (next === stored[field]) return;
     try {
-      await saveProfile({ [field]: next });
+      const result = await saveProfile({ [field]: next });
+      // The profile row saved, but the name on every bill did not change.
+      if (field === "display_name") setNameConflict(result.peerRenameConflict);
       setStored((s) => ({ ...s, [field]: next }));
       if (next !== value) setValues((v) => ({ ...v, [field]: next })); // show normalized
       setSaveFailed(false);
@@ -90,6 +100,13 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
           ชื่อของคุณในบิล เพื่อนที่เปิดลิงก์จะเห็นชื่อนี้
           <input placeholder="ชื่อเล่นที่เพื่อนเรียก" {...bind("display_name")} />
         </label>
+        {/* globals.css: danger is always paired with an icon shape, so colour is
+            never the only carrier of the meaning. */}
+        {nameConflict && (
+          <p role="alert" className="mt-2 text-xs text-danger">
+            ⚠ บันทึกชื่อแล้ว แต่ชื่อนี้ซ้ำกับเพื่อนในรายชื่อ บิลจะยังใช้ชื่อเดิม
+          </p>
+        )}
       </section>
 
       <div>

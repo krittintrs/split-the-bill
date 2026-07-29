@@ -314,6 +314,15 @@ export default function PeerBill({
                     {formatSatang(peerTotal)}
                   </span>
                 </div>
+                {/* Invisible clone of the neighbours' pay button. Without a
+                    second child this row's total lands ~80px right of every
+                    other total, and the row loses the button's min-h-10 floor. */}
+                <span
+                  aria-hidden
+                  className="invisible inline-flex min-h-10 items-center rounded-full px-3 py-1 text-xs font-semibold"
+                >
+                  ยังไม่จ่าย
+                </span>
               </li>
             );
           }
@@ -484,7 +493,11 @@ export default function PeerBill({
                 // No Paid Flag on the organizer's own column: there is nothing
                 // to settle. The empty box keeps the row height of its neighbours.
                 <td key={peer.id} className="p-1 text-center">
-                  <span aria-hidden className="inline-block h-10 w-10" />
+                  <span className="inline-flex h-10 w-10 items-center justify-center">
+                    {/* Carries the meaning to a screen reader, which would
+                        otherwise hit one silent column in a row of buttons. */}
+                    <span className="sr-only">ไม่ต้องจ่าย</span>
+                  </span>
                 </td>
               ) : (
                 <td key={peer.id} className="p-1 text-center">

@@ -12,9 +12,12 @@ export async function createBill() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
+  // select("*") on purpose, not a column list: PostgREST fails the WHOLE query
+  // on an unknown column, so naming display_name here would blank the payment
+  // info on every new bill in the window between deploy and migration.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, promptpay_id, bank_name, bank_account, account_name")
+    .select("*")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -62,24 +65,22 @@ export async function createBill() {
       if (inserted.data) {
         selfPeerId = inserted.data.id;
       } else {
-        // The name is already taken by a peer the organizer made by hand. Adopt
-        // that row rather than fail: bill creation must not die on a name clash.
-        const adopted = await supabase
-          .from("peers")
-          .update({ linked_user_id: user.id })
-          .eq("organizer_id", user.id)
-          .eq("name", displayName)
-          .select("id")
-          .single();
-        selfPeerId = adopted.data?.id ?? null;
+        // Deliberately NOT adopting the colliding row. A peer already carrying
+        // this name is indistinguishable from a friend of the same name, and
+        // marking a friend as the organizer is unrecoverable: they lose their QR
+        // and the next display-name edit renames them on every past bill.
+        // Leaving the organizer off this bill costs one tap on the ล่าสุด chips.
+        console.error("createBill: self-peer not created", inserted.error?.message);
       }
     }
 
     if (selfPeerId) {
       await supabase.from("bill_peers").insert({ bill_id: data.id, peer_id: selfPeerId });
     }
-  } catch {
+  } catch (err) {
     // Bill is created either way; the organizer can add themselves manually.
+    // Logged because a silently failing self-peer path would be invisible in prod.
+    console.error("createBill: self-peer step failed", err);
   }
 
   redirect(`/bills/${data.id}`);

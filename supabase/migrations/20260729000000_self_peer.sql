@@ -15,6 +15,19 @@ create unique index peers_one_row_per_linked_user
   on peers (organizer_id, linked_user_id)
   where linked_user_id is not null;
 
+-- The existing "own peers" policy predates this column, so it would let an
+-- organizer write ANY uid into linked_user_id via a hand-crafted PostgREST call.
+-- Harmless today (get_bill compares against b.organizer_id, so a foreign uid
+-- never reads as isSelf), but #12's Account Claim inherits this column and it
+-- becomes a claim-hijack surface then. Closed now, while the cost is one policy.
+drop policy "own peers" on peers;
+create policy "own peers" on peers for all to authenticated
+  using (organizer_id = auth.uid())
+  with check (
+    organizer_id = auth.uid()
+    and (linked_user_id is null or linked_user_id = auth.uid())
+  );
+
 -- The organizer's peer-facing name. Not account_name, which is the bank account
 -- holder name shown for payer confirmation (ADR-0009).
 alter table profiles add column display_name text not null default '';
