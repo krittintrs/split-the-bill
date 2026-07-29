@@ -26,7 +26,7 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
   });
   const [saved, setSaved] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
-  const [nameConflict, setNameConflict] = useState(false);
+  const [renameFailure, setRenameFailure] = useState<"ok" | "conflict" | "failed">("ok");
   const [previewQr, setPreviewQr] = useState("");
   // What's currently persisted, so blur only writes real changes.
   const [stored, setStored] = useState({
@@ -52,8 +52,8 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
     if (next === stored[field]) return;
     try {
       const result = await saveProfile({ [field]: next });
-      // The profile row saved, but the name on every bill did not change.
-      if (field === "display_name") setNameConflict(result.peerRenameConflict);
+      // The profile row saved, but the name on the bills may not have changed.
+      if (field === "display_name") setRenameFailure(result.peerRename);
       setStored((s) => ({ ...s, [field]: next }));
       if (next !== value) setValues((v) => ({ ...v, [field]: next })); // show normalized
       setSaveFailed(false);
@@ -102,9 +102,11 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
         </label>
         {/* globals.css: danger is always paired with an icon shape, so colour is
             never the only carrier of the meaning. */}
-        {nameConflict && (
+        {renameFailure !== "ok" && (
           <p role="alert" className="mt-2 text-xs text-danger">
-            ⚠ บันทึกชื่อแล้ว แต่ชื่อนี้ซ้ำกับเพื่อนในรายชื่อ บิลจะยังใช้ชื่อเดิม
+            {renameFailure === "conflict"
+              ? "⚠ บันทึกชื่อแล้ว แต่ชื่อนี้ซ้ำกับเพื่อนในรายชื่อ บิลจะยังใช้ชื่อเดิม"
+              : "⚠ บันทึกชื่อแล้ว แต่ยังไม่ได้อัปเดตในบิล ลองใหม่อีกครั้ง"}
           </p>
         )}
       </section>

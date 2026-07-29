@@ -64,12 +64,25 @@ export async function createBill() {
         .single();
       if (inserted.data) {
         selfPeerId = inserted.data.id;
+      } else if (inserted.error?.code === "23505") {
+        // The name is taken. Deliberately NOT adopting that row: a peer already
+        // carrying this name is indistinguishable from a friend of the same
+        // name, and marking a friend as the organizer is unrecoverable, since
+        // they lose their QR and the next display-name edit renames them on
+        // every past bill. Insert a disambiguated row instead, which only ever
+        // creates something new. Leaving the organizer off the bill instead
+        // would look recoverable (re-add from the ล่าสุด chips) but silently
+        // hands back the unmarked pre-#24 peer, on this and every later bill.
+        const suffixed = await supabase
+          .from("peers")
+          .insert({ organizer_id: user.id, name: `${displayName} (ฉัน)`, linked_user_id: user.id })
+          .select("id")
+          .single();
+        selfPeerId = suffixed.data?.id ?? null;
+        if (!suffixed.data) {
+          console.error("createBill: self-peer not created", suffixed.error?.message);
+        }
       } else {
-        // Deliberately NOT adopting the colliding row. A peer already carrying
-        // this name is indistinguishable from a friend of the same name, and
-        // marking a friend as the organizer is unrecoverable: they lose their QR
-        // and the next display-name edit renames them on every past bill.
-        // Leaving the organizer off this bill costs one tap on the ล่าสุด chips.
         console.error("createBill: self-peer not created", inserted.error?.message);
       }
     }

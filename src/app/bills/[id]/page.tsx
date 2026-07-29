@@ -50,13 +50,17 @@ export default async function BillPage({
     supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
   ]);
 
-  const profile: ProfileRow = profileRes.data ?? {
+  // Built field by field rather than passing profileRes.data straight through:
+  // the select is a wildcard now, and this object crosses into a client
+  // component, so a column added to profiles later would ship to the browser on
+  // its own. Same shape as profile/page.tsx.
+  const profile: ProfileRow = {
     user_id: user.id,
-    display_name: "",
-    promptpay_id: "",
-    bank_name: "",
-    bank_account: "",
-    account_name: "",
+    display_name: profileRes.data?.display_name ?? "",
+    promptpay_id: profileRes.data?.promptpay_id ?? "",
+    bank_name: profileRes.data?.bank_name ?? "",
+    bank_account: profileRes.data?.bank_account ?? "",
+    account_name: profileRes.data?.account_name ?? "",
   };
 
   const items = (itemsRes.data ?? []) as LineItemRow[];

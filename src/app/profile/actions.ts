@@ -5,8 +5,14 @@ import { resolveDisplayName } from "@/lib/bills/displayName";
 import type { ProfileRow } from "@/lib/bills/types";
 
 export interface SaveProfileResult {
-  /** The self-peer kept its old name because another peer already has this one. */
-  peerRenameConflict: boolean;
+  /**
+   * Whether the display name reached the bills. "conflict" = another peer holds
+   * that name; "failed" = anything else, including the missing-column error you
+   * get if this runs before the migration. The user's move is the same either
+   * way, but silence is not an option: the profile row saved while every bill
+   * kept the old name, and naming the bills is all this field does.
+   */
+  peerRename: "ok" | "conflict" | "failed";
 }
 
 export async function saveProfile(
@@ -38,12 +44,14 @@ export async function saveProfile(
       .eq("organizer_id", user.id)
       .eq("linked_user_id", user.id);
 
-    // A unique (organizer_id, name) clash must not fail the profile save, but it
-    // must not be swallowed either: the bills would silently keep the old name
-    // while the form flashed บันทึกแล้ว, which is a lie about the only thing this
-    // field does. Report it so the form can say so.
-    if (peerError) return { peerRenameConflict: peerError.code === "23505" };
+    // A failure here must not fail the profile save, but it must not be
+    // swallowed either: the bills would keep the old name while the form flashed
+    // บันทึกแล้ว, which is a lie about the only thing this field does.
+    if (peerError) {
+      console.error("saveProfile: self-peer rename failed", peerError.message);
+      return { peerRename: peerError.code === "23505" ? "conflict" : "failed" };
+    }
   }
 
-  return { peerRenameConflict: false };
+  return { peerRename: "ok" };
 }
