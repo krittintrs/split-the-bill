@@ -32,7 +32,11 @@ export default async function BillPage({
 
   const [itemsRes, billPeersRes, recentRes, profileRes] = await Promise.all([
     supabase.from("line_items").select("*").eq("bill_id", id).order("position"),
-    supabase.from("bill_peers").select("added_at, peers (id, name)").eq("bill_id", id).order("added_at"),
+    supabase
+      .from("bill_peers")
+      .select("added_at, peers (id, name, linked_user_id)")
+      .eq("bill_id", id)
+      .order("added_at"),
     supabase
       .from("peers")
       .select("id, name, last_used_at")
@@ -59,6 +63,10 @@ export default async function BillPage({
     .map((row) => row.peers as unknown as PeerRow)
     .filter(Boolean);
 
+  // ADR-0010: the organizer's own row, identified by the joinable predicate
+  // linked_user_id = organizer_id, never by comparing names (ADR-0005).
+  const selfPeerId = peersOnBill.find((peer) => peer.linked_user_id === user.id)?.id ?? null;
+
   const itemIds = items.map((item) => item.id);
   const ticks: TickRow[] =
     itemIds.length === 0
@@ -79,6 +87,7 @@ export default async function BillPage({
         initialPeers={peersOnBill}
         initialTicks={ticks}
         recentPeers={(recentRes.data ?? []) as PeerRow[]}
+        selfPeerId={selfPeerId}
         profile={profile}
       />
     </>

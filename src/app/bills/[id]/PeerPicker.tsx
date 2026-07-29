@@ -6,11 +6,18 @@ import type { PeerRow } from "@/lib/bills/types";
 interface Props {
   peersOnBill: PeerRow[];
   recentPeers: PeerRow[];
+  selfPeerId: string | null;
   onAdd: (name: string) => void;
   onRemove: (peerId: string) => void;
 }
 
-export default function PeerPicker({ peersOnBill, recentPeers, onAdd, onRemove }: Props) {
+export default function PeerPicker({
+  peersOnBill,
+  recentPeers,
+  selfPeerId,
+  onAdd,
+  onRemove,
+}: Props) {
   const [name, setName] = useState("");
   const onBillIds = new Set(peersOnBill.map((peer) => peer.id));
   const suggestions = recentPeers.filter((peer) => !onBillIds.has(peer.id));
@@ -36,6 +43,13 @@ export default function PeerPicker({ peersOnBill, recentPeers, onAdd, onRemove }
               className="flex min-h-11 items-center gap-1 rounded-full bg-primary pl-4 pr-0.5 text-sm font-bold text-white"
             >
               {peer.name}
+              {/* ADR-0010: the ✕ stays live on your own chip — removing yourself
+                  is the documented opt-out on a bill you only paid for. */}
+              {peer.id === selfPeerId && (
+                <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-semibold">
+                  คุณ
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => onRemove(peer.id)}

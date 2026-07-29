@@ -12,6 +12,7 @@ interface Props {
   ticks: TickRow[];
   result: BillResult;
   receiptTotalSatang: number;
+  selfPeerId: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
 }
 
@@ -22,6 +23,7 @@ export default function CardsView({
   ticks,
   result,
   receiptTotalSatang,
+  selfPeerId,
   onToggle,
 }: Props) {
   const [totalsOpen, setTotalsOpen] = useState(false);
@@ -125,7 +127,12 @@ export default function CardsView({
             <ul className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
               {peers.map((peer) => (
                 <li key={peer.id} className="flex justify-between tabular-nums">
-                  <span>{peer.name}</span>
+                  <span>
+                    {peer.name}
+                    {peer.id === selfPeerId && (
+                      <span className="ml-1 text-xs text-primary-ink">(คุณ)</span>
+                    )}
+                  </span>
                   <span>{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
                 </li>
               ))}
