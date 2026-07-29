@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, type FocusEvent } from "react";
+import { useMemo, useRef, useState, type FocusEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import KebabMenu, { kebabItemCls } from "@/components/KebabMenu";
 import { computeBill } from "@/lib/billing/compute";
+import { totalFromUnitPriceSatang, unitPriceFromTotalSatang } from "@/lib/billing/lineEntry";
 import { formatSatang } from "@/lib/billing/money";
 import { mapToBillInput } from "@/lib/bills/mapper";
 import {
@@ -619,6 +620,49 @@ function ItemRow({
   onUpdate: (id: string, patch: Partial<LineItemRow>) => void;
   onRemove: (id: string) => void;
 }) {
+  // Price, qty and total are three views of two stored fields, so the boxes are
+  // written imperatively (same idiom as moneyBlur) rather than made controlled:
+  // it keeps the derived box in step without remounting an input mid-tab.
+  const priceRef = useRef<HTMLInputElement>(null);
+  const totalRef = useRef<HTMLInputElement>(null);
+  const qtyRef = useRef<HTMLInputElement>(null);
+  // null = the unit price is the held side. A number = the line total the
+  // organizer typed, held across qty changes, because on a receipt the line
+  // total is the fact and the qty is the typo. It stores what they TYPED, not
+  // what the box shows: the box shows the settled figure, and re-settling that
+  // at a new qty would stack a second round-up (see lineEntry.test.ts).
+  const heldTotal = useRef<number | null>(null);
+  // Set on input, not on blur: blur fires on a plain tab-through, which would
+  // otherwise flip the held side without the organizer typing anything.
+  const priceDirty = useRef(false);
+  const totalDirty = useRef(false);
+  const [roundedUp, setRoundedUp] = useState<string | null>(null);
+
+  function currentQty(): number {
+    const qty = parseInt(qtyRef.current?.value ?? "", 10);
+    return Number.isNaN(qty) || qty < 1 ? item.qty : qty;
+  }
+  function writePrice(satang: number) {
+    if (priceRef.current) priceRef.current.value = satangToInput(satang);
+  }
+  function writeTotal(satang: number) {
+    if (totalRef.current) totalRef.current.value = satangToInput(satang);
+  }
+
+  /** Back-calculate the stored unit price from a typed total, surfacing any round-up. */
+  function settleFromTotal(typedSatang: number, qty: number): number {
+    const unit = unitPriceFromTotalSatang(typedSatang, qty);
+    const settled = totalFromUnitPriceSatang(unit, qty);
+    writePrice(unit);
+    writeTotal(settled);
+    setRoundedUp(
+      settled === typedSatang
+        ? null
+        : `ปัดขึ้น: ${formatSatang(unit)} × ${qty} = ${formatSatang(settled)}`,
+    );
+    return unit;
+  }
+
   return (
     <div className="flex flex-wrap items-end gap-2 border-b border-border pb-3 last:border-b-0 last:pb-0">
       <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-ink-muted">
@@ -632,60 +676,144 @@ function ItemRow({
           className={inputCls}
         />
       </label>
-      <label className="flex flex-col gap-1 text-xs text-ink-muted">
-        ราคา ฿
-        <input
-          inputMode="decimal"
-          defaultValue={satangToInput(item.unit_price_satang)}
-          placeholder="0.00"
-          onBlur={(e) => moneyBlur(e, (satang) => onUpdate(item.id, { unit_price_satang: satang }))}
-          className={`${inputCls} w-24 text-right tabular-nums`}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-xs text-ink-muted">
-        จำนวน
-        <input
-          inputMode="numeric"
-          defaultValue={item.qty}
-          onBlur={(e) => {
-            const qty = parseInt(e.target.value, 10);
-            onUpdate(item.id, { qty: Number.isNaN(qty) || qty < 1 ? 1 : qty });
-          }}
-          className={`${inputCls} w-14 text-right tabular-nums`}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-xs text-ink-muted">
-        ลด %
-        <input
-          inputMode="numeric"
-          defaultValue={item.discount_percent || ""}
-          onBlur={(e) => {
-            const value = parseInt(e.target.value, 10);
-            onUpdate(item.id, {
-              discount_percent: Number.isNaN(value) ? 0 : Math.min(100, Math.max(0, value)),
-            });
-          }}
-          className={`${inputCls} w-14 text-right tabular-nums`}
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-xs text-ink-muted">
-        ลด ฿
-        <input
-          inputMode="decimal"
-          defaultValue={satangToInput(item.discount_satang)}
-          placeholder="0.00"
-          onBlur={(e) => moneyBlur(e, (satang) => onUpdate(item.id, { discount_satang: satang }))}
-          className={`${inputCls} w-20 text-right tabular-nums`}
-        />
-      </label>
-      <button
-        type="button"
-        onClick={() => onRemove(item.id)}
-        aria-label={`ลบ ${item.name || "รายการ"}`}
-        className="flex h-11 w-11 items-center justify-center rounded-lg text-danger transition hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
-      >
-        ✕
-      </button>
+      {/* The three linked boxes stay together when the row wraps on a phone. */}
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          ราคา ฿
+          <input
+            ref={priceRef}
+            inputMode="decimal"
+            defaultValue={satangToInput(item.unit_price_satang)}
+            placeholder="0.00"
+            onInput={(e) => {
+              priceDirty.current = true;
+              // Live feedback while typing. Writes only the OTHER box, never the
+              // one under the cursor, and never saves: persistence stays on blur.
+              writeTotal(
+                totalFromUnitPriceSatang(inputToSatang(e.currentTarget.value), currentQty()),
+              );
+            }}
+            onBlur={(e) =>
+              moneyBlur(e, (satang) => {
+                if (!priceDirty.current) return; // tabbed through, nothing typed
+                priceDirty.current = false;
+                // Unit price typed: it becomes the held side and the total is
+                // derived from it, exactly, with nothing to round.
+                heldTotal.current = null;
+                setRoundedUp(null);
+                writeTotal(totalFromUnitPriceSatang(satang, currentQty()));
+                if (satang !== item.unit_price_satang) {
+                  onUpdate(item.id, { unit_price_satang: satang });
+                }
+              })
+            }
+            className={`${inputCls} w-24 text-right tabular-nums`}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          จำนวน
+          <input
+            ref={qtyRef}
+            inputMode="numeric"
+            defaultValue={item.qty}
+            onInput={() => {
+              // Re-derive whichever box is not the held side, live.
+              if (heldTotal.current !== null) {
+                writePrice(unitPriceFromTotalSatang(heldTotal.current, currentQty()));
+              } else {
+                writeTotal(totalFromUnitPriceSatang(item.unit_price_satang, currentQty()));
+              }
+            }}
+            onBlur={(e) => {
+              const parsed = parseInt(e.target.value, 10);
+              const qty = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+              e.target.value = String(qty);
+              if (heldTotal.current !== null) {
+                const unit = settleFromTotal(heldTotal.current, qty);
+                onUpdate(item.id, { qty, unit_price_satang: unit });
+              } else {
+                writeTotal(totalFromUnitPriceSatang(item.unit_price_satang, qty));
+                setRoundedUp(null);
+                onUpdate(item.id, { qty });
+              }
+            }}
+            className={`${inputCls} w-14 text-right tabular-nums`}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          รวม ฿ (ก่อนลด)
+          <input
+            ref={totalRef}
+            inputMode="decimal"
+            defaultValue={satangToInput(
+              totalFromUnitPriceSatang(item.unit_price_satang, item.qty),
+            )}
+            placeholder="0.00"
+            onInput={(e) => {
+              totalDirty.current = true;
+              // Live feedback: back-derive the unit price as they type. The
+              // settle (and the ปัดขึ้น note) waits for blur, so the round-up
+              // never rewrites this box mid-keystroke and fights the cursor.
+              writePrice(unitPriceFromTotalSatang(inputToSatang(e.currentTarget.value), currentQty()));
+            }}
+            onBlur={(e) => {
+              // Receipts often print only this box; the unit price is what we store.
+              const typed = inputToSatang(e.target.value);
+              if (!totalDirty.current) {
+                e.target.value = satangToInput(typed); // tabbed through: just normalize
+                return;
+              }
+              totalDirty.current = false;
+              heldTotal.current = typed;
+              const unit = settleFromTotal(typed, currentQty());
+              if (unit !== item.unit_price_satang) {
+                onUpdate(item.id, { unit_price_satang: unit });
+              }
+            }}
+            className={`${inputCls} w-24 text-right tabular-nums`}
+          />
+        </label>
+      </div>
+      {/* Likewise the discount pair, so ลด ฿ never wraps away from ลด %. */}
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          ลด %
+          <input
+            inputMode="numeric"
+            defaultValue={item.discount_percent || ""}
+            onBlur={(e) => {
+              const value = parseInt(e.target.value, 10);
+              onUpdate(item.id, {
+                discount_percent: Number.isNaN(value) ? 0 : Math.min(100, Math.max(0, value)),
+              });
+            }}
+            className={`${inputCls} w-14 text-right tabular-nums`}
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          ลด ฿
+          <input
+            inputMode="decimal"
+            defaultValue={satangToInput(item.discount_satang)}
+            placeholder="0.00"
+            onBlur={(e) => moneyBlur(e, (satang) => onUpdate(item.id, { discount_satang: satang }))}
+            className={`${inputCls} w-20 text-right tabular-nums`}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => onRemove(item.id)}
+          aria-label={`ลบ ${item.name || "รายการ"}`}
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-danger transition hover:bg-surface-tint active:scale-95 focus-visible:outline-2 focus-visible:outline-danger"
+        >
+          ✕
+        </button>
+      </div>
+      {roundedUp && (
+        <p role="status" className="w-full text-xs text-ink-muted tabular-nums">
+          {roundedUp}
+        </p>
+      )}
     </div>
   );
 }
