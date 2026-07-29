@@ -1,8 +1,8 @@
 # Split the Bill — Status
 
-**Phase:** 7 — #10 payback shipped as v0.3.0 (PR #29): typed payment model + carry-over migration (applied), in-house EMVCo PromptPay QR (ADR-0008/0009), `/profile` editor, follow-profile snapshot, peer tap-to-claim payback panel (design C+, works mobile + desktop matrix), and an organizer top-bar nav (Bills/Profile/Sign out). → next: #26 (peer order bug, ready-for-agent), then grill #21 (create-flow slowness) and #24 (owner self-select, needs a rollup semantics call), then { #11 dashboard, #12 my debts }
+**Phase:** 7 — #26 peer-order bug shipped as v0.3.1 (PR #30): the anon `get_bill` RPC now orders peers by `(added_at, id)` and `PeerBill` re-sorts on the same key, so a realtime refetch can no longer reshuffle columns mid-session; migration applied to prod and verified (grants, security definer, live payload). Before it, v0.3.0 (PR #29) shipped #10 payback: typed payment model, in-house EMVCo PromptPay QR (ADR-0008/0009), `/profile` editor, peer tap-to-claim panel, organizer top-bar nav. → next: #25 line-total input (PR #31, open, awaiting browser QA), then grill #21 (create-flow slowness) and #24 (owner self-select, needs a rollup semantics call), then { #11 dashboard, #12 my debts }
 
-**Triaged 2026-07-26** (not yet scheduled into the pipeline below): #20 calculation visibility, #24 owner can't self-select, #25 total-amount line item input, #26 peer order instability. See issues for agent briefs / open questions. #27 (Microsoft sign-in) triaged as needs-triage, pending a go/no-go against the Google-only decision above.
+**Triaged 2026-07-26** (not yet scheduled into the pipeline below): #20 calculation visibility, #24 owner can't self-select. See issues for agent briefs / open questions. #27 (Microsoft sign-in) triaged as needs-triage, pending a go/no-go against the Google-only decision above.
 
 ## Frame (decided 2026-07-14)
 
@@ -34,7 +34,7 @@ READY 🟢
 | High | #10 | Payback: payment info, copy paths, QR image, tap-to-claim | #9 | main session + user | DONE ✅ |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
 | Med | #12 | Account Claim + My Debts | #10 | dev agent | READY |
-| High | #26 | Bug: peer view order reshuffles (no stable ORDER BY on peers) | — | dev agent | READY (ready-for-agent) |
+| High | #26 | Bug: peer view order reshuffles (no stable ORDER BY on peers) | — | main session | DONE ✅ v0.3.1 |
 | High | #24 | Bug: bill owner can't self-select items they ate | — | needs a rollup semantics call first | NEEDS-TRIAGE |
 | Med | #21 | Rework bill creation flow to avoid perceived slowness | — | needs grilling | NEEDS-TRIAGE |
 | Med | #25 | Enhancement: total-amount input mode for line items (supersedes duplicate #28) | — | dev agent | READY (ready-for-agent) |
@@ -62,3 +62,4 @@ READY 🟢
 | 2026-07-25 | #10 payback: generate PromptPay QR client-side per peer (not upload), typed payment fields, in-house EMV builder | ADR-0008 (upload leaks name/branding, can't carry per-peer amount; client-side adds no attack surface), ADR-0009 (free-form can't drive QR; frozen standard = no dep needed); attribution deferred to #12 | User + main session (grill) |
 | 2026-07-25 | #10 peer UI = design "C+" (locked via /impeccable): no separate claim strip — the "ทุกคน" list is the selector; tap your name (device-local localStorage claim, no login) → payback panel pins to top + auto-scroll. #9 never shipped soft-claim, so #10 absorbs a minimal claim. Profile page gets a static QR preview | Copy buttons (required path) read cleaner in a top panel than crammed in a row; reuses existing list; on-brand "one loud thing"; mock confirmed on phone | User + main session (impeccable craft) |
 | 2026-07-19 | #15: UI speaks lifecycle phases, not mechanisms — locked shows as "💰 พร้อมเก็บเงิน", lock buttons name the mechanism (ล็อกรายการ) | "Locked"/ปิดยอด confuse (freeze vs settled); phase language scales to #10 QR and a derived "ครบแล้ว" state; glossary in CONTEXT.md | User + main session |
+| 2026-07-29 | #26: peers are ordered by `(added_at, id)` in the anon RPC and re-sorted client-side on the same key, compared byte-wise rather than with `localeCompare`; payload fields the client sorts on are typed optional | `jsonb_agg` has no order without `ORDER BY`, so refetches reshuffled columns. ICU orders "." before "+", so `localeCompare` on ISO timestamps disagrees across browser locales; byte order matches Postgres. **Migrations here cut both ways** — #10's dropped columns so it had to run *after* deploy, #26's must run *before* — and Vercel deploys on merge while migrations are manual, so client code must degrade rather than throw when a field is missing | User + main session (reviewer) |

@@ -5,6 +5,15 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-07-29
+
+Peer view stops reshuffling itself.
+
+### Fixed
+
+- Peer view column and row order no longer changes on its own (#26). The anon `get_bill` RPC aggregated peers with no `ORDER BY`, and `jsonb_agg` has no defined order without one, so any realtime refetch (someone toggling a paid flag) could return a different peer order. Peers are now ordered by `(added_at, id)`, the same key the organizer's page has always used, and the peer page re-sorts on it client-side
+- Peer order no longer varies by browser locale. The client sorted with `localeCompare`, and ICU collation orders `.` before `+`, so two peers on different locales could see opposite column order for timestamps differing only in fractional seconds
+
 ## [0.3.0] — 2026-07-26
 
 Payback: peers get a PromptPay QR with their exact amount and one-tap copy paths; the organizer stores payment info once on a new profile page. Plus organizer navigation.
