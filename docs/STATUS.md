@@ -1,8 +1,8 @@
 # Split the Bill — Status
 
-**Phase:** 7 — #26 peer-order bug shipped as v0.3.1 (PR #30): the anon `get_bill` RPC now orders peers by `(added_at, id)` and `PeerBill` re-sorts on the same key, so a realtime refetch can no longer reshuffle columns mid-session; migration applied to prod and verified (grants, security definer, live payload). Before it, v0.3.0 (PR #29) shipped #10 payback: typed payment model, in-house EMVCo PromptPay QR (ADR-0008/0009), `/profile` editor, peer tap-to-claim panel, organizer top-bar nav. → next: #25 line-total input (PR #31, open, awaiting browser QA), then grill #21 (create-flow slowness) and #24 (owner self-select, needs a rollup semantics call), then { #11 dashboard, #12 my debts }
+**Phase:** 7 — #25 line-total input shipped as v0.4.0 (PR #31, closes duplicate #28): the item row's ราคา and รวม boxes each derive the other live as you type, unit price stays the stored truth, and a typed total back-derives through the engine's exact-BigInt ceil with a visible ปัดขึ้น note. Before it, v0.3.1 (PR #30) fixed the #26 peer-order reshuffle (migration applied to prod and verified). → next: choose between #24 (owner self-select, blocked on a rollup semantics call from the user) and #20 (per-peer calculation breakdown, ready-for-agent, brief already written), then grill #21 (create-flow slowness), then { #11 dashboard, #12 my debts }
 
-**Triaged 2026-07-26** (not yet scheduled into the pipeline below): #20 calculation visibility, #24 owner can't self-select. See issues for agent briefs / open questions. #27 (Microsoft sign-in) triaged as needs-triage, pending a go/no-go against the Google-only decision above.
+**Open from the 2026-07-26 triage:** #20 calculation visibility (ready-for-agent), #24 owner can't self-select (needs the rollup call), #21 create-flow slowness (needs grilling), #27 Microsoft sign-in (needs a go/no-go against the Google-only decision above). See the issues for briefs and open questions.
 
 ## Frame (decided 2026-07-14)
 
@@ -18,10 +18,21 @@
 Spec: [#5](https://github.com/krittintrs/split-the-bill/issues/5). Grilled decisions live in `CONTEXT.md` + `docs/adr/`. Old issues #1–#4 closed as superseded.
 
 ```
-READY 🟢
- #6 walking skeleton  →  #7 billing engine  →  #8 bill editor
-   →  #9 peer link (+paid flag)  →  #15 UI revamp  →  #10 payback
-   →  { #11 dashboard, #12 my debts }
+SHIPPED ✅
+ #6 skeleton → #7 billing engine → #8 bill editor → #9 peer link (+paid flag)
+   → #15 UI revamp → #10 payback ......................... v0.3.0
+   → #26 peer order fix .................................. v0.3.1
+   → #25 line-total input (closes dup #28) ............... v0.4.0
+
+READY 🟢  unblocked, brief written, an agent can start now
+ #20 calculation visibility ... peer sees how their own total was built
+ #11 dashboard ................ history, unpaid rollup, peer rename
+ #12 my debts ................. account claim + cross-bill view
+
+BLOCKED 🔴  waiting on a human decision, not on code
+ #24 owner self-select ........ does the organizer's own share count in the rollup?
+ #21 create-flow slowness ..... needs a grilling session on the persistence model
+ #27 Microsoft sign-in ........ go/no-go against the Google-only decision above
 ```
 
 | Impact | Issue | Description | Blocked by | Who | Status |
@@ -32,13 +43,14 @@ READY 🟢
 | High | #9 | Peer link experience: ticking, realtime, lock, basic paid flag | #8 | dev agent | DONE ✅ |
 | Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | DONE ✅ |
 | High | #10 | Payback: payment info, copy paths, QR image, tap-to-claim | #9 | main session + user | DONE ✅ |
-| Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 | dev agent | READY |
-| Med | #12 | Account Claim + My Debts | #10 | dev agent | READY |
 | High | #26 | Bug: peer view order reshuffles (no stable ORDER BY on peers) | — | main session | DONE ✅ v0.3.1 |
-| High | #24 | Bug: bill owner can't self-select items they ate | — | needs a rollup semantics call first | NEEDS-TRIAGE |
-| Med | #21 | Rework bill creation flow to avoid perceived slowness | — | needs grilling | NEEDS-TRIAGE |
-| Med | #25 | Enhancement: total-amount input mode for line items (supersedes duplicate #28) | — | dev agent | READY (ready-for-agent) |
-| Med | #20 | Enhancement: per-peer calculation breakdown (subtotal/discount/service/VAT) | — | dev agent | READY (ready-for-agent) |
+| Med | #25 | Enhancement: total-amount input mode for line items (supersedes duplicate #28) | — | main session | DONE ✅ v0.4.0 |
+| Med | #20 | Enhancement: per-peer calculation breakdown (subtotal/discount/service/VAT) | — | dev agent | READY 🟢 |
+| Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 ✅ | dev agent | READY 🟢 |
+| Med | #12 | Account Claim + My Debts | #10 ✅ | dev agent | READY 🟢 |
+| High | #24 | Bug: bill owner can't self-select items they ate | rollup semantics call | user | BLOCKED 🔴 |
+| Med | #21 | Rework bill creation flow to avoid perceived slowness | grilling session | user | BLOCKED 🔴 |
+| Low | #27 | Microsoft sign-in (external request) | go/no-go vs Google-only | user | BLOCKED 🔴 |
 
 ## Decision Log
 

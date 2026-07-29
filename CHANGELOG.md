@@ -5,6 +5,24 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-29
+
+Type a line total straight off the receipt instead of dividing by hand.
+
+### Added
+
+- Line items take a **รวม ฿ (ก่อนลด)** total alongside **ราคา ฿** (#25, closes duplicate #28). Plenty of receipts print only a line total ("pad kra pao 429.12 x4"), so the organizer had to divide before typing anything in. Type either box and the other derives, live, as you type
+- A typed total that does not divide evenly rounds the unit price up, so the organizer is never left short: ฿100.00 across 3 settles to ฿33.34 each. The box re-derives to the resulting ฿100.02 with a ปัดขึ้น note, so the adjustment is never silent
+- Changing the quantity holds whichever box was actually typed in, because on a receipt the line total is the fact and the quantity is the typo
+
+### Changed
+
+- Item row fields are grouped so a phone-width wrap keeps ราคา/จำนวน/รวม together and never orphans ลด ฿ from ลด %
+
+### Notes
+
+- No schema change. `unit_price_satang` remains the stored truth and the only value the billing engine multiplies out; a typed total is back-derived through the existing exact-BigInt ceil (ADR-0001), never float arithmetic
+
 ## [0.3.1] — 2026-07-29
 
 Peer view stops reshuffling itself.
