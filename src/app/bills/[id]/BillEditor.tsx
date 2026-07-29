@@ -685,8 +685,13 @@ function ItemRow({
             inputMode="decimal"
             defaultValue={satangToInput(item.unit_price_satang)}
             placeholder="0.00"
-            onInput={() => {
+            onInput={(e) => {
               priceDirty.current = true;
+              // Live feedback while typing. Writes only the OTHER box, never the
+              // one under the cursor, and never saves: persistence stays on blur.
+              writeTotal(
+                totalFromUnitPriceSatang(inputToSatang(e.currentTarget.value), currentQty()),
+              );
             }}
             onBlur={(e) =>
               moneyBlur(e, (satang) => {
@@ -711,6 +716,14 @@ function ItemRow({
             ref={qtyRef}
             inputMode="numeric"
             defaultValue={item.qty}
+            onInput={() => {
+              // Re-derive whichever box is not the held side, live.
+              if (heldTotal.current !== null) {
+                writePrice(unitPriceFromTotalSatang(heldTotal.current, currentQty()));
+              } else {
+                writeTotal(totalFromUnitPriceSatang(item.unit_price_satang, currentQty()));
+              }
+            }}
             onBlur={(e) => {
               const parsed = parseInt(e.target.value, 10);
               const qty = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
@@ -736,8 +749,12 @@ function ItemRow({
               totalFromUnitPriceSatang(item.unit_price_satang, item.qty),
             )}
             placeholder="0.00"
-            onInput={() => {
+            onInput={(e) => {
               totalDirty.current = true;
+              // Live feedback: back-derive the unit price as they type. The
+              // settle (and the ปัดขึ้น note) waits for blur, so the round-up
+              // never rewrites this box mid-keystroke and fights the cursor.
+              writePrice(unitPriceFromTotalSatang(inputToSatang(e.currentTarget.value), currentQty()));
             }}
             onBlur={(e) => {
               // Receipts often print only this box; the unit price is what we store.
