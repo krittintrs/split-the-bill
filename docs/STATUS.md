@@ -1,8 +1,8 @@
 # Split the Bill — Status
 
-**Phase:** 7 — #25 line-total input shipped as v0.4.0 (PR #31, closes duplicate #28): the item row's ราคา and รวม boxes each derive the other live as you type, unit price stays the stored truth, and a typed total back-derives through the engine's exact-BigInt ceil with a visible ปัดขึ้น note. Before it, v0.3.1 (PR #30) fixed the #26 peer-order reshuffle (migration applied to prod and verified). → next: choose between #24 (owner self-select, blocked on a rollup semantics call from the user) and #20 (per-peer calculation breakdown, ready-for-agent, brief already written), then grill #21 (create-flow slowness), then { #11 dashboard, #12 my debts }
+**Phase:** 8 — #24 organizer self-peer shipped as v0.5.0: the organizer is auto-added to their own bill as a real `peers` row marked by `linked_user_id = organizer_id` (ADR-0010), named from a new `profiles.display_name`, badged คุณ in the editor, and visible-but-not-claimable (no QR, no paid toggle) on the shared link. The rollup call is settled: the organizer's share is excluded from debt and shown as context. **The migration must be applied before the deploy** (`20260729000000_self_peer.sql`). Before it, v0.4.0 (PR #31) shipped #25 line-total input. → next: #20 (per-peer calculation breakdown, ready-for-agent, brief already written), then grill #21 (create-flow slowness), then { #11 dashboard, #12 my debts }
 
-**Open from the 2026-07-26 triage:** #20 calculation visibility (ready-for-agent), #24 owner can't self-select (needs the rollup call), #21 create-flow slowness (needs grilling), #27 Microsoft sign-in (needs a go/no-go against the Google-only decision above). See the issues for briefs and open questions.
+**Open from the 2026-07-26 triage:** #20 calculation visibility (ready-for-agent), #21 create-flow slowness (needs grilling), #27 Microsoft sign-in (needs a go/no-go against the Google-only decision above). See the issues for briefs and open questions.
 
 ## Frame (decided 2026-07-14)
 
@@ -23,6 +23,7 @@ SHIPPED ✅
    → #15 UI revamp → #10 payback ......................... v0.3.0
    → #26 peer order fix .................................. v0.3.1
    → #25 line-total input (closes dup #28) ............... v0.4.0
+   → #24 organizer self-peer ............................. v0.5.0
 
 READY 🟢  unblocked, brief written, an agent can start now
  #20 calculation visibility ... peer sees how their own total was built
@@ -30,7 +31,6 @@ READY 🟢  unblocked, brief written, an agent can start now
  #12 my debts ................. account claim + cross-bill view
 
 BLOCKED 🔴  waiting on a human decision, not on code
- #24 owner self-select ........ does the organizer's own share count in the rollup?
  #21 create-flow slowness ..... needs a grilling session on the persistence model
  #27 Microsoft sign-in ........ go/no-go against the Google-only decision above
 ```
@@ -45,10 +45,10 @@ BLOCKED 🔴  waiting on a human decision, not on code
 | High | #10 | Payback: payment info, copy paths, QR image, tap-to-claim | #9 | main session + user | DONE ✅ |
 | High | #26 | Bug: peer view order reshuffles (no stable ORDER BY on peers) | — | main session | DONE ✅ v0.3.1 |
 | Med | #25 | Enhancement: total-amount input mode for line items (supersedes duplicate #28) | — | main session | DONE ✅ v0.4.0 |
+| High | #24 | Bug: bill owner can't self-select items they ate | — | main session + dev agent | DONE ✅ v0.5.0 |
 | Med | #20 | Enhancement: per-peer calculation breakdown (subtotal/discount/service/VAT) | — | dev agent | READY 🟢 |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 ✅ | dev agent | READY 🟢 |
 | Med | #12 | Account Claim + My Debts | #10 ✅ | dev agent | READY 🟢 |
-| High | #24 | Bug: bill owner can't self-select items they ate | rollup semantics call | user | BLOCKED 🔴 |
 | Med | #21 | Rework bill creation flow to avoid perceived slowness | grilling session | user | BLOCKED 🔴 |
 | Low | #27 | Microsoft sign-in (external request) | go/no-go vs Google-only | user | BLOCKED 🔴 |
 
@@ -76,3 +76,4 @@ BLOCKED 🔴  waiting on a human decision, not on code
 | 2026-07-19 | #15: UI speaks lifecycle phases, not mechanisms — locked shows as "💰 พร้อมเก็บเงิน", lock buttons name the mechanism (ล็อกรายการ) | "Locked"/ปิดยอด confuse (freeze vs settled); phase language scales to #10 QR and a derived "ครบแล้ว" state; glossary in CONTEXT.md | User + main session |
 | 2026-07-27 | #25: a Line Item's unit price stays the stored truth; the editor's total box is a second view (gross, before item discount) that back-derives it, ceil'd per ADR-0001 | Storing the typed total instead would mean a migration, a compute.ts change and two sources of truth for one price; ceil keeps the organizer whole and the box re-derives to the settled figure so the round-up is never silent. Glossary clause in CONTEXT.md | User + main session |
 | 2026-07-29 | #26: peers are ordered by `(added_at, id)` in the anon RPC and re-sorted client-side on the same key, compared byte-wise rather than with `localeCompare`; payload fields the client sorts on are typed optional | `jsonb_agg` has no order without `ORDER BY`, so refetches reshuffled columns. ICU orders "." before "+", so `localeCompare` on ISO timestamps disagrees across browser locales; byte order matches Postgres. **Migrations here cut both ways** — #10's dropped columns so it had to run *after* deploy, #26's must run *before* — and Vercel deploys on merge while migrations are manual, so client code must degrade rather than throw when a field is missing | User + main session (reviewer) |
+| 2026-07-29 | #24: the organizer joins their own bill as a marked self-peer (`peers.linked_user_id`), auto-added on creation, visible but not claimable on the peer link | Every path is keyed on `peer_id`, so a peer row is the only shape; marking it is what lets #11 exclude it from debt and the peer view suppress a QR paying yourself, without the name matching ADR-0005 rejects. Same column #12 needs, so it is paid for once. ADR-0010 | User + main session (grill) |

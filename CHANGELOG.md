@@ -5,6 +5,24 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-29
+
+The organizer eats too.
+
+### Added
+
+- The organizer joins their own bill automatically and ticks the items they ate (#24). No more creating a peer named after yourself. Remove your own chip on the rare bill you only paid for
+- A display name on `/profile`, defaulted from your Google account, that names your row on every bill
+
+### Changed
+
+- On the shared link the organizer's row shows its ticks and total badged เจ้าของบิล, but is not tappable and has no QR or paid toggle: you cannot owe yourself
+
+### Notes
+
+- `peers.linked_user_id` is the column ADR-0005 reserved for peer accounts, so #12's Account Claim inherits it. #11's rollup excludes the organizer from debt and shows their share as context (ADR-0010)
+- The migration must be applied **before** the deploy: the new code reads `isSelf` and `display_name`. Both are typed optional so a deploy that wins the race degrades instead of throwing
+
 ## [0.4.0] — 2026-07-29
 
 Type a line total straight off the receipt instead of dividing by hand.
