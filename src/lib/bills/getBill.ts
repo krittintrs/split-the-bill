@@ -24,7 +24,13 @@ export interface GetBillJson {
     discountSatang: number;
     position: number;
   }[];
-  peers: { id: string; name: string; paidAt: string | null }[];
+  /**
+   * Server-ordered by (addedAt, id); re-sort on the same key before rendering.
+   * addedAt is optional on purpose: fetchBill casts the RPC payload unchecked,
+   * so a deploy that lands before the ordering migration would otherwise crash
+   * the anon peer view during SSR. Missing values fall back to the id tiebreak.
+   */
+  peers: { id: string; name: string; paidAt: string | null; addedAt?: string }[];
   ticks: { lineItemId: string; peerId: string }[];
 }
 
