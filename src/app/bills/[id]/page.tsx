@@ -40,13 +40,14 @@ export default async function BillPage({
       .limit(20),
     supabase
       .from("profiles")
-      .select("user_id, promptpay_id, bank_name, bank_account, account_name")
+      .select("user_id, display_name, promptpay_id, bank_name, bank_account, account_name")
       .eq("user_id", user.id)
       .maybeSingle(),
   ]);
 
   const profile: ProfileRow = profileRes.data ?? {
     user_id: user.id,
+    display_name: "",
     promptpay_id: "",
     bank_name: "",
     bank_account: "",

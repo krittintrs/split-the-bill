@@ -17,6 +17,7 @@ export interface BillRow {
 
 export interface ProfileRow {
   user_id: string;
+  display_name: string;
   promptpay_id: string;
   bank_name: string;
   bank_account: string;
@@ -38,6 +39,8 @@ export interface PeerRow {
   id: string;
   name: string;
   last_used_at?: string;
+  /** ADR-0010: set to the organizer's own user id on their self-peer. */
+  linked_user_id?: string | null;
 }
 
 export interface TickRow {

@@ -9,10 +9,16 @@ import { saveProfile } from "./actions";
 const inputCls =
   "min-h-11 rounded-lg border border-border bg-surface p-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary-ink";
 
-type Field = "account_name" | "promptpay_id" | "bank_name" | "bank_account";
+type Field =
+  | "display_name"
+  | "account_name"
+  | "promptpay_id"
+  | "bank_name"
+  | "bank_account";
 
 export default function ProfileForm({ profile }: { profile: ProfileRow }) {
   const [values, setValues] = useState({
+    display_name: profile.display_name,
     account_name: profile.account_name,
     promptpay_id: profile.promptpay_id,
     bank_name: profile.bank_name,
@@ -23,6 +29,7 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
   const [previewQr, setPreviewQr] = useState("");
   // What's currently persisted, so blur only writes real changes.
   const [stored, setStored] = useState({
+    display_name: profile.display_name,
     account_name: profile.account_name,
     promptpay_id: profile.promptpay_id,
     bank_name: profile.bank_name,
@@ -77,6 +84,21 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <section className="rounded-xl border border-border bg-surface p-3">
+        <h2 className="mb-2 font-semibold text-primary-ink">ชื่อที่แสดงในบิล</h2>
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          ชื่อของคุณในบิล เพื่อนที่เปิดลิงก์จะเห็นชื่อนี้
+          <input placeholder="ชื่อเล่นที่เพื่อนเรียก" {...bind("display_name")} />
+        </label>
+      </section>
+
+      <div>
+        <h2 className="font-semibold">ช่องทางรับเงิน</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          ตั้งค่าครั้งเดียว บิลใหม่จะดึงไปใช้อัตโนมัติ (แก้เป็นรายบิลได้)
+        </p>
+      </div>
+
       <section className="rounded-xl border border-border bg-surface p-3">
         <h2 className="mb-2 font-semibold text-primary-ink">ชื่อบัญชี</h2>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
