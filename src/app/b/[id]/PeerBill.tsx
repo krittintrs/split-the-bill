@@ -123,6 +123,10 @@ export default function PeerBill({
     [bill.peers],
   );
 
+  // ADR-0010: the organizer's own row shows its ticks and total so the split
+  // reconciles against the receipt, but it owes nobody: no claim, no QR, no paid.
+  const selfPeerId = peersSorted.find((peer) => peer.isSelf)?.id ?? null;
+
   const displayItems: DisplayItem[] = useMemo(
     () =>
       itemsSorted.map((item) => ({
@@ -209,9 +213,12 @@ export default function PeerBill({
   const paid: Record<string, boolean> = {};
   for (const peer of peersSorted) paid[peer.id] = peer.paidAt != null;
 
-  // Ignore a stale claim whose peer was removed from the bill.
+  // Ignore a stale claim whose peer was removed from the bill, or one stored on
+  // the organizer's row before this shipped: you cannot claim, or pay, yourself.
   const validClaimId =
-    claimedId && peersSorted.some((peer) => peer.id === claimedId) ? claimedId : null;
+    claimedId && claimedId !== selfPeerId && peersSorted.some((peer) => peer.id === claimedId)
+      ? claimedId
+      : null;
 
   const paybackPanel = validClaimId ? (
     <div ref={panelRef}>
@@ -293,6 +300,23 @@ export default function PeerBill({
         {peersSorted.map((peer) => {
           const isClaimed = claimedId === peer.id;
           const peerTotal = result.peerTotals[peer.id] ?? 0;
+          if (peer.id === selfPeerId) {
+            // Same row shape as its neighbours, minus every interactive part:
+            // the organizer's share is context, not a debt anyone can settle.
+            return (
+              <li key={peer.id} className="flex items-center gap-2 py-1">
+                <div className="flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left">
+                  <span>{peerName.get(peer.id)}</span>
+                  <span className="rounded-full bg-surface-tint px-2 py-0.5 text-xs font-semibold text-primary-ink">
+                    เจ้าของบิล
+                  </span>
+                  <span className="ml-auto font-semibold tabular-nums">
+                    {formatSatang(peerTotal)}
+                  </span>
+                </div>
+              </li>
+            );
+          }
           return (
             <li key={peer.id} className="flex items-center gap-2 py-1">
               <button
@@ -372,6 +396,18 @@ export default function PeerBill({
             </th>
             {peersSorted.map((peer) => {
               const isClaimed = claimedId === peer.id;
+              if (peer.id === selfPeerId) {
+                // A plain span, not a disabled button: nothing here is tappable,
+                // so nothing here should look tappable.
+                return (
+                  <th key={peer.id} className="p-2 text-center font-semibold">
+                    <span className="inline-flex min-h-9 flex-col items-center justify-center rounded-lg px-2 py-1 text-ink-muted">
+                      {peer.name}
+                      <span className="text-[11px] font-normal">เจ้าของบิล</span>
+                    </span>
+                  </th>
+                );
+              }
               return (
                 <th key={peer.id} className="p-2 text-center font-semibold">
                   <button
@@ -443,23 +479,31 @@ export default function PeerBill({
           </tr>
           <tr>
             <td className="sticky left-0 bg-surface p-3 font-semibold">จ่ายแล้ว</td>
-            {peersSorted.map((peer) => (
-              <td key={peer.id} className="p-1 text-center">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => onPaid(peer.id)}
-                  aria-label={`${peer.name} จ่ายแล้ว`}
-                  className={`h-10 w-10 rounded-lg border text-lg font-bold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    paid[peer.id]
-                      ? "border-transparent bg-success text-white hover:opacity-90"
-                      : "border-border bg-surface text-ink-muted/40 hover:border-primary hover:bg-surface-tint"
-                  }`}
-                >
-                  ✓
-                </button>
-              </td>
-            ))}
+            {peersSorted.map((peer) =>
+              peer.id === selfPeerId ? (
+                // No Paid Flag on the organizer's own column: there is nothing
+                // to settle. The empty box keeps the row height of its neighbours.
+                <td key={peer.id} className="p-1 text-center">
+                  <span aria-hidden className="inline-block h-10 w-10" />
+                </td>
+              ) : (
+                <td key={peer.id} className="p-1 text-center">
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => onPaid(peer.id)}
+                    aria-label={`${peer.name} จ่ายแล้ว`}
+                    className={`h-10 w-10 rounded-lg border text-lg font-bold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      paid[peer.id]
+                        ? "border-transparent bg-success text-white hover:opacity-90"
+                        : "border-border bg-surface text-ink-muted/40 hover:border-primary hover:bg-surface-tint"
+                    }`}
+                  >
+                    ✓
+                  </button>
+                </td>
+              ),
+            )}
           </tr>
         </tfoot>
       </table>
