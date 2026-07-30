@@ -7,12 +7,16 @@ Splitting shared restaurant bills among a recurring group of friends: one person
 ### People
 
 **Organizer**:
-The person who paid the restaurant and owns the Bill. Signs in with Google.
+The person who paid the restaurant and owns the Bill. Signs in with Google. Usually ate too, and joins their own Bill as a Self-Peer (ADR-0010). Their peer-facing name is their **Display Name**, set on `/profile` and defaulted from their Google account.
 _Avoid_: payer, owner, host
 
 **Peer**:
 A person who owes a share of a Bill. Exists as an organizer-scoped record so the same person is recognized across bills even if renamed.
 _Avoid_: friend, member, participant, user
+
+**Self-Peer**:
+The Organizer's own Peer record, marked by `peers.linked_user_id = organizer_id` and added to every Bill on creation. Ticks and totals like any Peer, but owes nobody: no PromptPay QR, no Paid Flag, excluded from the Unpaid Rollup's debt (ADR-0010). Remove it from the rare Bill you only paid for.
+_Avoid_: owner peer, self row, ghost peer
 
 **Soft Claim**:
 A peer tapping their name on a Bill in the browser, without an account. Pins their row and attributes their actions for that device only.
@@ -85,7 +89,7 @@ A single per-peer-per-bill toggle meaning "this Peer has paid the Organizer back
 _Avoid_: settled, confirmed, payment status
 
 **Unpaid Rollup**:
-The Organizer's cross-bill summary of what each Peer record still owes, grouped by Peer, oldest first.
+The Organizer's cross-bill summary of what each Peer record still owes, grouped by Peer, oldest first. The Organizer's own Self-Peer never appears as debt; their share shows as context so the figures reconcile against the receipt (ADR-0010).
 _Avoid_: debt summary, outstanding report
 
 **My Debts**:

@@ -26,11 +26,18 @@ export interface GetBillJson {
   }[];
   /**
    * Server-ordered by (addedAt, id); re-sort on the same key before rendering.
-   * addedAt is optional on purpose: fetchBill casts the RPC payload unchecked,
-   * so a deploy that lands before the ordering migration would otherwise crash
-   * the anon peer view during SSR. Missing values fall back to the id tiebreak.
+   * addedAt and isSelf are optional on purpose: fetchBill casts the RPC payload
+   * unchecked, so a deploy that lands before the migration would otherwise crash
+   * the anon peer view during SSR. Missing addedAt falls back to the id tiebreak;
+   * missing isSelf degrades the organizer's row to an ordinary peer.
    */
-  peers: { id: string; name: string; paidAt: string | null; addedAt?: string }[];
+  peers: {
+    id: string;
+    name: string;
+    paidAt: string | null;
+    addedAt?: string;
+    isSelf?: boolean;
+  }[];
   ticks: { lineItemId: string; peerId: string }[];
 }
 

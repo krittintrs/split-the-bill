@@ -9,10 +9,16 @@ import { saveProfile } from "./actions";
 const inputCls =
   "min-h-11 rounded-lg border border-border bg-surface p-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary-ink";
 
-type Field = "account_name" | "promptpay_id" | "bank_name" | "bank_account";
+type Field =
+  | "display_name"
+  | "account_name"
+  | "promptpay_id"
+  | "bank_name"
+  | "bank_account";
 
 export default function ProfileForm({ profile }: { profile: ProfileRow }) {
   const [values, setValues] = useState({
+    display_name: profile.display_name,
     account_name: profile.account_name,
     promptpay_id: profile.promptpay_id,
     bank_name: profile.bank_name,
@@ -20,9 +26,11 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
   });
   const [saved, setSaved] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [renameFailure, setRenameFailure] = useState<"ok" | "conflict" | "failed">("ok");
   const [previewQr, setPreviewQr] = useState("");
   // What's currently persisted, so blur only writes real changes.
   const [stored, setStored] = useState({
+    display_name: profile.display_name,
     account_name: profile.account_name,
     promptpay_id: profile.promptpay_id,
     bank_name: profile.bank_name,
@@ -32,12 +40,26 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
   // Persist a field on blur only when it changed from what's stored. `stored`
   // advances only on success so a failed save stays retryable on the next blur.
   async function commit(field: Field, value: string) {
-    // Store promptpay as digits only so a formatted number still drives a QR.
-    const next = field === "promptpay_id" ? value.replace(/\D/g, "") : value;
+    // Store promptpay as digits only so a formatted number still drives a QR,
+    // and the display name trimmed so the stored value matches the peer name
+    // (saveProfile trims before writing it) rather than differing by whitespace.
+    const next =
+      field === "promptpay_id"
+        ? value.replace(/\D/g, "")
+        : field === "display_name"
+          ? value.trim()
+          : value;
     if (next === stored[field]) return;
     try {
-      await saveProfile({ [field]: next });
-      setStored((s) => ({ ...s, [field]: next }));
+      const result = await saveProfile({ [field]: next });
+      // The profile row saved, but the name on the bills may not have changed.
+      if (field === "display_name") setRenameFailure(result.peerRename);
+      // Hold `stored` back when the rename never reached the bills: otherwise the
+      // dirty check above turns the next blur into a no-op and blocks the retry
+      // this field's own alert asks for. Costs one idempotent upsert on retry.
+      if (field !== "display_name" || result.peerRename === "ok") {
+        setStored((s) => ({ ...s, [field]: next }));
+      }
       if (next !== value) setValues((v) => ({ ...v, [field]: next })); // show normalized
       setSaveFailed(false);
       setSaved(true);
@@ -77,6 +99,30 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <section className="rounded-xl border border-border bg-surface p-3">
+        <h2 className="mb-2 font-semibold text-primary-ink">ชื่อที่แสดงในบิล</h2>
+        <label className="flex flex-col gap-1 text-xs text-ink-muted">
+          ชื่อของคุณในบิล เพื่อนที่เปิดลิงก์จะเห็นชื่อนี้
+          <input placeholder="ชื่อเล่นที่เพื่อนเรียก" {...bind("display_name")} />
+        </label>
+        {/* globals.css: danger is always paired with an icon shape, so colour is
+            never the only carrier of the meaning. */}
+        {renameFailure !== "ok" && (
+          <p role="alert" className="mt-2 text-xs text-danger">
+            {renameFailure === "conflict"
+              ? "⚠ บันทึกชื่อแล้ว แต่ชื่อนี้ซ้ำกับเพื่อนในรายชื่อ บิลจะยังใช้ชื่อเดิม"
+              : "⚠ บันทึกชื่อแล้ว แต่ยังไม่ได้อัปเดตในบิล ลองใหม่อีกครั้ง"}
+          </p>
+        )}
+      </section>
+
+      <div>
+        <h2 className="font-semibold">ช่องทางรับเงิน</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          ตั้งค่าครั้งเดียว บิลใหม่จะดึงไปใช้อัตโนมัติ (แก้เป็นรายบิลได้)
+        </p>
+      </div>
+
       <section className="rounded-xl border border-border bg-surface p-3">
         <h2 className="mb-2 font-semibold text-primary-ink">ชื่อบัญชี</h2>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">

@@ -68,6 +68,8 @@ interface Props {
   initialPeers: PeerRow[];
   initialTicks: TickRow[];
   recentPeers: PeerRow[];
+  /** ADR-0010: the organizer's own peer row on this bill, badged คุณ. */
+  selfPeerId: string | null;
   profile: ProfileRow;
 }
 
@@ -77,6 +79,7 @@ export default function BillEditor({
   initialPeers,
   initialTicks,
   recentPeers,
+  selfPeerId,
   profile,
 }: Props) {
   const router = useRouter();
@@ -472,6 +475,7 @@ export default function BillEditor({
       <PeerPicker
         peersOnBill={peers}
         recentPeers={recentPeers}
+        selfPeerId={selfPeerId}
         onAdd={onAddPeer}
         onRemove={onRemovePeer}
       />
@@ -483,6 +487,7 @@ export default function BillEditor({
           ticks={ticks}
           result={result}
           receiptTotalSatang={bill.receipt_total_satang}
+          selfPeerId={selfPeerId}
           onToggle={onToggle}
         />
       </div>
@@ -493,6 +498,7 @@ export default function BillEditor({
           ticks={ticks}
           result={result}
           receiptTotalSatang={bill.receipt_total_satang}
+          selfPeerId={selfPeerId}
           onToggle={onToggle}
         />
       </div>

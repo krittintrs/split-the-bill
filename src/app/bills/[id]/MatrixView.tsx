@@ -11,6 +11,7 @@ interface Props {
   ticks: TickRow[];
   result: BillResult;
   receiptTotalSatang: number;
+  selfPeerId: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
 }
 
@@ -21,6 +22,7 @@ export default function MatrixView({
   ticks,
   result,
   receiptTotalSatang,
+  selfPeerId,
   onToggle,
 }: Props) {
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
@@ -48,6 +50,9 @@ export default function MatrixView({
               {peers.map((peer) => (
                 <th key={peer.id} className="min-w-14 p-2 text-center font-semibold">
                   {peer.name}
+                  {peer.id === selfPeerId && (
+                    <span className="block text-[11px] font-normal text-primary-ink">คุณ</span>
+                  )}
                 </th>
               ))}
             </tr>

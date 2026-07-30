@@ -32,31 +32,50 @@ export default async function BillPage({
 
   const [itemsRes, billPeersRes, recentRes, profileRes] = await Promise.all([
     supabase.from("line_items").select("*").eq("bill_id", id).order("position"),
-    supabase.from("bill_peers").select("added_at, peers (id, name)").eq("bill_id", id).order("added_at"),
+    // peers (*) and select("*") rather than column lists: PostgREST fails the
+    // WHOLE query on an unknown column, so naming linked_user_id or display_name
+    // here would empty this bill's peer list and blank its payment fields in the
+    // window between deploy and migration. With "*" a missing column is just a
+    // missing field, and selfPeerId falls to null.
+    supabase
+      .from("bill_peers")
+      .select("added_at, peers (*)")
+      .eq("bill_id", id)
+      .order("added_at"),
     supabase
       .from("peers")
-      .select("id, name, last_used_at")
+      .select("*")
       .order("last_used_at", { ascending: false })
       .limit(20),
-    supabase
-      .from("profiles")
-      .select("user_id, promptpay_id, bank_name, bank_account, account_name")
-      .eq("user_id", user.id)
-      .maybeSingle(),
+    supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
   ]);
 
-  const profile: ProfileRow = profileRes.data ?? {
+  // Built field by field rather than passing profileRes.data straight through:
+  // the select is a wildcard now, and this object crosses into a client
+  // component, so a column added to profiles later would ship to the browser on
+  // its own. Same shape as profile/page.tsx.
+  const profile: ProfileRow = {
     user_id: user.id,
-    promptpay_id: "",
-    bank_name: "",
-    bank_account: "",
-    account_name: "",
+    display_name: profileRes.data?.display_name ?? "",
+    promptpay_id: profileRes.data?.promptpay_id ?? "",
+    bank_name: profileRes.data?.bank_name ?? "",
+    bank_account: profileRes.data?.bank_account ?? "",
+    account_name: profileRes.data?.account_name ?? "",
   };
 
   const items = (itemsRes.data ?? []) as LineItemRow[];
   const peersOnBill = (billPeersRes.data ?? [])
     .map((row) => row.peers as unknown as PeerRow)
     .filter(Boolean);
+
+  const recentPeers = (recentRes.data ?? []) as PeerRow[];
+
+  // ADR-0010: the organizer's own row, identified by the joinable predicate
+  // linked_user_id = organizer_id, never by comparing names (ADR-0005). The
+  // recent list is searched too, so the คุณ badge still resolves on a bill the
+  // organizer removed themselves from and re-added from the ล่าสุด chips.
+  const selfPeerId =
+    [...peersOnBill, ...recentPeers].find((peer) => peer.linked_user_id === user.id)?.id ?? null;
 
   const itemIds = items.map((item) => item.id);
   const ticks: TickRow[] =
@@ -77,7 +96,8 @@ export default async function BillPage({
         initialItems={items}
         initialPeers={peersOnBill}
         initialTicks={ticks}
-        recentPeers={(recentRes.data ?? []) as PeerRow[]}
+        recentPeers={recentPeers}
+        selfPeerId={selfPeerId}
         profile={profile}
       />
     </>
