@@ -19,11 +19,13 @@ Spec: [#5](https://github.com/krittintrs/split-the-bill/issues/5). Grilled decis
 
 ```
 SHIPPED ✅
- #6 skeleton → #7 billing engine → #8 bill editor → #9 peer link (+paid flag)
-   → #15 UI revamp → #10 payback ......................... v0.3.0
-   → #26 peer order fix .................................. v0.3.1
-   → #25 line-total input (closes dup #28) ............... v0.4.0
-   → #24 organizer self-peer ............................. v0.5.0
+ #6 skeleton → #7 billing engine → #8 bill editor ...... v0.1.0
+   → #9 peer link (+paid flag), #16 add-bill feedback ... v0.2.0
+   → #15 UI revamp, #19 nav + delete + loading .......... v0.2.1
+   → #10 payback ........................................ v0.3.0
+   → #26 peer order fix ................................. v0.3.1
+   → #25 line-total input (closes dup #28) .............. v0.4.0
+   → #24 organizer self-peer ............................ v0.5.0
 
 READY 🟢  unblocked, brief written, an agent can start now
  #20 calculation visibility ... peer sees how their own total was built
@@ -37,12 +39,14 @@ BLOCKED 🔴  waiting on a human decision, not on code
 
 | Impact | Issue | Description | Blocked by | Who | Status |
 |---|---|---|---|---|---|
-| High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + agy + main session | DONE ✅ |
-| High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | DONE ✅ |
-| High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | DONE ✅ |
-| High | #9 | Peer link experience: ticking, realtime, lock, basic paid flag | #8 | dev agent | DONE ✅ |
-| Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | DONE ✅ |
-| High | #10 | Payback: payment info, copy paths, QR image, tap-to-claim | #9 | main session + user | DONE ✅ |
+| High | #6 | Walking skeleton: scaffold, `npm run check`, Vercel deploy, Google sign-in | — | user + agy + main session | DONE ✅ v0.1.0 |
+| High | #7 | Billing engine: pure satang math, TDD, canonical fixtures | #6 | dev agent | DONE ✅ v0.1.0 |
+| High | #8 | Organizer bill editor: draft → publish, live totals (prototype layout first) | #6, #7 | dev agent | DONE ✅ v0.1.0 |
+| High | #9 | Peer link experience: ticking, realtime, lock, basic paid flag | #8 | dev agent | DONE ✅ v0.2.0 |
+| Low | #16 | Bug: no visual feedback when clicking add bill (duplicate inserts) | #8 | main session | DONE ✅ v0.2.0 |
+| Med | #15 | UI revamp: impeccable critique → polish on all shipped surfaces | #9 | main session + user | DONE ✅ v0.2.1 |
+| Med | #19 | Bug: missing feedback, nav, and edit/delete on bills | #9 | dev agent | DONE ✅ v0.2.1 |
+| High | #10 | Payback: payment info, copy paths, QR image, tap-to-claim | #9 | main session + user | DONE ✅ v0.3.0 |
 | High | #26 | Bug: peer view order reshuffles (no stable ORDER BY on peers) | — | main session | DONE ✅ v0.3.1 |
 | Med | #25 | Enhancement: total-amount input mode for line items (supersedes duplicate #28) | — | main session | DONE ✅ v0.4.0 |
 | High | #24 | Bug: bill owner can't self-select items they ate | — | main session + dev agent | DONE ✅ v0.5.0 |
