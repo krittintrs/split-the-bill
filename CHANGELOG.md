@@ -5,7 +5,7 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
-## [0.5.0] — 2026-07-29
+## [0.5.0] — 2026-07-30
 
 The organizer eats too.
 

@@ -20,6 +20,7 @@
 - Dark mode — v1 ships light-only (DESIGN.md); needs a full dark ramp of the cyan tokens
 - Per-peer pipeline breakdown rows under the desktop matrix (subtotal → discount → SC → VAT → total, like the old Sheet) — needs the engine to expose intermediate values (ADR-0004 says derive, so new grill required)
 - Initial-only peer chips when a bill has >8 peers (name chips wrap fine below that)
+- Peer page ทุกคน list: a *claimed* peer owing ฿0 renders no status echo (`PeerBill.tsx`, the `paid || peerTotal > 0` guard), so that row loses its second flex child and its total sits ~80px right of every other total, with no `min-h-10` height floor. Pre-existing; found reviewing #24, which fixed the identical defect on the self row nine lines above using an `invisible` clone of the pay button
 - Sheet-style inline item editing inside the matrix rows (v1 edits items in their own card above)
 - Billing engine restricts discount/SC/VAT percents to integers (all 61 real bills used 0/5/7/10) — loosen to fractional % only if a real receipt demands it
 - Landing page should display auth errors (currently `/?error=oauth` and `/?error=auth` params are silently ignored)
