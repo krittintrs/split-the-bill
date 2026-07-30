@@ -75,7 +75,16 @@ export async function createBill() {
         // hands back the unmarked pre-#24 peer, on this and every later bill.
         const suffixed = await supabase
           .from("peers")
-          .insert({ organizer_id: user.id, name: `${displayName} (ฉัน)`, linked_user_id: user.id })
+          // "(เจ้าของบิล)", not "(ฉัน)": this name is peer-facing, and ADR-0010
+          // rules out ฉัน there because every peer reads it as themselves. The
+          // suffix matches the badge the peer view already puts on this row,
+          // which matters most in exactly the case that creates it, where a peer
+          // of the same name can appear beside it on the same bill.
+          .insert({
+            organizer_id: user.id,
+            name: `${displayName} (เจ้าของบิล)`,
+            linked_user_id: user.id,
+          })
           .select("id")
           .single();
         selfPeerId = suffixed.data?.id ?? null;

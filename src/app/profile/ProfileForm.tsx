@@ -54,7 +54,12 @@ export default function ProfileForm({ profile }: { profile: ProfileRow }) {
       const result = await saveProfile({ [field]: next });
       // The profile row saved, but the name on the bills may not have changed.
       if (field === "display_name") setRenameFailure(result.peerRename);
-      setStored((s) => ({ ...s, [field]: next }));
+      // Hold `stored` back when the rename never reached the bills: otherwise the
+      // dirty check above turns the next blur into a no-op and blocks the retry
+      // this field's own alert asks for. Costs one idempotent upsert on retry.
+      if (field !== "display_name" || result.peerRename === "ok") {
+        setStored((s) => ({ ...s, [field]: next }));
+      }
       if (next !== value) setValues((v) => ({ ...v, [field]: next })); // show normalized
       setSaveFailed(false);
       setSaved(true);

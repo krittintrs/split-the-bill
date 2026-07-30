@@ -22,7 +22,7 @@ The organizer eats too.
 
 - `peers.linked_user_id` is the column ADR-0005 reserved for peer accounts, so #12's Account Claim inherits it. #11's rollup excludes the organizer from debt and shows their share as context (ADR-0010)
 - Apply the migration **before** the deploy. Every call site that reads a new column uses `select("*")` rather than naming it, because PostgREST fails the whole query on an unknown column, so a deploy that wins the race leaves the organizer off new bills instead of blanking payment info and emptying peer lists
-- The organizer's `linked_user_id` is never written onto a peer row they did not create. If the display name collides with a peer you already had, you join as `ชื่อ (ฉัน)`; delete the old row and rename to clear it
+- The organizer's `linked_user_id` is never written onto a peer row they did not create. If the display name collides with a peer you already had, you join as `ชื่อ (เจ้าของบิล)`; delete the old row and rename to clear it
 
 ## [0.4.0] — 2026-07-29
 
