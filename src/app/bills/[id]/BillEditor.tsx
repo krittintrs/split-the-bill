@@ -498,7 +498,7 @@ export default function BillEditor({
 
       <section className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-2 font-semibold">เช็คกับใบเสร็จ</h2>
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
             ยอดตามใบเสร็จ ฿
             <input
@@ -509,7 +509,7 @@ export default function BillEditor({
               className={`${inputCls} w-36 text-right tabular-nums`}
             />
           </label>
-          <div className="flex min-w-48 flex-col gap-1 pb-1 text-sm">
+          <div className="flex min-w-48 flex-1 flex-col gap-1 border-t border-border pt-3 text-sm sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
             <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
               <span>รวมรายการ</span>
               <span>{formatSatang(result.subtotalSatang)}</span>
