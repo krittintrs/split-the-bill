@@ -509,10 +509,27 @@ export default function BillEditor({
               className={`${inputCls} w-36 text-right tabular-nums`}
             />
           </label>
-          <div className="flex flex-col gap-1 pb-1 text-sm">
-            <span className="tabular-nums text-ink-muted">
-              ระบบคำนวณได้ {formatSatang(result.checksumSatang)}
-            </span>
+          <div className="flex min-w-48 flex-col gap-1 pb-1 text-sm">
+            <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+              <span>รวมรายการ</span>
+              <span>{formatSatang(result.subtotalSatang)}</span>
+            </div>
+            {bill.service_charge_percent > 0 && (
+              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+                <span>+ Service charge {bill.service_charge_percent}%</span>
+                <span>{formatSatang(result.serviceChargeSatang)}</span>
+              </div>
+            )}
+            {bill.vat_percent > 0 && (
+              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+                <span>+ VAT {bill.vat_percent}%</span>
+                <span>{formatSatang(result.vatSatang)}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
+              <span>รวม</span>
+              <span>{formatSatang(result.receiptTotalSatang)}</span>
+            </div>
             <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
               {receipt.label}
             </span>
