@@ -552,6 +552,8 @@ export default function BillEditor({
           ticks={ticks}
           result={result}
           receiptTotalSatang={bill.receipt_total_satang}
+          billDiscountPercent={bill.bill_discount_percent}
+          billDiscountSatang={bill.bill_discount_satang}
           selfPeerId={selfPeerId}
           onToggle={onToggle}
         />
