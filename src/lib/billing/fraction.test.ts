@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { add, ceilToSatang, fraction, multiply, ZERO } from "./fraction";
+import { add, ceilToSatang, floorToSatang, fraction, multiply, ZERO } from "./fraction";
 
 describe("fraction", () => {
   it("defaults denominator to 1", () => {
@@ -46,5 +46,21 @@ describe("ceilToSatang", () => {
   });
   it("rejects negative amounts", () => {
     expect(() => ceilToSatang(fraction(-1n, 2n))).toThrow("cannot round a negative amount");
+  });
+});
+
+describe("floorToSatang", () => {
+  it("rounds down a fractional amount", () => {
+    expect(floorToSatang(fraction(2500n, 3n))).toBe(833); // ADR-0011 example
+  });
+  it("keeps an exact amount unchanged", () => {
+    expect(floorToSatang(fraction(17910n, 1n))).toBe(17910);
+  });
+  it("rounds down fractions with large denominators exactly", () => {
+    // 29425000/30000 = 980.8333… → 980 (no float drift)
+    expect(floorToSatang(fraction(29425000n, 30000n))).toBe(980);
+  });
+  it("rejects negative amounts", () => {
+    expect(() => floorToSatang(fraction(-1n, 2n))).toThrow("cannot round a negative amount");
   });
 });
