@@ -93,17 +93,17 @@ describe("even split (no discounts, no charges)", () => {
     expect(r.itemSplits).toEqual({ i1: { a: 10000, b: 10000, c: 10000 } });
   });
 
-  it("rounds each peer UP: 2500 ÷ 3 → 834 each, surplus kept by organizer", () => {
+  it("ties per item: 2500 ÷ 3 floors to 833 each, item's own leftover goes to its first ticker", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
       serviceChargePercent: 0,
       vatPercent: 0,
     });
-    expect(r.peerTotals).toEqual({ a: 834, b: 834, c: 834 });
-    expect(r.checksumSatang).toBe(2502);
+    expect(r.peerTotals).toEqual({ a: 834, b: 833, c: 833 });
+    expect(r.checksumSatang).toBe(2500);
     expect(r.receiptTotalSatang).toBe(2500);
-    expect(r.surplusSatang).toBe(2);
+    expect(r.surplusSatang).toBe(0);
   });
 
   it("multiplies qty into the line total before splitting", () => {
@@ -203,8 +203,9 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
     expect(r.receiptTotalSatang).toBe(26700);
   });
 
-  it("rounds each allocated share up, surplus goes to organizer", () => {
-    // items 10.00 + 20.00, discount 10.00 → ratio 2/3 → 6.6667/13.3334 → 667 + 1334
+  it("bill-tier remainder can be negative: two single-ticker items overshoot, absorber gives one back", () => {
+    // i1 (x alone) ceils to 667, i2 (y alone) ceils to 1334 — sum 2001 vs receipt 2000.
+    // Bill-tier remainder is −1; default absorber x drops from 667 to 666.
     const r = computeBill({
       items: [
         { id: "i1", unitPriceSatang: 1000, qty: 1, tickedBy: ["x"] },
@@ -215,10 +216,10 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
       serviceChargePercent: 0,
       vatPercent: 0,
     });
-    expect(r.peerTotals).toEqual({ x: 667, y: 1334 });
-    expect(r.checksumSatang).toBe(2001);
+    expect(r.peerTotals).toEqual({ x: 666, y: 1334 });
+    expect(r.checksumSatang).toBe(2000);
     expect(r.receiptTotalSatang).toBe(2000);
-    expect(r.surplusSatang).toBe(1);
+    expect(r.surplusSatang).toBe(0);
   });
 
   it("clamps bill over-discount to ฿0 (mid-editing state)", () => {
@@ -256,16 +257,16 @@ describe("service charge then VAT, compounded (ADR-0003)", () => {
     expect(computeBill(single(5, 7, 9999)).peerTotals.a).toBe(11234);
   });
 
-  it("compounds after even split: 2500 ÷ 3 × 1.10 × 1.07 → 981 each", () => {
+  it("item-tier ceiling compounds through SC/VAT before the bill-tier remainder lands", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
       serviceChargePercent: 10,
       vatPercent: 7,
     });
-    expect(r.peerTotals).toEqual({ a: 981, b: 981, c: 981 });
+    expect(r.peerTotals).toEqual({ a: 983, b: 980, c: 980 });
     expect(r.checksumSatang).toBe(2943);
-    expect(r.receiptTotalSatang).toBe(2943); // 2942.5 → ceil
+    expect(r.receiptTotalSatang).toBe(2943);
     expect(r.surplusSatang).toBe(0);
   });
 });
@@ -356,7 +357,7 @@ describe("breakdown fields (subtotal / SC / VAT, bill-level and per-peer)", () =
       const b = r.peerBreakdowns[id];
       expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals[id]);
     }
-    expect(r.peerTotals).toEqual({ A: 9453, B: 24681 }); // unchanged from the existing test
+    expect(r.peerTotals).toEqual({ A: 9453, B: 24680 }); // was {A: 9453, B: 24681}
   });
 
   it("discountSatang reconciles against an independently-computed gross, with item AND bill discount", () => {
@@ -384,8 +385,8 @@ describe("breakdown fields (subtotal / SC / VAT, bill-level and per-peer)", () =
     // Charge chain is untouched by discountSatang: still sums exactly to each peer's total.
     expect(a.subtotalSatang + a.serviceChargeSatang + a.vatSatang).toBe(r.peerTotals.A);
     expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals.B);
-    expect(a.discountSatang).toBe(1969);
-    expect(b.discountSatang).toBe(4030);
+    expect(a.discountSatang).toBe(1968); // was 1969
+    expect(b.discountSatang).toBe(4031); // was 4030
     expect(r.discountSatang).toBe(6000);
   });
 
@@ -444,9 +445,95 @@ describe("full pipeline integration (every stage at once)", () => {
       serviceChargePercent: 10,
       vatPercent: 7,
     });
-    expect(r.peerTotals).toEqual({ A: 9453, B: 24681 });
-    expect(r.checksumSatang).toBe(34134);
+    expect(r.peerTotals).toEqual({ A: 9453, B: 24680 }); // was {A: 9453, B: 24681}
+    expect(r.checksumSatang).toBe(34133); // was 34134
     expect(r.receiptTotalSatang).toBe(34133);
-    expect(r.surplusSatang).toBe(1);
+    expect(r.surplusSatang).toBe(0); // was 1
+  });
+});
+
+describe("ADR-0011 two-tier rounding absorber", () => {
+  it("cross-item independence: two different ticker groups each absorb their own leftover", () => {
+    // item1 ฿100 ÷ A,B,C (leftover 1 → A); item2 ฿25 ÷ D,E,F (leftover 1 → D). No cross-contamination.
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 10000, qty: 1, tickedBy: ["A", "B", "C"] },
+        { id: "i2", unitPriceSatang: 2500, qty: 1, tickedBy: ["D", "E", "F"] },
+      ],
+      peerIds: ["A", "B", "C", "D", "E", "F"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.peerTotals).toEqual({ A: 3334, B: 3333, C: 3333, D: 834, E: 833, F: 833 });
+    expect(r.checksumSatang).toBe(12500);
+    expect(r.receiptTotalSatang).toBe(12500);
+    expect(r.surplusSatang).toBe(0);
+  });
+
+  it("item-level roundingAbsorberPeerId overrides the default first ticker", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"], roundingAbsorberPeerId: "c" }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.peerTotals).toEqual({ a: 833, b: 833, c: 834 });
+  });
+
+  it("item-level absorber falls back to the first ticker when the stored id is stale", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"], roundingAbsorberPeerId: "ghost" }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.peerTotals).toEqual({ a: 834, b: 833, c: 833 });
+  });
+
+  it("bill-level roundingAbsorberPeerId overrides which peer takes the bill-tier remainder", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 10,
+      vatPercent: 0,
+      roundingAbsorberPeerId: "c",
+    });
+    expect(r.peerTotals).toEqual({ a: 917, b: 916, c: 917 }); // default (no override) would be {a:918,b:916,c:916}
+    expect(r.checksumSatang).toBe(2750);
+  });
+
+  it("never lets a non-absorber peer's VAT residual go negative (SC-only compounding, VAT 0%)", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 10,
+      vatPercent: 0,
+    });
+    expect(r.peerTotals).toEqual({ a: 918, b: 916, c: 916 });
+    for (const id of ["a", "b", "c"]) {
+      expect(r.peerBreakdowns[id].vatSatang).toBeGreaterThanOrEqual(0);
+      const b = r.peerBreakdowns[id];
+      expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals[id]);
+    }
+  });
+
+  it("negative-remainder guard: falls back to the largest-total peer rather than go negative", () => {
+    // w ticks nothing (baseline 0) and is the designated bill-level absorber; three single-
+    // ticker items each ceil up by ~1 satang, driving the bill-tier remainder to −2 — more
+    // than w's ฿0 floor can absorb, so the guard reassigns it to the largest-floor peer instead.
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 97, qty: 1, discountPercent: 1, tickedBy: ["x"] },
+        { id: "i2", unitPriceSatang: 97, qty: 1, discountPercent: 1, tickedBy: ["y"] },
+        { id: "i3", unitPriceSatang: 97, qty: 1, discountPercent: 1, tickedBy: ["z"] },
+      ],
+      peerIds: ["w", "x", "y", "z"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+      roundingAbsorberPeerId: "w",
+    });
+    expect(r.peerTotals.w).toBe(0); // never negative
+    expect(Object.values(r.peerTotals).every((v) => v >= 0)).toBe(true);
+    expect(r.checksumSatang).toBe(r.receiptTotalSatang);
   });
 });

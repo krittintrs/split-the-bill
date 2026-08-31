@@ -5,6 +5,8 @@ export interface LineItemInput {
   discountPercent?: number; // integer 0-100, applied first (ADR-0003)
   discountAmountSatang?: number; // then subtracted
   tickedBy: string[]; // peer ids; [] = unticked
+  /** ADR-0011: ticker who absorbs this item's own leftover. Falls back to tickedBy[0] if stale. */
+  roundingAbsorberPeerId?: string;
 }
 
 export interface BillDiscount {
@@ -18,6 +20,8 @@ export interface BillInput {
   billDiscount?: BillDiscount;
   serviceChargePercent: number; // integer 0-100
   vatPercent: number; // integer 0-100
+  /** ADR-0011: peer who absorbs the bill-wide leftover. Falls back to peerIds[0] if stale. */
+  roundingAbsorberPeerId?: string;
 }
 
 export interface PeerBreakdown {
@@ -38,7 +42,11 @@ export interface BillResult {
   receiptTotalSatang: number;
   /** checksum − receiptTotal; negative when items are unticked (shortfall). */
   surplusSatang: number;
-  /** DISPLAY ONLY: per-item per-peer share, each ceil'd; may sum slightly above peerTotal. */
+  /**
+   * Per-item per-peer share (ADR-0011 item tier). For any ticked item, sums exactly to that
+   * item's own ceil'd cost — each ticker gets a floored share, and the item's own leftover
+   * (0..tickerCount−1 satang) goes to that item's designated absorbing ticker.
+   */
   itemSplits: Record<string, Record<string, number>>;
   /** Items with tickedBy = [] — contribute ฿0; organizer must chase these. */
   untickedItemIds: string[];
