@@ -44,28 +44,6 @@ interface DisplayItem {
   tickedBy: string[];
 }
 
-/**
- * DISPLAY ONLY, not the money truth: a peer's share of the discount, derived by
- * comparing the gross (pre-discount) line total against their settled
- * `subtotalSatang` from `result.peerBreakdowns`. peerTotals/checksumSatang are
- * unaffected — this is purely a breakdown row for the desktop matrix footer.
- */
-function peerDiscountSatang(
-  peerId: string,
-  items: DisplayItem[],
-  peerBreakdowns: Record<string, { subtotalSatang: number }>,
-): number {
-  let grossSatang = 0;
-  for (const item of items) {
-    if (!item.tickedBy.includes(peerId)) continue;
-    const tickerCount = item.tickedBy.length;
-    if (tickerCount === 0) continue;
-    grossSatang += Math.round((item.unitPriceSatang * item.qty) / tickerCount);
-  }
-  const subtotal = peerBreakdowns[peerId]?.subtotalSatang ?? 0;
-  return Math.max(0, grossSatang - subtotal);
-}
-
 export default function PeerBill({
   billId,
   initial,
@@ -533,7 +511,7 @@ export default function PeerBill({
               <td className="sticky left-0 bg-surface p-3">ส่วนลด</td>
               {peersSorted.map((peer) => (
                 <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                  −{formatSatang(peerDiscountSatang(peer.id, displayItems, result.peerBreakdowns))}
+                  −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
                 </td>
               ))}
             </tr>

@@ -66,12 +66,13 @@ describe("computeBill graceful incomplete states", () => {
       surplusSatang: 0,
       itemSplits: {},
       untickedItemIds: [],
+      discountSatang: 0,
       subtotalSatang: 0,
       serviceChargeSatang: 0,
       vatSatang: 0,
       peerBreakdowns: {
-        a: { subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
-        b: { subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
+        a: { discountSatang: 0, subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
+        b: { discountSatang: 0, subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
       },
     });
   });
@@ -358,6 +359,36 @@ describe("breakdown fields (subtotal / SC / VAT, bill-level and per-peer)", () =
     expect(r.peerTotals).toEqual({ A: 9453, B: 24681 }); // unchanged from the existing test
   });
 
+  it("discountSatang reconciles against an independently-computed gross, with item AND bill discount", () => {
+    // Same fixture as above: i1 has a 10% item discount, i2 a ฿5.00 item discount, plus a
+    // 10%+฿2.50 bill discount. Pre-discount (gross) shares: A ticks half of i1 only
+    // (20000÷2 = 10000 satang), B ticks the other half of i1 plus all of i2
+    // (10000 + 15000 = 25000 satang). Bill gross = 20000 + 15000 = 35000 satang.
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 10000, qty: 2, discountPercent: 10, tickedBy: ["A", "B"] },
+        { id: "i2", unitPriceSatang: 15000, qty: 1, discountAmountSatang: 500, tickedBy: ["B"] },
+      ],
+      peerIds: ["A", "B"],
+      billDiscount: { percent: 10, amountSatang: 250 },
+      serviceChargePercent: 10,
+      vatPercent: 7,
+    });
+    const a = r.peerBreakdowns.A;
+    const b = r.peerBreakdowns.B;
+    // Gross (pre item- AND bill-discount) reconstructed from the raw inputs, independent of
+    // compute.ts's own discountSatang math, then checked against discount + subtotal.
+    expect(a.discountSatang + a.subtotalSatang).toBe(10000);
+    expect(b.discountSatang + b.subtotalSatang).toBe(25000);
+    expect(r.discountSatang + r.subtotalSatang).toBe(35000);
+    // Charge chain is untouched by discountSatang: still sums exactly to each peer's total.
+    expect(a.subtotalSatang + a.serviceChargeSatang + a.vatSatang).toBe(r.peerTotals.A);
+    expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals.B);
+    expect(a.discountSatang).toBe(1969);
+    expect(b.discountSatang).toBe(4030);
+    expect(r.discountSatang).toBe(6000);
+  });
+
   it("canonical Katsu fixture: breakdown fields exist, peerTotals/checksum unchanged", () => {
     const katsu: BillInput = {
       items: [
@@ -383,6 +414,15 @@ describe("breakdown fields (subtotal / SC / VAT, bill-level and per-peer)", () =
       expect(b.subtotalSatang).toBe(r.peerTotals[id]); // no SC/VAT on this fixture
       expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals[id]);
     }
+    // Every item carries a 10% discount, so discountSatang must be correct and non-zero:
+    // each peer's gross (pre-discount) share minus their settled subtotal, e.g. D's only
+    // item (Katsu ฿159.00) at 10% off is exactly ฿15.90 = 1590 satang.
+    expect(r.discountSatang).toBe(10030);
+    expect(r.peerBreakdowns.A.discountSatang).toBe(1990);
+    expect(r.peerBreakdowns.B.discountSatang).toBe(2080);
+    expect(r.peerBreakdowns.C.discountSatang).toBe(1990);
+    expect(r.peerBreakdowns.D.discountSatang).toBe(1590);
+    expect(r.peerBreakdowns.E.discountSatang).toBe(2380);
   });
 });
 

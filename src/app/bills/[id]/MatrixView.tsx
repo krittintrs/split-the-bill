@@ -17,30 +17,6 @@ interface Props {
   onToggle: (lineItemId: string, peerId: string) => void;
 }
 
-/**
- * DISPLAY ONLY, not the money truth: each peer's share of the discount, derived
- * by comparing the gross (pre-discount) line total against their settled
- * `subtotalSatang` from `result.peerBreakdowns`. peerTotals/checksumSatang are
- * unaffected — this is purely a breakdown row for the ส่วนลด footer.
- */
-function peerDiscountSatang(
-  peerId: string,
-  items: LineItemRow[],
-  tickSet: Set<string>,
-  peers: PeerRow[],
-  result: BillResult,
-): number {
-  let grossSatang = 0;
-  for (const item of items) {
-    if (!tickSet.has(`${item.id}:${peerId}`)) continue;
-    const tickerCount = peers.filter((p) => tickSet.has(`${item.id}:${p.id}`)).length;
-    if (tickerCount === 0) continue;
-    grossSatang += Math.round((item.unit_price_satang * item.qty) / tickerCount);
-  }
-  const subtotal = result.peerBreakdowns[peerId]?.subtotalSatang ?? 0;
-  return Math.max(0, grossSatang - subtotal);
-}
-
 /** Desktop (>=lg): sheet-like matrix — items as rows, peers as columns. */
 export default function MatrixView({
   items,
@@ -59,11 +35,6 @@ export default function MatrixView({
     billDiscountPercent > 0 ||
     billDiscountSatang > 0 ||
     items.some((item) => item.discount_percent > 0 || item.discount_satang > 0);
-  const grossItemsSatang = items.reduce(
-    (sum, item) => sum + item.unit_price_satang * item.qty,
-    0,
-  );
-  const totalDiscountSatang = Math.max(0, grossItemsSatang - result.subtotalSatang);
 
   if (items.length === 0 || peers.length === 0) {
     return (
@@ -144,11 +115,11 @@ export default function MatrixView({
               <tr className="border-t border-border/60 text-ink-muted">
                 <td className="sticky left-0 z-10 bg-surface p-2">ส่วนลด</td>
                 <td className="p-2 text-right tabular-nums">
-                  −{formatSatang(totalDiscountSatang)}
+                  −{formatSatang(result.discountSatang)}
                 </td>
                 {peers.map((peer) => (
                   <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                    −{formatSatang(peerDiscountSatang(peer.id, items, tickSet, peers, result))}
+                    −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
                   </td>
                 ))}
               </tr>
