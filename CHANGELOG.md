@@ -5,6 +5,20 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-08-31
+
+Down to the last satang.
+
+### Added
+
+- The organizer can now pick who absorbs a line item's own rounding leftover — a small badge appears on an item's row only when its split among its own tickers doesn't divide evenly, defaults automatically to the first ticker, and expands into a picker (with a shuffle option, for when picking a friend feels arbitrary) to override it
+- Separately, a bill-level badge in เช็คกับใบเสร็จ picks up any leftover from the bill as a whole (rounding overshoot across several items, or the service charge/VAT stage) — defaults to the organizer's own row, same picker pattern
+- Peer totals now tie the receipt total exactly whenever every item is ticked — no more silent rounding windfall (or shortfall) sitting with the organizer
+
+### Notes
+
+- `computeBill()` resolves rounding in two tiers instead of one flat per-peer ceiling: an item tier (each ticked item's own leftover goes to a designated ticker of *that item*) and a bill tier, only engaged once every item is ticked (the remaining bill-wide gap — which can come from item-ceiling overshoot as much as from SC/VAT compounding — goes to one named bill-level peer, guarded so no total ever goes negative). See ADR-0011 (refines ADR-0001). The canonical Katsu fixture is unaffected — every item in it has exactly one ticker, and a 1-ticker item's math degenerates exactly to the old per-item ceiling.
+
 ## [0.6.0] — 2026-08-31
 
 The math shows its work.
