@@ -1,5 +1,5 @@
 import { add, ceilToSatang, fraction, multiply, ZERO, type Fraction } from "./fraction";
-import type { BillInput, BillResult } from "./types";
+import type { BillInput, BillResult, PeerBreakdown } from "./types";
 
 export function computeBill(input: BillInput): BillResult {
   validate(input);
@@ -35,15 +35,13 @@ export function computeBill(input: BillInput): BillResult {
   }
 
   // 4. Charges: × (1 + SC%) then × (1 + VAT%), compounded in that order (ADR-0003).
-  const chargeMultiplier = fraction(
-    BigInt(100 + input.serviceChargePercent) * BigInt(100 + input.vatPercent),
-    10000n,
-  );
-  const billLevelMultiplier = multiply(billDiscountRatio, chargeMultiplier);
+  const scRatio = fraction(BigInt(100 + input.serviceChargePercent), 100n);
+  const vatRatio = fraction(BigInt(100 + input.vatPercent), 100n);
 
-  // 5. Split each item evenly among its tickers and accumulate each peer's EXACT total.
+  // 5. Per-peer subtotal: item shares (after item + bill discounts), exact, no charges yet.
+  //    Also split each item evenly among its tickers for the display-only itemSplits grid.
   //    Unticked items contribute ฿0 and get flagged for the organizer to chase.
-  const peerTotalFractions = new Map<string, Fraction>(
+  const peerSubtotalFractions = new Map<string, Fraction>(
     input.peerIds.map((id) => [id, ZERO]),
   );
   const itemSplits: Record<string, Record<string, number>> = {};
@@ -56,26 +54,50 @@ export function computeBill(input: BillInput): BillResult {
       continue;
     }
     const netPrice = netPrices.get(item.id)!;
-    const perTickerShare = multiply(
+    const perTickerSubtotal = multiply(
       fraction(netPrice.numerator, netPrice.denominator * BigInt(item.tickedBy.length)),
-      billLevelMultiplier,
+      billDiscountRatio,
     );
+    const perTickerShare = multiply(perTickerSubtotal, multiply(scRatio, vatRatio));
     for (const peerId of item.tickedBy) {
-      peerTotalFractions.set(peerId, add(peerTotalFractions.get(peerId)!, perTickerShare));
+      peerSubtotalFractions.set(peerId, add(peerSubtotalFractions.get(peerId)!, perTickerSubtotal));
       itemSplits[item.id][peerId] = ceilToSatang(perTickerShare); // display only, rounded per cell
     }
   }
 
-  // 6. Round each peer's exact total UP to whole satang — the ONLY money rounding (ADR-0001).
+  // 6. Stage each peer through subtotal → +SC → +VAT, ceiling once per stage; VAT is the
+  //    residual so the three displayed lines always sum exactly to the final total.
   const peerTotals: Record<string, number> = {};
+  const peerBreakdowns: Record<string, PeerBreakdown> = {};
   let checksumSatang = 0;
-  for (const [peerId, exactTotal] of peerTotalFractions) {
-    peerTotals[peerId] = ceilToSatang(exactTotal);
-    checksumSatang += peerTotals[peerId];
+
+  for (const [peerId, subtotalExact] of peerSubtotalFractions) {
+    const withScExact = multiply(subtotalExact, scRatio);
+    const withVatExact = multiply(withScExact, vatRatio);
+
+    const peerSubtotalSatang = ceilToSatang(subtotalExact);
+    const peerScSatang = ceilToSatang(withScExact) - peerSubtotalSatang;
+    const total = ceilToSatang(withVatExact);
+    const peerVatSatang = total - peerSubtotalSatang - peerScSatang;
+
+    peerTotals[peerId] = total;
+    peerBreakdowns[peerId] = {
+      subtotalSatang: peerSubtotalSatang,
+      serviceChargeSatang: peerScSatang,
+      vatSatang: peerVatSatang,
+    };
+    checksumSatang += total;
   }
 
   // 7. Receipt total = whole bill through the same pipeline, for checking vs the paper receipt.
-  const receiptTotalSatang = ceilToSatang(multiply(subtotal, billLevelMultiplier));
+  //    Same residual convention as each peer: subtotal → +SC ceil'd → VAT is the residual.
+  const subtotalExactBill = multiply(subtotal, billDiscountRatio);
+  const withScExactBill = multiply(subtotalExactBill, scRatio);
+  const withVatExactBill = multiply(withScExactBill, vatRatio);
+  const subtotalSatang = ceilToSatang(subtotalExactBill);
+  const serviceChargeSatang = ceilToSatang(withScExactBill) - subtotalSatang;
+  const receiptTotalSatang = ceilToSatang(withVatExactBill);
+  const vatSatang = receiptTotalSatang - subtotalSatang - serviceChargeSatang;
 
   return {
     peerTotals,
@@ -84,6 +106,10 @@ export function computeBill(input: BillInput): BillResult {
     surplusSatang: checksumSatang - receiptTotalSatang,
     itemSplits,
     untickedItemIds,
+    subtotalSatang,
+    serviceChargeSatang,
+    vatSatang,
+    peerBreakdowns,
   };
 }
 

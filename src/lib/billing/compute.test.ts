@@ -66,6 +66,13 @@ describe("computeBill graceful incomplete states", () => {
       surplusSatang: 0,
       itemSplits: {},
       untickedItemIds: [],
+      subtotalSatang: 0,
+      serviceChargeSatang: 0,
+      vatSatang: 0,
+      peerBreakdowns: {
+        a: { subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
+        b: { subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
+      },
     });
   });
 });
@@ -285,6 +292,97 @@ describe("canonical Katsu fixture (split-the-bill-example.csv)", () => {
     expect(r.receiptTotalSatang).toBe(90270);
     expect(r.surplusSatang).toBe(0);
     expect(r.untickedItemIds).toEqual([]);
+  });
+});
+
+describe("breakdown fields (subtotal / SC / VAT, bill-level and per-peer)", () => {
+  it("bill-level breakdown sums exactly to receiptTotalSatang, no SC/VAT", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 30000, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.subtotalSatang).toBe(30000);
+    expect(r.serviceChargeSatang).toBe(0);
+    expect(r.vatSatang).toBe(0);
+    expect(r.subtotalSatang + r.serviceChargeSatang + r.vatSatang).toBe(r.receiptTotalSatang);
+  });
+
+  it("bill-level breakdown with 5% SC + 7% VAT (the #34 example bill)", () => {
+    // ค่าข้าว 5555.00 + Soju 510.00 = 6065.00 subtotal
+    const r = computeBill({
+      items: [
+        { id: "katao", unitPriceSatang: 555500, qty: 1, tickedBy: ["a", "b", "c", "d", "e"] },
+        { id: "soju", unitPriceSatang: 51000, qty: 1, tickedBy: ["a"] },
+      ],
+      peerIds: ["a", "b", "c", "d", "e"],
+      serviceChargePercent: 5,
+      vatPercent: 7,
+    });
+    expect(r.subtotalSatang).toBe(606500);
+    expect(r.serviceChargeSatang).toBe(30325); // 6065.00 × 5% = 303.25
+    // vatSatang is the residual line: total − subtotal − SC, so the three always sum exactly
+    expect(r.subtotalSatang + r.serviceChargeSatang + r.vatSatang).toBe(r.receiptTotalSatang);
+    expect(r.receiptTotalSatang).toBe(681403); // ceil(6065 × 1.05 × 1.07) = 6814.03 (see mockup)
+  });
+
+  it("per-peer breakdown sums exactly to that peer's peerTotals entry", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 10,
+      vatPercent: 7,
+    });
+    for (const id of ["a", "b", "c"]) {
+      const b = r.peerBreakdowns[id];
+      expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals[id]);
+    }
+  });
+
+  it("per-peer breakdown reconciles across the full-pipeline integration fixture", () => {
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 10000, qty: 2, discountPercent: 10, tickedBy: ["A", "B"] },
+        { id: "i2", unitPriceSatang: 15000, qty: 1, discountAmountSatang: 500, tickedBy: ["B"] },
+      ],
+      peerIds: ["A", "B"],
+      billDiscount: { percent: 10, amountSatang: 250 },
+      serviceChargePercent: 10,
+      vatPercent: 7,
+    });
+    for (const id of ["A", "B"]) {
+      const b = r.peerBreakdowns[id];
+      expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals[id]);
+    }
+    expect(r.peerTotals).toEqual({ A: 9453, B: 24681 }); // unchanged from the existing test
+  });
+
+  it("canonical Katsu fixture: breakdown fields exist, peerTotals/checksum unchanged", () => {
+    const katsu: BillInput = {
+      items: [
+        { id: "katsu", unitPriceSatang: 15900, qty: 1, discountPercent: 10, tickedBy: ["D"] },
+        { id: "cheesy-don", unitPriceSatang: 19900, qty: 1, discountPercent: 10, tickedBy: ["A"] },
+        { id: "chicken-don", unitPriceSatang: 14900, qty: 1, discountPercent: 10, tickedBy: ["B"] },
+        { id: "add-on-59", unitPriceSatang: 5900, qty: 1, discountPercent: 10, tickedBy: ["B"] },
+        { id: "add-on-89", unitPriceSatang: 8900, qty: 1, discountPercent: 10, tickedBy: ["E"] },
+        { id: "a-la-carte-loin", unitPriceSatang: 14900, qty: 1, discountPercent: 10, tickedBy: ["E"] },
+        { id: "chicken-katsu-set", unitPriceSatang: 19900, qty: 1, discountPercent: 10, tickedBy: ["C"] },
+      ],
+      peerIds: ["A", "B", "C", "D", "E"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    };
+    const r = computeBill(katsu);
+    expect(r.peerTotals).toEqual({ A: 17910, B: 18720, C: 17910, D: 14310, E: 21420 });
+    expect(r.checksumSatang).toBe(90270);
+    expect(r.serviceChargeSatang).toBe(0);
+    expect(r.vatSatang).toBe(0);
+    for (const id of ["A", "B", "C", "D", "E"]) {
+      const b = r.peerBreakdowns[id];
+      expect(b.subtotalSatang).toBe(r.peerTotals[id]); // no SC/VAT on this fixture
+      expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals[id]);
+    }
   });
 });
 

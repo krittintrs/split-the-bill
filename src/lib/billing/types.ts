@@ -20,6 +20,13 @@ export interface BillInput {
   vatPercent: number; // integer 0-100
 }
 
+export interface PeerBreakdown {
+  /** Their exact item-share subtotal, after item AND bill discounts, before any charge. */
+  subtotalSatang: number;
+  serviceChargeSatang: number;
+  vatSatang: number;
+}
+
 export interface BillResult {
   /** The money truth: exact pipeline sum, ceil'd ONCE per peer (ADR-0001). */
   peerTotals: Record<string, number>;
@@ -33,4 +40,10 @@ export interface BillResult {
   itemSplits: Record<string, Record<string, number>>;
   /** Items with tickedBy = [] — contribute ฿0; organizer must chase these. */
   untickedItemIds: string[];
+  /** Bill-level breakdown. subtotalSatang + serviceChargeSatang + vatSatang === receiptTotalSatang exactly. */
+  subtotalSatang: number;
+  serviceChargeSatang: number;
+  vatSatang: number;
+  /** Per peer. Each entry's three fields sum exactly to peerTotals[peerId]. */
+  peerBreakdowns: Record<string, PeerBreakdown>;
 }
