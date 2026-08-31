@@ -1,8 +1,8 @@
 # Split the Bill — Status
 
-**Phase:** 8 — #24 organizer self-peer shipped as v0.5.0: the organizer is auto-added to their own bill as a real `peers` row marked by `linked_user_id = organizer_id` (ADR-0010), named from a new `profiles.display_name`, badged คุณ in the editor, and visible-but-not-claimable (no QR, no paid toggle) on the shared link. The rollup call is settled: the organizer's share is excluded from debt and shown as context. Migration `20260729000000_self_peer.sql` was applied to prod and verified before the merge (columns, partial index, rewritten `own peers` policy, `get_bill` grants). Before it, v0.4.0 (PR #31) shipped #25 line-total input. → next: #20 (per-peer calculation breakdown, ready-for-agent, brief already written), then grill #21 (create-flow slowness), then { #11 dashboard, #12 my debts }
+**Phase:** 9 — #20 calculation breakdown + #34 calculation bug shipped together as v0.6.0: `computeBill()` now decomposes its pipeline into three visible stages (subtotal → +service charge → +VAT) at both bill level and per peer, exposed as new `BillResult` fields (`subtotalSatang`, `serviceChargeSatang`, `vatSatang`, `peerBreakdowns`); VAT is always the residual line so the three displayed numbers sum exactly to the total. Wired into four UI surfaces: the organizer's percent inputs get a permanent "%" suffix plus 5%/10% SC and 7% VAT quick-fill chips, the เช็คกับใบเสร็จ section shows a stacked line-by-line breakdown instead of one opaque figure, both matrix tables (`/bills/[id]` and `/b/[id]` desktop) gained SC/VAT footer rows plus a conditional ส่วนลด row, and the peer's own claimed row on mobile shows their personal subtotal → SC → VAT breakdown. #34 turned out not to be a code bug (SC/VAT fields were typed as 100% instead of 5%/7% with no unit hint) — this UX work is its fix, so it closes alongside #20. Before it, v0.5.0 (PR #32) shipped #24 organizer self-peer. → next: #11 dashboard, #12 my debts, then grill #21 (create-flow slowness)
 
-**Open from the 2026-07-26 triage:** #20 calculation visibility (ready-for-agent), #21 create-flow slowness (needs grilling), #27 Microsoft sign-in (needs a go/no-go against the Google-only decision above). See the issues for briefs and open questions.
+**Open from the 2026-07-26 triage:** #21 create-flow slowness (needs grilling), #27 Microsoft sign-in (needs a go/no-go against the Google-only decision above). See the issues for briefs and open questions.
 
 ## Frame (decided 2026-07-14)
 
@@ -26,9 +26,9 @@ SHIPPED ✅
    → #26 peer order fix ................................. v0.3.1
    → #25 line-total input (closes dup #28) .............. v0.4.0
    → #24 organizer self-peer ............................ v0.5.0
+   → #20 calc breakdown (closes bug #34) ................ v0.6.0
 
 READY 🟢  unblocked, brief written, an agent can start now
- #20 calculation visibility ... peer sees how their own total was built
  #11 dashboard ................ history, unpaid rollup, peer rename
  #12 my debts ................. account claim + cross-bill view
 
@@ -50,7 +50,8 @@ BLOCKED 🔴  waiting on a human decision, not on code
 | High | #26 | Bug: peer view order reshuffles (no stable ORDER BY on peers) | — | main session | DONE ✅ v0.3.1 |
 | Med | #25 | Enhancement: total-amount input mode for line items (supersedes duplicate #28) | — | main session | DONE ✅ v0.4.0 |
 | High | #24 | Bug: bill owner can't self-select items they ate | — | main session + dev agent | DONE ✅ v0.5.0 |
-| Med | #20 | Enhancement: per-peer calculation breakdown (subtotal/discount/service/VAT) | — | dev agent | READY 🟢 |
+| Med | #20 | Enhancement: per-peer calculation breakdown (subtotal/discount/service/VAT) | — | dev agent | DONE ✅ v0.6.0 |
+| Low | #34 | Bug: calculation looked wrong (SC/VAT typed as 100% instead of 5%/7%, no unit hint) — fixed by #20's UX, not a code bug | — | dev agent | DONE ✅ v0.6.0 |
 | Med | #11 | Dashboard: history, unpaid rollup, peer rename | #10 ✅ | dev agent | READY 🟢 |
 | Med | #12 | Account Claim + My Debts | #10 ✅ | dev agent | READY 🟢 |
 | Med | #21 | Rework bill creation flow to avoid perceived slowness | grilling session | user | BLOCKED 🔴 |
@@ -82,3 +83,4 @@ BLOCKED 🔴  waiting on a human decision, not on code
 | 2026-07-29 | #26: peers are ordered by `(added_at, id)` in the anon RPC and re-sorted client-side on the same key, compared byte-wise rather than with `localeCompare`; payload fields the client sorts on are typed optional | `jsonb_agg` has no order without `ORDER BY`, so refetches reshuffled columns. ICU orders "." before "+", so `localeCompare` on ISO timestamps disagrees across browser locales; byte order matches Postgres. **Migrations here cut both ways** — #10's dropped columns so it had to run *after* deploy, #26's must run *before* — and Vercel deploys on merge while migrations are manual, so client code must degrade rather than throw when a field is missing | User + main session (reviewer) |
 | 2026-07-29 | #24: the organizer joins their own bill as a marked self-peer (`peers.linked_user_id`), auto-added on creation, visible but not claimable on the peer link | Every path is keyed on `peer_id`, so a peer row is the only shape; marking it is what lets #11 exclude it from debt and the peer view suppress a QR paying yourself, without the name matching ADR-0005 rejects. Same column #12 needs, so it is paid for once. ADR-0010 | User + main session (grill) |
 | 2026-07-30 | A call site that reads a newly added column selects `*` rather than naming it, so a deploy landing before its migration degrades instead of failing | PostgREST resolves a select list into a column projection: an unknown column fails the WHOLE query, embedded resources included, not just that field. #24's `select("display_name, …")` would have blanked payment info on every new bill (so peers get no QR) and rendered every existing bill with zero peers, silently in both directions. Optional TypeScript typing does nothing here — it only protects untyped RPC jsonb like `get_bill`'s `isSelf`. Caught in review before merge | Main session + reviewer |
+| 2026-08-31 | #20/#34: `computeBill()` stages subtotal → +service charge → +VAT per peer and at bill level, ceiling once per stage; VAT is always computed as the residual (total − subtotal − SC) so the three displayed lines sum exactly to the total, never independently rounded. #34 was not a code bug — SC/VAT inputs had no visible unit, so it read as ×100 instead of ×1.05/×1.07 | Same exact BigInt fractions and final `peerTotals`/`checksumSatang` as before (canonical Katsu fixture unchanged); this only stops discarding intermediate values the engine already derives, so a peer never has to trust an opaque final figure. Fixes #34 by making the math visible rather than by changing it | Main session (dev agent) |

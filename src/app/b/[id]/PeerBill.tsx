@@ -159,6 +159,11 @@ export default function PeerBill({
   const locked = bill.bill.status === "locked";
   const peerName = new Map(peersSorted.map((peer) => [peer.id, peer.name]));
 
+  const hasDiscount =
+    bill.bill.billDiscountPercent > 0 ||
+    bill.bill.billDiscountSatang > 0 ||
+    displayItems.some((item) => (item.discountPercent ?? 0) > 0 || (item.discountAmountSatang ?? 0) > 0);
+
   async function onTick(itemId: string, peerId: string) {
     if (locked) return;
     const alreadyTicked = (tickedByItem.get(itemId) ?? []).includes(peerId);
@@ -326,52 +331,75 @@ export default function PeerBill({
               </li>
             );
           }
+          const breakdown = result.peerBreakdowns[peer.id];
           return (
-            <li key={peer.id} className="flex items-center gap-2 py-1">
-              <button
-                type="button"
-                onClick={() => claim(peer.id)}
-                className={`flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left transition active:scale-[0.99] ${
-                  isClaimed ? "bg-surface-tint" : "hover:bg-surface-tint"
-                }`}
-              >
-                <span className={paid[peer.id] ? "text-ink-muted" : ""}>
-                  {peerName.get(peer.id)}
-                </span>
-                {isClaimed && (
-                  <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
-                    คุณ
-                  </span>
-                )}
-                <span className="ml-auto font-semibold tabular-nums">
-                  {formatSatang(peerTotal)}
-                </span>
-              </button>
-              {isClaimed ? (
-                // Claimed peer's pay control lives in the top panel; here we only
-                // echo status, and only when there is actually something to pay.
-                (paid[peer.id] || peerTotal > 0) && (
-                  <span
-                    className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold ${
-                      paid[peer.id] ? "text-success" : "text-ink-muted"
-                    }`}
-                  >
-                    {paid[peer.id] ? "✓ จ่ายแล้ว" : "จ่ายด้านบน"}
-                  </span>
-                )
-              ) : (
+            <li key={peer.id} className="flex flex-col gap-1 py-1">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  disabled={pending}
-                  onClick={() => onPaid(peer.id)}
-                  className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    paid[peer.id]
-                      ? "bg-success text-white hover:opacity-90"
-                      : "border border-border text-ink-muted hover:bg-surface-tint"
+                  onClick={() => claim(peer.id)}
+                  className={`flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left transition active:scale-[0.99] ${
+                    isClaimed ? "bg-surface-tint" : "hover:bg-surface-tint"
                   }`}
                 >
-                  {paid[peer.id] ? "✓ จ่ายแล้ว" : "ยังไม่จ่าย"}
+                  <span className={paid[peer.id] ? "text-ink-muted" : ""}>
+                    {peerName.get(peer.id)}
+                  </span>
+                  {isClaimed && (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                      คุณ
+                    </span>
+                  )}
+                  <span className="ml-auto font-semibold tabular-nums">
+                    {formatSatang(peerTotal)}
+                  </span>
                 </button>
+                {isClaimed ? (
+                  // Claimed peer's pay control lives in the top panel; here we only
+                  // echo status, and only when there is actually something to pay.
+                  (paid[peer.id] || peerTotal > 0) && (
+                    <span
+                      className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold ${
+                        paid[peer.id] ? "text-success" : "text-ink-muted"
+                      }`}
+                    >
+                      {paid[peer.id] ? "✓ จ่ายแล้ว" : "จ่ายด้านบน"}
+                    </span>
+                  )
+                ) : (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => onPaid(peer.id)}
+                    className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      paid[peer.id]
+                        ? "bg-success text-white hover:opacity-90"
+                        : "border border-border text-ink-muted hover:bg-surface-tint"
+                    }`}
+                  >
+                    {paid[peer.id] ? "✓ จ่ายแล้ว" : "ยังไม่จ่าย"}
+                  </button>
+                )}
+              </div>
+              {isClaimed && breakdown && (
+                <div className="mt-1 flex flex-col gap-0.5 border-t border-dashed border-border pt-1 text-xs text-ink-muted">
+                  <div className="flex justify-between">
+                    <span>รวมของคุณ</span>
+                    <b className="text-ink">{formatSatang(breakdown.subtotalSatang)}</b>
+                  </div>
+                  {breakdown.serviceChargeSatang > 0 && (
+                    <div className="flex justify-between">
+                      <span>+ Service charge</span>
+                      <b className="text-ink">{formatSatang(breakdown.serviceChargeSatang)}</b>
+                    </div>
+                  )}
+                  {breakdown.vatSatang > 0 && (
+                    <div className="flex justify-between">
+                      <span>+ VAT</span>
+                      <b className="text-ink">{formatSatang(breakdown.vatSatang)}</b>
+                    </div>
+                  )}
+                </div>
               )}
             </li>
           );
@@ -478,6 +506,32 @@ export default function PeerBill({
           })}
         </tbody>
         <tfoot>
+          {hasDiscount && (
+            <tr className="border-b border-border/60 text-ink-muted">
+              <td className="sticky left-0 bg-surface p-3">ส่วนลด</td>
+              {peersSorted.map((peer) => (
+                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                  −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
+                </td>
+              ))}
+            </tr>
+          )}
+          <tr className="border-b border-border/60 text-ink-muted">
+            <td className="sticky left-0 bg-surface p-3">Service charge</td>
+            {peersSorted.map((peer) => (
+              <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                {formatSatang(result.peerBreakdowns[peer.id]?.serviceChargeSatang ?? 0)}
+              </td>
+            ))}
+          </tr>
+          <tr className="border-b border-border/60 text-ink-muted">
+            <td className="sticky left-0 bg-surface p-3">VAT</td>
+            {peersSorted.map((peer) => (
+              <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                {formatSatang(result.peerBreakdowns[peer.id]?.vatSatang ?? 0)}
+              </td>
+            ))}
+          </tr>
           <tr className="border-b border-border">
             <td className="sticky left-0 bg-surface p-3 font-semibold">ยอดต่อคน</td>
             {peersSorted.map((peer) => (

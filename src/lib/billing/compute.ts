@@ -1,13 +1,16 @@
 import { add, ceilToSatang, fraction, multiply, ZERO, type Fraction } from "./fraction";
-import type { BillInput, BillResult } from "./types";
+import type { BillInput, BillResult, PeerBreakdown } from "./types";
 
 export function computeBill(input: BillInput): BillResult {
   validate(input);
 
   // 1. Per-item net price: unitPrice × qty, minus item discounts — % first, then amount (ADR-0003).
+  //    grossPrices keeps the pre-ANY-discount line total (unitPrice × qty) for the ส่วนลด row.
   const netPrices = new Map<string, Fraction>();
+  const grossPrices = new Map<string, bigint>();
   for (const item of input.items) {
     const lineTotal = BigInt(item.unitPriceSatang) * BigInt(item.qty);
+    grossPrices.set(item.id, lineTotal);
     const discountPercent = BigInt(item.discountPercent ?? 0);
     const discountAmount = BigInt(item.discountAmountSatang ?? 0);
     // net = lineTotal × (100 − %) / 100 − amount, carried over denominator 100
@@ -17,8 +20,11 @@ export function computeBill(input: BillInput): BillResult {
   }
 
   // 2. Subtotal = sum of all net prices (the "Discounted price" row of the old sheet).
+  //    Gross bill total = sum of all pre-discount line totals, for the bill-level discountSatang.
   let subtotal = ZERO;
   for (const netPrice of netPrices.values()) subtotal = add(subtotal, netPrice);
+  let grossBillSatang = 0n;
+  for (const gross of grossPrices.values()) grossBillSatang += gross;
 
   // 3. Bill-level discount becomes one ratio applied to every item:
   //    proportional allocation (ADR-0003). ratio = discounted subtotal ÷ original subtotal.
@@ -35,15 +41,18 @@ export function computeBill(input: BillInput): BillResult {
   }
 
   // 4. Charges: × (1 + SC%) then × (1 + VAT%), compounded in that order (ADR-0003).
-  const chargeMultiplier = fraction(
-    BigInt(100 + input.serviceChargePercent) * BigInt(100 + input.vatPercent),
-    10000n,
-  );
-  const billLevelMultiplier = multiply(billDiscountRatio, chargeMultiplier);
+  const scRatio = fraction(BigInt(100 + input.serviceChargePercent), 100n);
+  const vatRatio = fraction(BigInt(100 + input.vatPercent), 100n);
 
-  // 5. Split each item evenly among its tickers and accumulate each peer's EXACT total.
+  // 5. Per-peer subtotal: item shares (after item + bill discounts), exact, no charges yet.
+  //    Per-peer gross: the same even split, but on the pre-ANY-discount line total — used only
+  //    to derive discountSatang below, never added into a peer's charged total.
+  //    Also split each item evenly among its tickers for the display-only itemSplits grid.
   //    Unticked items contribute ฿0 and get flagged for the organizer to chase.
-  const peerTotalFractions = new Map<string, Fraction>(
+  const peerSubtotalFractions = new Map<string, Fraction>(
+    input.peerIds.map((id) => [id, ZERO]),
+  );
+  const peerGrossFractions = new Map<string, Fraction>(
     input.peerIds.map((id) => [id, ZERO]),
   );
   const itemSplits: Record<string, Record<string, number>> = {};
@@ -56,26 +65,63 @@ export function computeBill(input: BillInput): BillResult {
       continue;
     }
     const netPrice = netPrices.get(item.id)!;
-    const perTickerShare = multiply(
-      fraction(netPrice.numerator, netPrice.denominator * BigInt(item.tickedBy.length)),
-      billLevelMultiplier,
+    const grossPrice = grossPrices.get(item.id)!;
+    const tickerCount = BigInt(item.tickedBy.length);
+    const perTickerSubtotal = multiply(
+      fraction(netPrice.numerator, netPrice.denominator * tickerCount),
+      billDiscountRatio,
     );
+    const perTickerGross = fraction(grossPrice, tickerCount);
+    const perTickerShare = multiply(perTickerSubtotal, multiply(scRatio, vatRatio));
     for (const peerId of item.tickedBy) {
-      peerTotalFractions.set(peerId, add(peerTotalFractions.get(peerId)!, perTickerShare));
+      peerSubtotalFractions.set(peerId, add(peerSubtotalFractions.get(peerId)!, perTickerSubtotal));
+      peerGrossFractions.set(peerId, add(peerGrossFractions.get(peerId)!, perTickerGross));
       itemSplits[item.id][peerId] = ceilToSatang(perTickerShare); // display only, rounded per cell
     }
   }
 
-  // 6. Round each peer's exact total UP to whole satang — the ONLY money rounding (ADR-0001).
+  // 6. Stage each peer through subtotal → +SC → +VAT, ceiling once per stage; VAT is the
+  //    residual so the three displayed lines always sum exactly to the final total.
+  //    discountSatang (gross − subtotal, both ceil'd at their own stage) is informational only:
+  //    gross is never charged, so it never joins the subtotal/SC/VAT chain.
   const peerTotals: Record<string, number> = {};
+  const peerBreakdowns: Record<string, PeerBreakdown> = {};
   let checksumSatang = 0;
-  for (const [peerId, exactTotal] of peerTotalFractions) {
-    peerTotals[peerId] = ceilToSatang(exactTotal);
-    checksumSatang += peerTotals[peerId];
+
+  for (const [peerId, subtotalExact] of peerSubtotalFractions) {
+    const grossExact = peerGrossFractions.get(peerId)!;
+    const withScExact = multiply(subtotalExact, scRatio);
+    const withVatExact = multiply(withScExact, vatRatio);
+
+    const peerGrossSatang = ceilToSatang(grossExact);
+    const peerSubtotalSatang = ceilToSatang(subtotalExact);
+    const peerDiscountSatang = peerGrossSatang - peerSubtotalSatang;
+    const peerScSatang = ceilToSatang(withScExact) - peerSubtotalSatang;
+    const total = ceilToSatang(withVatExact);
+    const peerVatSatang = total - peerSubtotalSatang - peerScSatang;
+
+    peerTotals[peerId] = total;
+    peerBreakdowns[peerId] = {
+      discountSatang: peerDiscountSatang,
+      subtotalSatang: peerSubtotalSatang,
+      serviceChargeSatang: peerScSatang,
+      vatSatang: peerVatSatang,
+    };
+    checksumSatang += total;
   }
 
   // 7. Receipt total = whole bill through the same pipeline, for checking vs the paper receipt.
-  const receiptTotalSatang = ceilToSatang(multiply(subtotal, billLevelMultiplier));
+  //    Same residual convention as each peer: subtotal → +SC ceil'd → VAT is the residual.
+  //    discountSatang here is the bill-wide gross (all items, exact integer, no discount) minus
+  //    the settled subtotal — informational, not part of the subtotal/SC/VAT chain.
+  const subtotalExactBill = multiply(subtotal, billDiscountRatio);
+  const withScExactBill = multiply(subtotalExactBill, scRatio);
+  const withVatExactBill = multiply(withScExactBill, vatRatio);
+  const subtotalSatang = ceilToSatang(subtotalExactBill);
+  const discountSatang = Number(grossBillSatang) - subtotalSatang;
+  const serviceChargeSatang = ceilToSatang(withScExactBill) - subtotalSatang;
+  const receiptTotalSatang = ceilToSatang(withVatExactBill);
+  const vatSatang = receiptTotalSatang - subtotalSatang - serviceChargeSatang;
 
   return {
     peerTotals,
@@ -84,6 +130,11 @@ export function computeBill(input: BillInput): BillResult {
     surplusSatang: checksumSatang - receiptTotalSatang,
     itemSplits,
     untickedItemIds,
+    discountSatang,
+    subtotalSatang,
+    serviceChargeSatang,
+    vatSatang,
+    peerBreakdowns,
   };
 }
 

@@ -11,6 +11,8 @@ interface Props {
   ticks: TickRow[];
   result: BillResult;
   receiptTotalSatang: number;
+  billDiscountPercent: number;
+  billDiscountSatang: number;
   selfPeerId: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
 }
@@ -22,11 +24,17 @@ export default function MatrixView({
   ticks,
   result,
   receiptTotalSatang,
+  billDiscountPercent,
+  billDiscountSatang,
   selfPeerId,
   onToggle,
 }: Props) {
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
   const receipt = receiptStatus(receiptTotalSatang, result.checksumSatang);
+  const hasDiscount =
+    billDiscountPercent > 0 ||
+    billDiscountSatang > 0 ||
+    items.some((item) => item.discount_percent > 0 || item.discount_satang > 0);
 
   if (items.length === 0 || peers.length === 0) {
     return (
@@ -103,6 +111,39 @@ export default function MatrixView({
             })}
           </tbody>
           <tfoot>
+            {hasDiscount && (
+              <tr className="border-t border-border/60 text-ink-muted">
+                <td className="sticky left-0 z-10 bg-surface p-2">ส่วนลด</td>
+                <td className="p-2 text-right tabular-nums">
+                  −{formatSatang(result.discountSatang)}
+                </td>
+                {peers.map((peer) => (
+                  <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                    −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
+                  </td>
+                ))}
+              </tr>
+            )}
+            <tr className="border-t border-border/60 text-ink-muted">
+              <td className="sticky left-0 z-10 bg-surface p-2">Service charge</td>
+              <td className="p-2 text-right tabular-nums">
+                {formatSatang(result.serviceChargeSatang)}
+              </td>
+              {peers.map((peer) => (
+                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                  {formatSatang(result.peerBreakdowns[peer.id]?.serviceChargeSatang ?? 0)}
+                </td>
+              ))}
+            </tr>
+            <tr className="border-t border-border/60 text-ink-muted">
+              <td className="sticky left-0 z-10 bg-surface p-2">VAT</td>
+              <td className="p-2 text-right tabular-nums">{formatSatang(result.vatSatang)}</td>
+              {peers.map((peer) => (
+                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                  {formatSatang(result.peerBreakdowns[peer.id]?.vatSatang ?? 0)}
+                </td>
+              ))}
+            </tr>
             <tr className="border-t-2 border-ink/20 font-semibold">
               <td className="sticky left-0 z-10 bg-surface p-2">รวมต่อคน</td>
               <td className="p-2 text-right tabular-nums">

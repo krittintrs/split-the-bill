@@ -20,6 +20,15 @@ export interface BillInput {
   vatPercent: number; // integer 0-100
 }
 
+export interface PeerBreakdown {
+  /** Their gross (pre item- AND bill-discount) even share, minus subtotalSatang. */
+  discountSatang: number;
+  /** Their exact item-share subtotal, after item AND bill discounts, before any charge. */
+  subtotalSatang: number;
+  serviceChargeSatang: number;
+  vatSatang: number;
+}
+
 export interface BillResult {
   /** The money truth: exact pipeline sum, ceil'd ONCE per peer (ADR-0001). */
   peerTotals: Record<string, number>;
@@ -33,4 +42,15 @@ export interface BillResult {
   itemSplits: Record<string, Record<string, number>>;
   /** Items with tickedBy = [] — contribute ฿0; organizer must chase these. */
   untickedItemIds: string[];
+  /**
+   * Bill-level breakdown. subtotalSatang + serviceChargeSatang + vatSatang === receiptTotalSatang
+   * exactly. discountSatang (gross pre-discount bill total minus subtotalSatang) is informational,
+   * not part of that sum.
+   */
+  discountSatang: number;
+  subtotalSatang: number;
+  serviceChargeSatang: number;
+  vatSatang: number;
+  /** Per peer. Each entry's three charge fields sum exactly to peerTotals[peerId]; discountSatang is informational (gross − subtotal), not part of that sum. */
+  peerBreakdowns: Record<string, PeerBreakdown>;
 }

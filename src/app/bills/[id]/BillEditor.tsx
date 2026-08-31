@@ -34,6 +34,35 @@ import CardsView from "./CardsView";
 export const inputCls =
   "min-h-11 rounded-lg border border-border bg-surface p-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-primary-ink";
 
+const chipCls =
+  "rounded-md border border-border bg-surface-tint px-2 py-1 text-xs font-medium text-primary-ink transition hover:border-primary hover:bg-border active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink";
+
+/** A percent `<input>` with a permanent, always-visible "%" suffix (not a placeholder). */
+function PercentBox({
+  defaultValue,
+  onBlur,
+  widthCls = "w-full",
+}: {
+  defaultValue: number | string;
+  onBlur: (e: FocusEvent<HTMLInputElement>) => void;
+  widthCls?: string;
+}) {
+  return (
+    <div className="relative">
+      <input
+        inputMode="numeric"
+        defaultValue={defaultValue}
+        placeholder="0"
+        onBlur={onBlur}
+        className={`${inputCls} ${widthCls} pr-6 text-right tabular-nums`}
+      />
+      <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-sm text-ink-muted">
+        %
+      </span>
+    </div>
+  );
+}
+
 export function satangToInput(satang: number): string {
   return satang === 0 ? "" : (satang / 100).toFixed(2);
 }
@@ -407,12 +436,10 @@ export default function BillEditor({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
             ส่วนลดบิล %
-            <input
-              inputMode="numeric"
+            <PercentBox
+              key={`bill-discount-${bill.bill_discount_percent}`}
               defaultValue={bill.bill_discount_percent || ""}
-              placeholder="0"
               onBlur={(e) => saveBill({ bill_discount_percent: inputToPercent(e.target.value) })}
-              className={`${inputCls} w-full text-right tabular-nums`}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -427,30 +454,51 @@ export default function BillEditor({
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
             Service charge %
-            <input
-              inputMode="numeric"
+            <PercentBox
+              key={`sc-${bill.service_charge_percent}`}
               defaultValue={bill.service_charge_percent || ""}
-              placeholder="0"
               onBlur={(e) => saveBill({ service_charge_percent: inputToPercent(e.target.value) })}
-              className={`${inputCls} w-full text-right tabular-nums`}
             />
+            <div className="flex gap-1 pt-0.5">
+              <button
+                type="button"
+                onClick={() => saveBill({ service_charge_percent: 5 })}
+                className={chipCls}
+              >
+                5%
+              </button>
+              <button
+                type="button"
+                onClick={() => saveBill({ service_charge_percent: 10 })}
+                className={chipCls}
+              >
+                10%
+              </button>
+            </div>
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
             VAT %
-            <input
-              inputMode="numeric"
+            <PercentBox
+              key={`vat-${bill.vat_percent}`}
               defaultValue={bill.vat_percent || ""}
-              placeholder="0"
               onBlur={(e) => saveBill({ vat_percent: inputToPercent(e.target.value) })}
-              className={`${inputCls} w-full text-right tabular-nums`}
             />
+            <div className="flex gap-1 pt-0.5">
+              <button
+                type="button"
+                onClick={() => saveBill({ vat_percent: 7 })}
+                className={chipCls}
+              >
+                7%
+              </button>
+            </div>
           </label>
         </div>
       </section>
 
       <section className="rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-2 font-semibold">เช็คกับใบเสร็จ</h2>
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
             ยอดตามใบเสร็จ ฿
             <input
@@ -461,10 +509,27 @@ export default function BillEditor({
               className={`${inputCls} w-36 text-right tabular-nums`}
             />
           </label>
-          <div className="flex flex-col gap-1 pb-1 text-sm">
-            <span className="tabular-nums text-ink-muted">
-              ระบบคำนวณได้ {formatSatang(result.checksumSatang)}
-            </span>
+          <div className="flex min-w-48 flex-1 flex-col gap-1 border-t border-border pt-3 text-sm sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
+            <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+              <span>รวมรายการ</span>
+              <span>{formatSatang(result.subtotalSatang)}</span>
+            </div>
+            {bill.service_charge_percent > 0 && (
+              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+                <span>+ Service charge {bill.service_charge_percent}%</span>
+                <span>{formatSatang(result.serviceChargeSatang)}</span>
+              </div>
+            )}
+            {bill.vat_percent > 0 && (
+              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+                <span>+ VAT {bill.vat_percent}%</span>
+                <span>{formatSatang(result.vatSatang)}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
+              <span>รวม</span>
+              <span>{formatSatang(result.receiptTotalSatang)}</span>
+            </div>
             <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
               {receipt.label}
             </span>
@@ -487,6 +552,8 @@ export default function BillEditor({
           ticks={ticks}
           result={result}
           receiptTotalSatang={bill.receipt_total_satang}
+          billDiscountPercent={bill.bill_discount_percent}
+          billDiscountSatang={bill.bill_discount_satang}
           selfPeerId={selfPeerId}
           onToggle={onToggle}
         />
@@ -784,8 +851,8 @@ function ItemRow({
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
           ลด %
-          <input
-            inputMode="numeric"
+          <PercentBox
+            widthCls="w-16"
             defaultValue={item.discount_percent || ""}
             onBlur={(e) => {
               const value = parseInt(e.target.value, 10);
@@ -793,7 +860,6 @@ function ItemRow({
                 discount_percent: Number.isNaN(value) ? 0 : Math.min(100, Math.max(0, value)),
               });
             }}
-            className={`${inputCls} w-14 text-right tabular-nums`}
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
