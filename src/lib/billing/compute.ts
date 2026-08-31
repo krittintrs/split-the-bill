@@ -63,6 +63,7 @@ export function computeBill(input: BillInput): BillResult {
   );
   const peerItemTierSatang = new Map<string, number>(input.peerIds.map((id) => [id, 0]));
   const itemSplits: Record<string, Record<string, number>> = {};
+  const itemLeftovers: Record<string, { leftoverSatang: number; absorberPeerId: string }> = {};
   const untickedItemIds: string[] = [];
 
   for (const item of input.items) {
@@ -101,6 +102,11 @@ export function computeBill(input: BillInput): BillResult {
       itemSplits[item.id][peerId] = share;
       peerItemTierSatang.set(peerId, peerItemTierSatang.get(peerId)! + share);
     }
+
+    // Task 5 UI hook: only items with 2+ tickers AND a nonzero leftover need a picker at all.
+    if (item.tickedBy.length >= 2 && itemRemainder !== 0) {
+      itemLeftovers[item.id] = { leftoverSatang: itemRemainder, absorberPeerId: itemAbsorberId };
+    }
   }
 
   // 6. Bill-level pipeline: whole bill through subtotal → +SC → +VAT, ceiling once per stage;
@@ -130,6 +136,7 @@ export function computeBill(input: BillInput): BillResult {
   const peerTotals: Record<string, number> = {};
   const peerBreakdowns: Record<string, PeerBreakdown> = {};
   let checksumSatang = 0;
+  let billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
 
   if (untickedItemIds.length === 0) {
     const floorTotals = new Map<string, number>();
@@ -164,6 +171,12 @@ export function computeBill(input: BillInput): BillResult {
         }
       }
       billAbsorberId = largestPeerId;
+    }
+
+    // Task 5 UI hook: only a nonzero remainder needs a picker — NOT the same as "SC or VAT is
+    // nonzero" (item-tier ceiling overshoot alone can make this nonzero at 0%/0%, see ADR-0011).
+    if (remainder !== 0) {
+      billLeftover = { leftoverSatang: remainder, absorberPeerId: billAbsorberId };
     }
 
     for (const [peerId, floorTotal] of floorTotals) {
@@ -223,6 +236,8 @@ export function computeBill(input: BillInput): BillResult {
     serviceChargeSatang,
     vatSatang,
     peerBreakdowns,
+    itemLeftovers,
+    billLeftover,
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import RoundingLeftoverBadge from "@/components/RoundingLeftoverBadge";
 import { formatSatang } from "@/lib/billing/money";
 import type { BillResult } from "@/lib/billing/types";
 import type { LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
@@ -14,6 +15,7 @@ interface Props {
   receiptTotalSatang: number;
   selfPeerId: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
+  onUpdateItemAbsorber: (lineItemId: string, peerId: string) => void;
 }
 
 /** Mobile (<lg): stacked item cards + sticky expandable totals bar. */
@@ -25,10 +27,12 @@ export default function CardsView({
   receiptTotalSatang,
   selfPeerId,
   onToggle,
+  onUpdateItemAbsorber,
 }: Props) {
   const [totalsOpen, setTotalsOpen] = useState(false);
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
   const receipt = receiptStatus(receiptTotalSatang, result.checksumSatang);
+  const peerNames = Object.fromEntries(peers.map((peer) => [peer.id, peer.name]));
 
   if (items.length === 0 || peers.length === 0) {
     return (
@@ -44,14 +48,13 @@ export default function CardsView({
         <h2 className="font-semibold">ใครกินอะไร</h2>
         {items.map((item) => {
           const unticked = result.untickedItemIds.includes(item.id);
-          const tickerCount = peers.filter((peer) =>
-            tickSet.has(`${item.id}:${peer.id}`),
-          ).length;
-          const firstTicker = peers.find((peer) => tickSet.has(`${item.id}:${peer.id}`));
-          const share =
-            firstTicker !== undefined
-              ? result.itemSplits[item.id]?.[firstTicker.id]
-              : undefined;
+          const tickedPeerIds = peers
+            .filter((peer) => tickSet.has(`${item.id}:${peer.id}`))
+            .map((peer) => peer.id);
+          const tickerCount = tickedPeerIds.length;
+          const firstTicker = tickedPeerIds[0];
+          const share = firstTicker !== undefined ? result.itemSplits[item.id]?.[firstTicker] : undefined;
+          const leftover = result.itemLeftovers[item.id];
           return (
             <div
               key={item.id}
@@ -100,6 +103,17 @@ export default function CardsView({
                     ÷ {tickerCount} = {formatSatang(share)} ต่อคน
                   </p>
                 )
+              )}
+              {leftover && (
+                <div className="mt-2">
+                  <RoundingLeftoverBadge
+                    leftoverSatang={leftover.leftoverSatang}
+                    candidateIds={tickedPeerIds}
+                    candidateNames={peerNames}
+                    absorberId={leftover.absorberPeerId}
+                    onChange={(peerId) => onUpdateItemAbsorber(item.id, peerId)}
+                  />
+                </div>
               )}
             </div>
           );

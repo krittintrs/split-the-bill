@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import KebabMenu, { kebabItemCls } from "@/components/KebabMenu";
+import RoundingLeftoverBadge from "@/components/RoundingLeftoverBadge";
 import { computeBill } from "@/lib/billing/compute";
 import { totalFromUnitPriceSatang, unitPriceFromTotalSatang } from "@/lib/billing/lineEntry";
 import { formatSatang } from "@/lib/billing/money";
@@ -158,6 +159,10 @@ export default function BillEditor({
     [bill, items, peers, ticks, selfPeerId],
   );
   const receipt = receiptStatus(bill.receipt_total_satang, result.checksumSatang);
+  const peerNames = useMemo(
+    () => Object.fromEntries(peers.map((peer) => [peer.id, peer.name])),
+    [peers],
+  );
 
   /**
    * Autosave failed → surface an inline banner instead of forcing a reload.
@@ -202,6 +207,16 @@ export default function BillEditor({
       prev.map((item) => (item.id === itemId ? { ...item, ...patch } : item)),
     );
     runMutation(() => updateLineItem(itemId, patch));
+  }
+
+  /** ADR-0011: organizer picks which ticker absorbs one item's own rounding leftover. */
+  function onUpdateItemAbsorber(itemId: string, peerId: string) {
+    onUpdateItem(itemId, { rounding_absorber_peer_id: peerId });
+  }
+
+  /** ADR-0011: organizer picks which peer absorbs the bill-wide rounding leftover. */
+  function onUpdateBillAbsorber(peerId: string) {
+    saveBill({ rounding_absorber_peer_id: peerId });
   }
 
   function onRemoveItem(itemId: string) {
@@ -533,6 +548,17 @@ export default function BillEditor({
             <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
               {receipt.label}
             </span>
+            {result.billLeftover && (
+              <div className="pt-1">
+                <RoundingLeftoverBadge
+                  leftoverSatang={result.billLeftover.leftoverSatang}
+                  candidateIds={peers.map((peer) => peer.id)}
+                  candidateNames={peerNames}
+                  absorberId={result.billLeftover.absorberPeerId}
+                  onChange={onUpdateBillAbsorber}
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -556,6 +582,7 @@ export default function BillEditor({
           billDiscountSatang={bill.bill_discount_satang}
           selfPeerId={selfPeerId}
           onToggle={onToggle}
+          onUpdateItemAbsorber={onUpdateItemAbsorber}
         />
       </div>
       <div className="lg:hidden">
@@ -567,6 +594,7 @@ export default function BillEditor({
           receiptTotalSatang={bill.receipt_total_satang}
           selfPeerId={selfPeerId}
           onToggle={onToggle}
+          onUpdateItemAbsorber={onUpdateItemAbsorber}
         />
       </div>
 

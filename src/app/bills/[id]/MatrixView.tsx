@@ -1,5 +1,6 @@
 "use client";
 
+import RoundingLeftoverBadge from "@/components/RoundingLeftoverBadge";
 import { formatSatang } from "@/lib/billing/money";
 import type { BillResult } from "@/lib/billing/types";
 import type { LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
@@ -15,6 +16,7 @@ interface Props {
   billDiscountSatang: number;
   selfPeerId: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
+  onUpdateItemAbsorber: (lineItemId: string, peerId: string) => void;
 }
 
 /** Desktop (>=lg): sheet-like matrix — items as rows, peers as columns. */
@@ -28,6 +30,7 @@ export default function MatrixView({
   billDiscountSatang,
   selfPeerId,
   onToggle,
+  onUpdateItemAbsorber,
 }: Props) {
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
   const receipt = receiptStatus(receiptTotalSatang, result.checksumSatang);
@@ -35,6 +38,7 @@ export default function MatrixView({
     billDiscountPercent > 0 ||
     billDiscountSatang > 0 ||
     items.some((item) => item.discount_percent > 0 || item.discount_satang > 0);
+  const peerNames = Object.fromEntries(peers.map((peer) => [peer.id, peer.name]));
 
   if (items.length === 0 || peers.length === 0) {
     return (
@@ -68,6 +72,10 @@ export default function MatrixView({
           <tbody>
             {items.map((item) => {
               const unticked = result.untickedItemIds.includes(item.id);
+              const leftover = result.itemLeftovers[item.id];
+              const tickedPeerIds = peers
+                .filter((peer) => tickSet.has(`${item.id}:${peer.id}`))
+                .map((peer) => peer.id);
               return (
                 <tr key={item.id} className="border-b border-border/60">
                   <td className="sticky left-0 z-10 bg-surface p-2 whitespace-nowrap">
@@ -81,6 +89,17 @@ export default function MatrixView({
                       <span className="ml-1 text-xs font-medium text-danger">
                         ยังไม่มีใครติ๊ก!
                       </span>
+                    )}
+                    {leftover && (
+                      <div className="mt-1">
+                        <RoundingLeftoverBadge
+                          leftoverSatang={leftover.leftoverSatang}
+                          candidateIds={tickedPeerIds}
+                          candidateNames={peerNames}
+                          absorberId={leftover.absorberPeerId}
+                          onChange={(peerId) => onUpdateItemAbsorber(item.id, peerId)}
+                        />
+                      </div>
                     )}
                   </td>
                   <td className="p-2 text-right tabular-nums text-ink-muted">
@@ -140,7 +159,10 @@ export default function MatrixView({
               <td className="p-2 text-right tabular-nums">{formatSatang(result.vatSatang)}</td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                  {formatSatang(result.peerBreakdowns[peer.id]?.vatSatang ?? 0)}
+                  {/* ADR-0011 known limitation: the negative-remainder guard can make a
+                      non-absorber's displayed VAT residual negative even though their real
+                      total never does. Clamp the display only, not the underlying math. */}
+                  {formatSatang(Math.max(0, result.peerBreakdowns[peer.id]?.vatSatang ?? 0))}
                 </td>
               ))}
             </tr>

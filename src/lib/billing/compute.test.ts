@@ -74,6 +74,8 @@ describe("computeBill graceful incomplete states", () => {
         a: { discountSatang: 0, subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
         b: { discountSatang: 0, subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
       },
+      itemLeftovers: {},
+      billLeftover: undefined,
     });
   });
 });
@@ -535,5 +537,64 @@ describe("ADR-0011 two-tier rounding absorber", () => {
     expect(r.peerTotals.w).toBe(0); // never negative
     expect(Object.values(r.peerTotals).every((v) => v >= 0)).toBe(true);
     expect(r.checksumSatang).toBe(r.receiptTotalSatang);
+    // The guard reassigned the absorber away from "w" (its floor can't cover the −2 remainder).
+    expect(r.billLeftover).toEqual({ leftoverSatang: -2, absorberPeerId: "x" });
+  });
+
+  it("itemLeftovers only lists multi-ticker items with a nonzero leftover, keyed by item id", () => {
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 10000, qty: 1, tickedBy: ["A", "B", "C"] }, // leftover 1 → A
+        { id: "i2", unitPriceSatang: 2500, qty: 1, tickedBy: ["D", "E", "F"] }, // leftover 1 → D
+        { id: "i3", unitPriceSatang: 3000, qty: 1, tickedBy: ["A", "B", "C"] }, // exact ÷ 3, no leftover
+        { id: "i4", unitPriceSatang: 5000, qty: 1, tickedBy: ["A"] }, // single ticker, never listed
+      ],
+      peerIds: ["A", "B", "C", "D", "E", "F"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.itemLeftovers).toEqual({
+      i1: { leftoverSatang: 1, absorberPeerId: "A" },
+      i2: { leftoverSatang: 1, absorberPeerId: "D" },
+    });
+  });
+
+  it("billLeftover is undefined when the bill tier's remainder is zero", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 30000, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.billLeftover).toBeUndefined();
+  });
+
+  it("billLeftover engages from item-tier ceiling overshoot alone, at SC = VAT = 0%", () => {
+    // Same two-single-ticker-item overshoot fixture as the earlier bill-tier test.
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 1000, qty: 1, tickedBy: ["x"] },
+        { id: "i2", unitPriceSatang: 2000, qty: 1, tickedBy: ["y"] },
+      ],
+      peerIds: ["x", "y"],
+      billDiscount: { amountSatang: 1000 },
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.billLeftover).toEqual({ leftoverSatang: -1, absorberPeerId: "x" });
+  });
+
+  it("billLeftover is undefined whenever any item is unticked (bill tier does not run)", () => {
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 1000, qty: 1, tickedBy: ["x"] },
+        { id: "i2", unitPriceSatang: 2000, qty: 1, tickedBy: [] },
+      ],
+      peerIds: ["x", "y"],
+      billDiscount: { amountSatang: 1000 },
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.billLeftover).toBeUndefined();
   });
 });

@@ -61,4 +61,15 @@ export interface BillResult {
   vatSatang: number;
   /** Per peer. Each entry's three charge fields sum exactly to peerTotals[peerId]; discountSatang is informational (gross − subtotal), not part of that sum. */
   peerBreakdowns: Record<string, PeerBreakdown>;
+  /**
+   * ADR-0011 item-tier leftover, keyed by item id. Only present for items with
+   * tickedBy.length >= 2 AND a nonzero itemRemainder — the UI renders nothing otherwise.
+   */
+  itemLeftovers: Record<string, { leftoverSatang: number; absorberPeerId: string }>;
+  /**
+   * ADR-0011 bill-tier leftover. Present only when the bill-tier remainder is nonzero — NOT the
+   * same as "SC or VAT is nonzero"; item-tier ceiling overshoot alone can make this nonzero even
+   * at 0%/0%. Absent (undefined) whenever any item is unticked, since the bill tier never runs.
+   */
+  billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
 }

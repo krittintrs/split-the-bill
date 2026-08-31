@@ -531,7 +531,10 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3">VAT</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                {formatSatang(result.peerBreakdowns[peer.id]?.vatSatang ?? 0)}
+                {/* ADR-0011 known limitation: the negative-remainder guard can make a
+                    non-absorber's displayed VAT residual negative even though their real
+                    total never does. Clamp the display only, not the underlying math. */}
+                {formatSatang(Math.max(0, result.peerBreakdowns[peer.id]?.vatSatang ?? 0))}
               </td>
             ))}
           </tr>
