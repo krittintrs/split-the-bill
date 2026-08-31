@@ -5,6 +5,26 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-08-31
+
+The math shows its work.
+
+### Added
+
+- เช็คกับใบเสร็จ now shows a line-by-line breakdown (subtotal → +Service charge → +VAT → total) instead of one final figure, so a surprising total is never a mystery (#20, #34)
+- Both matrix tables (organizer's editor and the peer's desktop view) gained Service charge and VAT footer rows, plus a discount row that only appears when a discount is actually set
+- On a peer's phone, claiming your name now shows your own subtotal → discount → SC → VAT breakdown right on your row, reconciling exactly to the amount above the QR
+- Service charge, VAT, and discount percent fields always show a "%" so a typed value can't be misread as something else; Service charge gets 5%/10% quick-fill chips and VAT gets a 7% chip (Thailand's rate)
+
+### Fixed
+
+- #34 ("the total didn't come out to what I typed"): not a code bug — Service charge and VAT had been entered as 100% each instead of 5%/7%, with no visible unit hint making the mistake easy to miss. Fixed by the visibility work above, not by changing any math
+- A duplicate, float-based discount calculation that had crept into two components (caught in review before merge) is gone; discount amounts are computed once, exactly, in `computeBill()`
+
+### Notes
+
+- `computeBill()` internally decomposes its pipeline into staged subtotal → +SC → +VAT (+ discount as the gross-minus-net gap), exposed as new `BillResult` fields (`subtotalSatang`, `serviceChargeSatang`, `vatSatang`, `discountSatang`, `peerBreakdowns`). Same exact BigInt fractions as before; `peerTotals`/`checksumSatang` are unchanged (canonical Katsu fixture still green). VAT is always the residual line so the displayed numbers sum exactly to the total, never independently rounded
+
 ## [0.5.0] — 2026-07-30
 
 The organizer eats too.
