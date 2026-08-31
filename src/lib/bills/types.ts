@@ -13,6 +13,8 @@ export interface BillRow {
   bank_name: string;
   bank_account: string;
   account_name: string;
+  /** ADR-0011: peer who absorbs the bill-wide rounding leftover. */
+  rounding_absorber_peer_id: string | null;
 }
 
 export interface ProfileRow {
@@ -33,6 +35,8 @@ export interface LineItemRow {
   discount_percent: number;
   discount_satang: number;
   position: number;
+  /** ADR-0011: ticker who absorbs this item's own rounding leftover. */
+  rounding_absorber_peer_id: string | null;
 }
 
 export interface PeerRow {

@@ -20,13 +20,19 @@ type BillPatch = Partial<
     | "bank_name"
     | "bank_account"
     | "account_name"
+    | "rounding_absorber_peer_id"
   >
 >;
 
 type LineItemPatch = Partial<
   Pick<
     LineItemRow,
-    "name" | "unit_price_satang" | "qty" | "discount_percent" | "discount_satang"
+    | "name"
+    | "unit_price_satang"
+    | "qty"
+    | "discount_percent"
+    | "discount_satang"
+    | "rounding_absorber_peer_id"
   >
 >;
 

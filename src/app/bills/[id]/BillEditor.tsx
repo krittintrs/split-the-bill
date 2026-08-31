@@ -154,8 +154,8 @@ export default function BillEditor({
   }
 
   const result = useMemo(
-    () => computeBill(mapToBillInput(bill, items, peers, ticks)),
-    [bill, items, peers, ticks],
+    () => computeBill(mapToBillInput(bill, items, peers, ticks, selfPeerId)),
+    [bill, items, peers, ticks, selfPeerId],
   );
   const receipt = receiptStatus(bill.receipt_total_satang, result.checksumSatang);
 
