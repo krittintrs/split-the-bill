@@ -5,8 +5,6 @@ export interface LineItemInput {
   discountPercent?: number; // integer 0-100, applied first (ADR-0003)
   discountAmountSatang?: number; // then subtracted
   tickedBy: string[]; // peer ids; [] = unticked
-  /** ADR-0011: ticker who absorbs this item's own leftover. Falls back to tickedBy[0] if stale. */
-  roundingAbsorberPeerId?: string;
 }
 
 export interface BillDiscount {
@@ -20,7 +18,10 @@ export interface BillInput {
   billDiscount?: BillDiscount;
   serviceChargePercent: number; // integer 0-100
   vatPercent: number; // integer 0-100
-  /** ADR-0011: peer who absorbs the bill-wide leftover. Falls back to peerIds[0] if stale. */
+  /**
+   * ADR-0011: peer who keeps the bill-wide rounding discount (everyone else's independent
+   * ceiling is subtracted from their total). Falls back to peerIds[0] if unset or stale.
+   */
   roundingAbsorberPeerId?: string;
 }
 
@@ -42,11 +43,7 @@ export interface BillResult {
   receiptTotalSatang: number;
   /** checksum − receiptTotal; negative when items are unticked (shortfall). */
   surplusSatang: number;
-  /**
-   * Per-item per-peer share (ADR-0011 item tier). For any ticked item, sums exactly to that
-   * item's own ceil'd cost — each ticker gets a floored share, and the item's own leftover
-   * (0..tickerCount−1 satang) goes to that item's designated absorbing ticker.
-   */
+  /** DISPLAY ONLY: per-item per-peer share, each ceil'd independently; may sum slightly above peerTotal. */
   itemSplits: Record<string, Record<string, number>>;
   /** Items with tickedBy = [] — contribute ฿0; organizer must chase these. */
   untickedItemIds: string[];
@@ -62,14 +59,9 @@ export interface BillResult {
   /** Per peer. Each entry's three charge fields sum exactly to peerTotals[peerId]; discountSatang is informational (gross − subtotal), not part of that sum. */
   peerBreakdowns: Record<string, PeerBreakdown>;
   /**
-   * ADR-0011 item-tier leftover, keyed by item id. Only present for items with
-   * tickedBy.length >= 2 AND a nonzero itemRemainder — the UI renders nothing otherwise.
-   */
-  itemLeftovers: Record<string, { leftoverSatang: number; absorberPeerId: string }>;
-  /**
-   * ADR-0011 bill-tier leftover. Present only when the bill-tier remainder is nonzero — NOT the
-   * same as "SC or VAT is nonzero"; item-tier ceiling overshoot alone can make this nonzero even
-   * at 0%/0%. Absent (undefined) whenever any item is unticked, since the bill tier never runs.
+   * ADR-0011 v2: the bill-wide rounding discount, present only when every item is ticked AND
+   * the independent per-peer ceilings sum to more than the receipt (always >= 0 when present —
+   * see compute.ts). Absent (undefined) whenever any item is unticked or nothing to round.
    */
   billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
 }

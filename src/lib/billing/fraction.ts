@@ -30,9 +30,3 @@ export function ceilToSatang(value: Fraction): number {
   if (value.numerator < 0n) throw new Error("cannot round a negative amount");
   return Number((value.numerator + value.denominator - 1n) / value.denominator);
 }
-
-/** Round DOWN to integer satang — used by the ADR-0011 rounding-absorber tiers. */
-export function floorToSatang(value: Fraction): number {
-  if (value.numerator < 0n) throw new Error("cannot round a negative amount");
-  return Number(value.numerator / value.denominator);
-}

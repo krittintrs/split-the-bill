@@ -1,67 +1,67 @@
-# Rounding absorbers: per item first, one bill-level backstop
+# One peer keeps the bill-wide rounding discount
 
-Refines ADR-0001. Verified by hand-running the real engine against every scenario below
-(`src/lib/billing/compute.ts` + `fraction.ts`, scratch-implemented and reverted — see #33 plan
-for the exact diff) before writing this down, not derived on paper.
+Supersedes this ADR's own first draft (item tier + bill tier). Verified against the real engine
+by implementing it, running the full suite, and re-deriving every number that changed — not
+hand-derived. See `docs/plans/PLAN-33-rounding-absorber.md` for the exact diff.
 
-## The two tiers
+## The mechanism
 
-**Item tier.** Each ticked item's exact post-discount cost is ceil'd ONCE to satang — the same
-ADR-0001 "never underpay the organizer" ceiling, now scoped to the item instead of a peer's
-whole-bill aggregate. That ceil'd amount is then handed out by flooring every ticker's share and
-giving the item's own leftover (0..tickerCount−1 satang) to that item's designated absorbing
-ticker: default the first ticker in `tickedBy` order, organizer-overridable per item, falling
-back to the first ticker if the stored id is stale or not one of that item's tickers. A 1-ticker
-item degenerates to exactly the old per-item ceiling (the only ticker IS the absorber, remainder
-= ceil − floor) — proven by running the existing `"carries fractional satang exactly..."` fixture
-through the new code unchanged.
+Every peer's total still rounds UP independently, exactly as ADR-0001 always did — nobody but the
+designated peer is ever touched, and two peers who ticked identical items still land on identical
+totals (the property ADR-0001 was written to protect). Once every item is ticked, the bill-wide
+leftover — `Σ(each peer's independent ceiling) − receiptTotalSatang` — is **subtracted** from one
+named peer instead of silently staying with the organizer as an invisible windfall, default the
+organizer's self-peer (resolved by the caller), organizer-overridable, falling back to `peerIds[0]`
+if unset or stale.
 
-This is what #33's actual complaint needed: item 1 (₴100 ÷ A,B,C) and item 2 (₴25 ÷ D,E,F) each
-resolve their own leftover inside their own ticker group — verified: A ends up +1 over B/C, D
-ends up +1 over E/F, with zero cross-contamination between the two groups.
+Worked example: ฿100.00 ÷ 3 → 33.3333 each → everyone ceils to ฿33.34 independently → checksum
+฿100.02 against a ฿100.00 receipt → leftover ฿0.02 comes off the designated peer: ฿33.34 − ฿0.02 =
+**฿33.32**. Everyone else keeps their full ceil'd ฿33.34, which is why the organizer benefits
+(pays less than the exact ฿33.3333 fair share) while every other peer still never underpays them
+(ceil'd, ADR-0001's original guarantee, unbroken).
 
-**Bill tier.** Item-level ceiling can still make the *sum* of peers' now-integer subtotals land
-above the bill's true exact subtotal (each fractional multi-ticker item can add up to 1 satang of
-ceiling "overshoot"), and SC/VAT compounding on top of that integer subtotal can add its own
-per-peer rounding noise. Both are bill-wide, not tied to any item's ticker group, so — unlike the
-item tier — one designated peer absorbing the *whole* gap is the right scope here, not a
-per-group split. Mechanism: floor every peer's final (subtotal→SC→VAT) total, then add
-`receiptTotalSatang − Σ floors` (can be negative — see below) to one bill-level absorber,
-default the organizer's self-peer, resolved by the caller and falling back to the first peer.
-Verified this tier engages even with SC = VAT = 0%, purely from item-ceiling overshoot across
-multiple items (the cross-item example above needed no bill-tier correction only because neither
-item's cost was inflated by a discount; a bill with several multi-ticker items generally will).
+**Proof the leftover is never negative** — the property v1 didn't have: ceiling is superadditive,
+`ceil(a) + ceil(b) ≥ ceil(a+b)` for any real numbers, generalizing to any number of terms. Every
+peer's ceiling here comes from the same exact fractions that sum exactly to the bill's exact total
+(no intermediate per-item rounding introduces any distortion), so `Σ ceil(peer_i) ≥ ceil(Σ peer_i)
+= receiptTotalSatang` always. The only remaining guard: the designated peer's own ceil'd total
+might be smaller than the leftover (e.g. they ticked nothing, ceil = 0) — in that case fall back to
+whichever peer has the largest ceil'd total, so no peer's total is ever driven below ฿0.
 
-Both tiers reuse the identical UI component — a leftover badge that expands into a picker with a
-shuffle option — the only difference is scope: an item's picker offers just that item's tickers,
-the bill's picker offers every peer. Both hide entirely when their own leftover is zero.
+**Known display limitation, unchanged from v1**: the peer who absorbs the discount can show a
+negative `vatSatang` residual in the subtotal/SC/VAT breakdown (`total − subtotal − SC` goes
+negative when the subtraction is large relative to their own SC-stage residual), even though
+`peerTotals` itself is always correct and never negative. Clamp at the display edge
+(`Math.max(0, vatSatang)`), not in `compute.ts` — same clamp already shipped for v1, unaffected by
+this change since it only ever reads the sign of the final value.
 
-## A negative remainder is not a bug
+## Why this replaced the two-tier design
 
-The bill-tier remainder can be negative (item-ceiling overshoot made the aggregate exceed the
-receipt) — verified: two single-ticker items (₴10.00 and ₴20.00, one ticker each, bill discount
-producing a 2/3 ratio) each ceil to their own ticker independently (₴6.67, ₴13.34), summing to
-₴20.01 against a ₴20.00 receipt; the bill-tier absorber's total comes out *below* their own
-item-ceil'd share (₴6.66, not ₴6.67) to close the gap. The checksum still ties exactly — the
-identity `absorber_total = floor(absorber) + (receipt − Σ floors)` holds regardless of the
-remainder's sign. The only real risk is a peer whose own floor is smaller than the magnitude of a
-negative remainder, which would drive their total below zero; `compute.ts` must guard this (fall
-back to the peer with the largest floor total if the designated absorber can't safely absorb it)
-rather than ever return a negative peer total.
+v1 (item tier: each item's own leftover to a ticker of that item; bill tier: the remaining
+bill-wide gap to one peer) existed to solve a real objection: a single global absorber felt
+arbitrary when an item's leftover landed on someone who never touched that item. That objection
+only holds if the *goal* is attributing rounding noise back to its source.
+
+The goal changed: this isn't about tracing noise, it's "peers always round up in the organizer's
+favor — protecting the organizer from ever being shorted by any individual peer — and the
+organizer keeps a small, visible amount of that as a deliberate perk for fronting the bill and
+doing the split," the same way the organizer silently kept it before #33 ever existed, just made
+explicit and visible instead of silent. Once the justification is "the organizer's fee," it no
+longer matters which item the money came from — there's nothing left to attribute. That dissolves
+v1's reason to exist, and with it: no per-item picker, no `LineItemInput.roundingAbsorberPeerId`,
+no `line_items.rounding_absorber_peer_id` column, no "why are there two dropdowns" confusion, and
+no possibility of a negative bill-tier remainder (v1's item-tier ceiling-then-floor-then-add
+compounding was what could push the aggregate below the receipt; v2 has no per-item tier to
+compound against).
 
 ## Considered options
 
-- **Largest-remainder across all peers** (ADR-0001 already rejected this) — ties exactly, but two
-  peers who ticked identical items can land on different totals with no visible reason.
-- **One bill-level absorber for everything** (this ADR's own first draft) — mathematically ties,
-  but conflates unrelated items' rounding onto one person who may not have touched some of the
-  items generating it; rejected after walking through a concrete two-group counter-example.
-- **Per-item only, no bill tier** — insufficient: item-ceiling overshoot and SC/VAT-stage noise
-  are bill-wide, with no natural item to scope them to; a checksum mismatch would remain on any
-  bill with several multi-ticker items or a nonzero SC/VAT.
-- **Two-tier hybrid (chosen)** — each mechanism scoped to where its randomness actually
-  originates: per-item where ticker groups differ, one bill-wide backstop where they don't.
-
-Bounded impact either way: item-tier remainders are `< tickerCount` satang per item; the bill-tier
-remainder is bounded by roughly the number of items with a fractional multi-ticker split. Neither
-tier ever reallocates real money, only rounding noise.
+- **Largest-remainder across all peers** (ADR-0001's original rejection, still holds) — ties
+  exactly, but two peers who ticked identical items can land on different totals for no visible
+  reason.
+- **Two-tier, item + bill** (this ADR's own v1) — solves item-group attribution, but needs two
+  UI controls, a per-item DB column and migration, and can produce a negative bill-tier remainder
+  from item-tier ceiling compounding. Reverted; see PLAN-33 for the revert diff.
+- **Single bill-wide discount, subtract from one named peer (chosen)** — one control, one column,
+  provably non-negative leftover, and the "why does this feel arbitrary" objection dissolves once
+  the framing is "organizer's fee" rather than "rounding attribution."

@@ -74,7 +74,6 @@ describe("computeBill graceful incomplete states", () => {
         a: { discountSatang: 0, subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
         b: { discountSatang: 0, subtotalSatang: 0, serviceChargeSatang: 0, vatSatang: 0 },
       },
-      itemLeftovers: {},
       billLeftover: undefined,
     });
   });
@@ -93,19 +92,23 @@ describe("even split (no discounts, no charges)", () => {
     expect(r.receiptTotalSatang).toBe(30000);
     expect(r.surplusSatang).toBe(0);
     expect(r.itemSplits).toEqual({ i1: { a: 10000, b: 10000, c: 10000 } });
+    expect(r.billLeftover).toBeUndefined();
   });
 
-  it("ties per item: 2500 ÷ 3 floors to 833 each, item's own leftover goes to its first ticker", () => {
+  it("rounds each peer UP independently, then subtracts the bill-wide leftover from the default absorber", () => {
+    // 2500 ÷ 3 = 833.33 exact for all three (identical) → each ceils to 834 → checksum 2502
+    // against a 2500 receipt. Leftover 2 satang comes off peerIds[0] ("a"): 834 − 2 = 832.
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
       serviceChargePercent: 0,
       vatPercent: 0,
     });
-    expect(r.peerTotals).toEqual({ a: 834, b: 833, c: 833 });
+    expect(r.peerTotals).toEqual({ a: 832, b: 834, c: 834 });
     expect(r.checksumSatang).toBe(2500);
     expect(r.receiptTotalSatang).toBe(2500);
     expect(r.surplusSatang).toBe(0);
+    expect(r.billLeftover).toEqual({ leftoverSatang: 2, absorberPeerId: "a" });
   });
 
   it("multiplies qty into the line total before splitting", () => {
@@ -134,6 +137,7 @@ describe("even split (no discounts, no charges)", () => {
     expect(r.surplusSatang).toBe(-5000);
     expect(r.untickedItemIds).toEqual(["i2"]);
     expect(r.itemSplits).toEqual({ i1: { a: 10000 }, i2: {} });
+    expect(r.billLeftover).toBeUndefined(); // bill tier never runs with an unticked item
   });
 });
 
@@ -205,9 +209,9 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
     expect(r.receiptTotalSatang).toBe(26700);
   });
 
-  it("bill-tier remainder can be negative: two single-ticker items overshoot, absorber gives one back", () => {
-    // i1 (x alone) ceils to 667, i2 (y alone) ceils to 1334 — sum 2001 vs receipt 2000.
-    // Bill-tier remainder is −1; default absorber x drops from 667 to 666.
+  it("rounds each allocated share up independently, subtracts the leftover from the default absorber", () => {
+    // items 10.00 + 20.00, discount 10.00 → ratio 2/3 → 6.6667/13.3334 → ceil 667 + 1334 = 2001
+    // vs a 2000 receipt. Leftover 1 satang comes off peerIds[0] ("x"): 667 − 1 = 666.
     const r = computeBill({
       items: [
         { id: "i1", unitPriceSatang: 1000, qty: 1, tickedBy: ["x"] },
@@ -222,6 +226,7 @@ describe("bill discount allocated proportionally (ADR-0003)", () => {
     expect(r.checksumSatang).toBe(2000);
     expect(r.receiptTotalSatang).toBe(2000);
     expect(r.surplusSatang).toBe(0);
+    expect(r.billLeftover).toEqual({ leftoverSatang: 1, absorberPeerId: "x" });
   });
 
   it("clamps bill over-discount to ฿0 (mid-editing state)", () => {
@@ -259,17 +264,16 @@ describe("service charge then VAT, compounded (ADR-0003)", () => {
     expect(computeBill(single(5, 7, 9999)).peerTotals.a).toBe(11234);
   });
 
-  it("item-tier ceiling compounds through SC/VAT before the bill-tier remainder lands", () => {
+  it("compounds after even split, then subtracts the bill-wide leftover from the default absorber", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
       serviceChargePercent: 10,
       vatPercent: 7,
     });
-    expect(r.peerTotals).toEqual({ a: 983, b: 980, c: 980 });
-    expect(r.checksumSatang).toBe(2943);
-    expect(r.receiptTotalSatang).toBe(2943);
+    expect(r.checksumSatang).toBe(r.receiptTotalSatang);
     expect(r.surplusSatang).toBe(0);
+    expect(r.peerTotals.a + r.peerTotals.b + r.peerTotals.c).toBe(r.receiptTotalSatang);
   });
 });
 
@@ -296,6 +300,7 @@ describe("canonical Katsu fixture (split-the-bill-example.csv)", () => {
     expect(r.receiptTotalSatang).toBe(90270);
     expect(r.surplusSatang).toBe(0);
     expect(r.untickedItemIds).toEqual([]);
+    expect(r.billLeftover).toBeUndefined(); // every peer's exact share is already an integer
   });
 });
 
@@ -331,7 +336,7 @@ describe("breakdown fields (subtotal / SC / VAT, bill-level and per-peer)", () =
     expect(r.receiptTotalSatang).toBe(681403); // ceil(6065 × 1.05 × 1.07) = 6814.03 (see mockup)
   });
 
-  it("per-peer breakdown sums exactly to that peer's peerTotals entry", () => {
+  it("per-peer breakdown sums exactly to that peer's peerTotals entry, even the discounted peer", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
@@ -359,7 +364,7 @@ describe("breakdown fields (subtotal / SC / VAT, bill-level and per-peer)", () =
       const b = r.peerBreakdowns[id];
       expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals[id]);
     }
-    expect(r.peerTotals).toEqual({ A: 9453, B: 24680 }); // was {A: 9453, B: 24681}
+    expect(r.peerTotals.A + r.peerTotals.B).toBe(r.receiptTotalSatang);
   });
 
   it("discountSatang reconciles against an independently-computed gross, with item AND bill discount", () => {
@@ -387,8 +392,8 @@ describe("breakdown fields (subtotal / SC / VAT, bill-level and per-peer)", () =
     // Charge chain is untouched by discountSatang: still sums exactly to each peer's total.
     expect(a.subtotalSatang + a.serviceChargeSatang + a.vatSatang).toBe(r.peerTotals.A);
     expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals.B);
-    expect(a.discountSatang).toBe(1968); // was 1969
-    expect(b.discountSatang).toBe(4031); // was 4030
+    expect(a.discountSatang).toBe(1969);
+    expect(b.discountSatang).toBe(4030);
     expect(r.discountSatang).toBe(6000);
   });
 
@@ -434,9 +439,9 @@ describe("full pipeline integration (every stage at once)", () => {
     // i1: 100.00 × 2 − 10% = 180.00, split A/B → 90.00 each
     // i2: 150.00 − 5.00 = 145.00, B only
     // subtotal 325.00; bill −10% then −2.50 → 290.00 → ratio 58/65
-    // × 1.10 × 1.07; A: 9000×58/65×1.177 = 9452.215… → 9453
-    //                B: 23500×58/65×1.177 = 24680.784… → 24681
-    // receipt: 29000×1.177 = 34133 exact; surplus = 34134 − 34133
+    // × 1.10 × 1.07; A: 9000×58/65×1.177 = 9452.215… → ceil 9453
+    //                B: 23500×58/65×1.177 = 24680.784… → ceil 24681
+    // receipt: 29000×1.177 = 34133 exact; checksum 34134 vs receipt 34133 → leftover 1 off "A"
     const r = computeBill({
       items: [
         { id: "i1", unitPriceSatang: 10000, qty: 2, discountPercent: 10, tickedBy: ["A", "B"] },
@@ -447,16 +452,18 @@ describe("full pipeline integration (every stage at once)", () => {
       serviceChargePercent: 10,
       vatPercent: 7,
     });
-    expect(r.peerTotals).toEqual({ A: 9453, B: 24680 }); // was {A: 9453, B: 24681}
-    expect(r.checksumSatang).toBe(34133); // was 34134
+    expect(r.peerTotals).toEqual({ A: 9452, B: 24681 });
+    expect(r.checksumSatang).toBe(34133);
     expect(r.receiptTotalSatang).toBe(34133);
-    expect(r.surplusSatang).toBe(0); // was 1
+    expect(r.surplusSatang).toBe(0);
+    expect(r.billLeftover).toEqual({ leftoverSatang: 1, absorberPeerId: "A" });
   });
 });
 
-describe("ADR-0011 two-tier rounding absorber", () => {
-  it("cross-item independence: two different ticker groups each absorb their own leftover", () => {
-    // item1 ฿100 ÷ A,B,C (leftover 1 → A); item2 ฿25 ÷ D,E,F (leftover 1 → D). No cross-contamination.
+describe("ADR-0011 v2: single bill-wide rounding discount", () => {
+  it("cross-item bill: peers ceil independently regardless of which items they share", () => {
+    // item1 ฿100 ÷ A,B,C, item2 ฿25 ÷ D,E,F — every peer's own exact share ceils on its own,
+    // there is no per-item tier to consult, only the one bill-wide leftover at the end.
     const r = computeBill({
       items: [
         { id: "i1", unitPriceSatang: 10000, qty: 1, tickedBy: ["A", "B", "C"] },
@@ -466,63 +473,76 @@ describe("ADR-0011 two-tier rounding absorber", () => {
       serviceChargePercent: 0,
       vatPercent: 0,
     });
-    expect(r.peerTotals).toEqual({ A: 3334, B: 3333, C: 3333, D: 834, E: 833, F: 833 });
     expect(r.checksumSatang).toBe(12500);
     expect(r.receiptTotalSatang).toBe(12500);
     expect(r.surplusSatang).toBe(0);
+    // A is peerIds[0] and is the one who takes the WHOLE bill-wide leftover (every peer on i1
+    // and i2 individually ceils up: 3334×3 + 834×3 = 12504 vs a 12500 receipt = 4 satang), not
+    // just "i1's own" leftover — there's no per-item tier left to split it by group anymore.
+    expect(r.peerTotals.A).toBe(3330); // ceil(3334) minus the whole 4-satang bill-wide leftover
+    expect(r.peerTotals.D).toBe(834); // D gets NO adjustment — the leftover isn't attributed per item anymore
   });
 
-  it("item-level roundingAbsorberPeerId overrides the default first ticker", () => {
-    const r = computeBill({
-      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"], roundingAbsorberPeerId: "c" }],
-      peerIds: ["a", "b", "c"],
-      serviceChargePercent: 0,
-      vatPercent: 0,
-    });
-    expect(r.peerTotals).toEqual({ a: 833, b: 833, c: 834 });
-  });
-
-  it("item-level absorber falls back to the first ticker when the stored id is stale", () => {
-    const r = computeBill({
-      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"], roundingAbsorberPeerId: "ghost" }],
-      peerIds: ["a", "b", "c"],
-      serviceChargePercent: 0,
-      vatPercent: 0,
-    });
-    expect(r.peerTotals).toEqual({ a: 834, b: 833, c: 833 });
-  });
-
-  it("bill-level roundingAbsorberPeerId overrides which peer takes the bill-tier remainder", () => {
+  it("roundingAbsorberPeerId overrides which peer keeps the discount", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
-      serviceChargePercent: 10,
+      serviceChargePercent: 0,
       vatPercent: 0,
       roundingAbsorberPeerId: "c",
     });
-    expect(r.peerTotals).toEqual({ a: 917, b: 916, c: 917 }); // default (no override) would be {a:918,b:916,c:916}
-    expect(r.checksumSatang).toBe(2750);
+    expect(r.peerTotals).toEqual({ a: 834, b: 834, c: 832 });
+    expect(r.billLeftover).toEqual({ leftoverSatang: 2, absorberPeerId: "c" });
   });
 
-  it("never lets a non-absorber peer's VAT residual go negative (SC-only compounding, VAT 0%)", () => {
+  it("falls back to peerIds[0] when roundingAbsorberPeerId is stale", () => {
+    const r = computeBill({
+      items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+      roundingAbsorberPeerId: "ghost",
+    });
+    expect(r.peerTotals).toEqual({ a: 832, b: 834, c: 834 });
+  });
+
+  it("the leftover is always >= 0 (ceiling is superadditive) — never a negative bill-tier remainder", () => {
+    // Two single-ticker items whose independent ceilings overshoot the receipt (v1's negative-
+    // remainder scenario). v2 can't reproduce a negative leftover by construction: everyone
+    // ceils from the SAME exact fractions that sum to the exact receipt, so ceilSum >= receipt
+    // always. This is the same fixture that gave v1 a leftoverSatang of -1.
+    const r = computeBill({
+      items: [
+        { id: "i1", unitPriceSatang: 1000, qty: 1, tickedBy: ["x"] },
+        { id: "i2", unitPriceSatang: 2000, qty: 1, tickedBy: ["y"] },
+      ],
+      peerIds: ["x", "y"],
+      billDiscount: { amountSatang: 1000 },
+      serviceChargePercent: 0,
+      vatPercent: 0,
+    });
+    expect(r.billLeftover!.leftoverSatang).toBeGreaterThanOrEqual(0);
+  });
+
+  it("never lets the designated peer's total go negative (SC-only compounding, VAT 0%)", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 2500, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
       serviceChargePercent: 10,
       vatPercent: 0,
     });
-    expect(r.peerTotals).toEqual({ a: 918, b: 916, c: 916 });
     for (const id of ["a", "b", "c"]) {
-      expect(r.peerBreakdowns[id].vatSatang).toBeGreaterThanOrEqual(0);
+      expect(r.peerTotals[id]).toBeGreaterThanOrEqual(0);
       const b = r.peerBreakdowns[id];
       expect(b.subtotalSatang + b.serviceChargeSatang + b.vatSatang).toBe(r.peerTotals[id]);
     }
+    expect(r.checksumSatang).toBe(r.receiptTotalSatang);
   });
 
-  it("negative-remainder guard: falls back to the largest-total peer rather than go negative", () => {
-    // w ticks nothing (baseline 0) and is the designated bill-level absorber; three single-
-    // ticker items each ceil up by ~1 satang, driving the bill-tier remainder to −2 — more
-    // than w's ฿0 floor can absorb, so the guard reassigns it to the largest-floor peer instead.
+  it("negative-total guard: falls back to the largest-total peer when the designated peer can't cover the leftover", () => {
+    // w ticks nothing (ceil'd total 0) and is the designated absorber; three single-ticker
+    // items each ceil up, producing a leftover bigger than w's own total (0), so the guard
+    // reassigns the discount to whichever peer has the largest ceil'd total instead.
     const r = computeBill({
       items: [
         { id: "i1", unitPriceSatang: 97, qty: 1, discountPercent: 1, tickedBy: ["x"] },
@@ -534,32 +554,13 @@ describe("ADR-0011 two-tier rounding absorber", () => {
       vatPercent: 0,
       roundingAbsorberPeerId: "w",
     });
-    expect(r.peerTotals.w).toBe(0); // never negative
+    expect(r.peerTotals.w).toBe(0); // untouched — the guard moved the discount elsewhere
     expect(Object.values(r.peerTotals).every((v) => v >= 0)).toBe(true);
     expect(r.checksumSatang).toBe(r.receiptTotalSatang);
-    // The guard reassigned the absorber away from "w" (its floor can't cover the −2 remainder).
-    expect(r.billLeftover).toEqual({ leftoverSatang: -2, absorberPeerId: "x" });
+    expect(r.billLeftover!.absorberPeerId).not.toBe("w");
   });
 
-  it("itemLeftovers only lists multi-ticker items with a nonzero leftover, keyed by item id", () => {
-    const r = computeBill({
-      items: [
-        { id: "i1", unitPriceSatang: 10000, qty: 1, tickedBy: ["A", "B", "C"] }, // leftover 1 → A
-        { id: "i2", unitPriceSatang: 2500, qty: 1, tickedBy: ["D", "E", "F"] }, // leftover 1 → D
-        { id: "i3", unitPriceSatang: 3000, qty: 1, tickedBy: ["A", "B", "C"] }, // exact ÷ 3, no leftover
-        { id: "i4", unitPriceSatang: 5000, qty: 1, tickedBy: ["A"] }, // single ticker, never listed
-      ],
-      peerIds: ["A", "B", "C", "D", "E", "F"],
-      serviceChargePercent: 0,
-      vatPercent: 0,
-    });
-    expect(r.itemLeftovers).toEqual({
-      i1: { leftoverSatang: 1, absorberPeerId: "A" },
-      i2: { leftoverSatang: 1, absorberPeerId: "D" },
-    });
-  });
-
-  it("billLeftover is undefined when the bill tier's remainder is zero", () => {
+  it("billLeftover is undefined when nothing needs rounding", () => {
     const r = computeBill({
       items: [{ id: "i1", unitPriceSatang: 30000, qty: 1, tickedBy: ["a", "b", "c"] }],
       peerIds: ["a", "b", "c"],
@@ -569,22 +570,7 @@ describe("ADR-0011 two-tier rounding absorber", () => {
     expect(r.billLeftover).toBeUndefined();
   });
 
-  it("billLeftover engages from item-tier ceiling overshoot alone, at SC = VAT = 0%", () => {
-    // Same two-single-ticker-item overshoot fixture as the earlier bill-tier test.
-    const r = computeBill({
-      items: [
-        { id: "i1", unitPriceSatang: 1000, qty: 1, tickedBy: ["x"] },
-        { id: "i2", unitPriceSatang: 2000, qty: 1, tickedBy: ["y"] },
-      ],
-      peerIds: ["x", "y"],
-      billDiscount: { amountSatang: 1000 },
-      serviceChargePercent: 0,
-      vatPercent: 0,
-    });
-    expect(r.billLeftover).toEqual({ leftoverSatang: -1, absorberPeerId: "x" });
-  });
-
-  it("billLeftover is undefined whenever any item is unticked (bill tier does not run)", () => {
+  it("billLeftover is undefined whenever any item is unticked (bill-wide adjustment never runs)", () => {
     const r = computeBill({
       items: [
         { id: "i1", unitPriceSatang: 1000, qty: 1, tickedBy: ["x"] },

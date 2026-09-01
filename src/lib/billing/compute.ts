@@ -1,4 +1,4 @@
-import { add, ceilToSatang, floorToSatang, fraction, multiply, ZERO, type Fraction } from "./fraction";
+import { add, ceilToSatang, fraction, multiply, ZERO, type Fraction } from "./fraction";
 import type { BillInput, BillResult, PeerBreakdown } from "./types";
 
 export function computeBill(input: BillInput): BillResult {
@@ -44,16 +44,12 @@ export function computeBill(input: BillInput): BillResult {
   const scRatio = fraction(BigInt(100 + input.serviceChargePercent), 100n);
   const vatRatio = fraction(BigInt(100 + input.vatPercent), 100n);
 
-  // 5. Item tier (ADR-0011): each ticked item's exact post-discount cost is ceil'd ONCE, then
-  //    handed out by flooring every ticker's share and giving the item's own leftover (0 ..
-  //    tickerCount−1 satang) to that item's designated absorbing ticker (default: first ticker,
-  //    organizer-overridable per item, falling back to the first ticker if the stored id is stale
-  //    or not one of that item's tickers). A 1-ticker item degenerates to exactly the old
-  //    per-item ceiling — the only ticker IS the absorber.
-  //    peerSubtotalFractions stays the EXACT per-peer subtotal (unchanged from today) — it feeds
-  //    discountSatang and is the fallback pipeline whenever any item is unticked (untouched path).
-  //    peerItemTierSatang is the new per-peer INTEGER subtotal built from item-tier shares, used
-  //    by the ADR-0011 bill tier below once every item is ticked.
+  // 5. Per-peer subtotal: item shares (after item + bill discounts), exact, no charges yet.
+  //    Per-peer gross: the same even split, but on the pre-ANY-discount line total — used only
+  //    to derive discountSatang below, never added into a peer's charged total.
+  //    itemSplits is DISPLAY ONLY: each cell ceil'd independently, may sum slightly above a
+  //    peer's actual total — there is no per-item rounding tier (ADR-0011 v2 dropped it; see the
+  //    ADR for why a single bill-wide adjustment no longer needs per-item attribution).
   //    Unticked items contribute ฿0 and get flagged for the organizer to chase.
   const peerSubtotalFractions = new Map<string, Fraction>(
     input.peerIds.map((id) => [id, ZERO]),
@@ -61,9 +57,7 @@ export function computeBill(input: BillInput): BillResult {
   const peerGrossFractions = new Map<string, Fraction>(
     input.peerIds.map((id) => [id, ZERO]),
   );
-  const peerItemTierSatang = new Map<string, number>(input.peerIds.map((id) => [id, 0]));
   const itemSplits: Record<string, Record<string, number>> = {};
-  const itemLeftovers: Record<string, { leftoverSatang: number; absorberPeerId: string }> = {};
   const untickedItemIds: string[] = [];
 
   for (const item of input.items) {
@@ -80,40 +74,16 @@ export function computeBill(input: BillInput): BillResult {
       billDiscountRatio,
     );
     const perTickerGross = fraction(grossPrice, tickerCount);
-
-    // Item tier: ceil the item's own exact chargeable amount once, then floor+remainder it out.
-    const itemChargeableExact = multiply(netPrice, billDiscountRatio);
-    const itemTotalSatang = ceilToSatang(itemChargeableExact);
-    const perTickerExact = fraction(
-      itemChargeableExact.numerator,
-      itemChargeableExact.denominator * tickerCount,
-    );
-    const floorShare = floorToSatang(perTickerExact);
-    const itemRemainder = itemTotalSatang - floorShare * item.tickedBy.length;
-    const itemAbsorberId =
-      item.roundingAbsorberPeerId !== undefined && item.tickedBy.includes(item.roundingAbsorberPeerId)
-        ? item.roundingAbsorberPeerId
-        : item.tickedBy[0];
-
+    const perTickerShare = multiply(perTickerSubtotal, multiply(scRatio, vatRatio));
     for (const peerId of item.tickedBy) {
       peerSubtotalFractions.set(peerId, add(peerSubtotalFractions.get(peerId)!, perTickerSubtotal));
       peerGrossFractions.set(peerId, add(peerGrossFractions.get(peerId)!, perTickerGross));
-      const share = floorShare + (peerId === itemAbsorberId ? itemRemainder : 0);
-      itemSplits[item.id][peerId] = share;
-      peerItemTierSatang.set(peerId, peerItemTierSatang.get(peerId)! + share);
-    }
-
-    // Task 5 UI hook: only items with 2+ tickers AND a nonzero leftover need a picker at all.
-    if (item.tickedBy.length >= 2 && itemRemainder !== 0) {
-      itemLeftovers[item.id] = { leftoverSatang: itemRemainder, absorberPeerId: itemAbsorberId };
+      itemSplits[item.id][peerId] = ceilToSatang(perTickerShare); // display only, rounded per cell
     }
   }
 
   // 6. Bill-level pipeline: whole bill through subtotal → +SC → +VAT, ceiling once per stage;
-  //    VAT is the residual so the three displayed lines always sum exactly to the total. This is
-  //    independent of any peer split (it's derived straight from the aggregate `subtotal`), so
-  //    it's computed once here and reused both as the receipt-vs-checksum comparison and as the
-  //    ADR-0011 bill tier's remainder target below.
+  //    VAT is the residual so the three displayed lines always sum exactly to the total.
   //    discountSatang here is the bill-wide gross (all items, exact integer, no discount) minus
   //    the settled subtotal — informational, not part of the subtotal/SC/VAT chain.
   const subtotalExactBill = multiply(subtotal, billDiscountRatio);
@@ -125,104 +95,91 @@ export function computeBill(input: BillInput): BillResult {
   const receiptTotalSatang = ceilToSatang(withVatExactBill);
   const vatSatang = receiptTotalSatang - subtotalSatang - serviceChargeSatang;
 
-  // 7. Per-peer totals. Unticked items keep today's flat per-peer ceiling pipeline completely
-  //    untouched (each stage ceil'd independently from the peer's EXACT fraction subtotal); once
-  //    every item is ticked, use the ADR-0011 bill tier instead: floor each peer's staged total,
-  //    then hand the bill-wide remainder (can be negative — item-tier ceiling overshoot, see
-  //    ADR-0011) to one designated absorbing peer (default: the organizer's self-peer, resolved
-  //    by the caller; falls back to the first peer), guarded so a peer's total never goes
-  //    negative — if the designated absorber can't safely absorb a negative remainder, fall back
-  //    to whichever peer has the largest floor total instead.
+  // 7. Stage each peer through subtotal → +SC → +VAT, ceiling once per stage (ADR-0001,
+  //    unchanged, identical for every peer whether or not every item is ticked — no peer is
+  //    ever touched here). ADR-0011 v2: once every item is ticked, the bill-wide leftover
+  //    (checksum of these independent ceilings minus the receipt total) is SUBTRACTED from one
+  //    named peer instead of silently staying with the organizer as an invisible windfall. That
+  //    leftover is always >= 0 — ceiling is superadditive (ceil(a)+ceil(b) >= ceil(a+b) always)
+  //    — so unlike v1's bill tier this can never go negative; the only remaining guard is that
+  //    the designated peer's own ceil'd total might be smaller than the leftover, in which case
+  //    fall back to whichever peer has the largest total.
   const peerTotals: Record<string, number> = {};
   const peerBreakdowns: Record<string, PeerBreakdown> = {};
-  let checksumSatang = 0;
-  let billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
+  const ceilTotals = new Map<string, number>();
+  const ceilSubtotals = new Map<string, number>();
+  const ceilScs = new Map<string, number>();
+  const ceilGrosses = new Map<string, number>();
+  let checksumRaw = 0;
 
-  if (untickedItemIds.length === 0) {
-    const floorTotals = new Map<string, number>();
-    const subtotalOf = new Map<string, number>();
-    const scOf = new Map<string, number>();
-    for (const [peerId, peerSubtotalSatang] of peerItemTierSatang) {
-      const subtotalExact = fraction(BigInt(peerSubtotalSatang));
-      const withScExact = multiply(subtotalExact, scRatio);
-      const withVatExact = multiply(withScExact, vatRatio);
-      floorTotals.set(peerId, floorToSatang(withVatExact));
-      subtotalOf.set(peerId, peerSubtotalSatang);
-      scOf.set(peerId, floorToSatang(withScExact) - peerSubtotalSatang);
-    }
+  for (const [peerId, subtotalExact] of peerSubtotalFractions) {
+    const grossExact = peerGrossFractions.get(peerId)!;
+    const withScExact = multiply(subtotalExact, scRatio);
+    const withVatExact = multiply(withScExact, vatRatio);
 
-    let floorSum = 0;
-    for (const v of floorTotals.values()) floorSum += v;
-    const remainder = receiptTotalSatang - floorSum; // can be negative — see ADR-0011
+    const peerGrossSatang = ceilToSatang(grossExact);
+    const peerSubtotalSatang = ceilToSatang(subtotalExact);
+    const peerScSatang = ceilToSatang(withScExact) - peerSubtotalSatang;
+    const total = ceilToSatang(withVatExact);
 
-    let billAbsorberId =
-      input.roundingAbsorberPeerId !== undefined &&
-      input.peerIds.includes(input.roundingAbsorberPeerId)
+    ceilTotals.set(peerId, total);
+    ceilSubtotals.set(peerId, peerSubtotalSatang);
+    ceilScs.set(peerId, peerScSatang);
+    ceilGrosses.set(peerId, peerGrossSatang);
+    checksumRaw += total;
+  }
+
+  const allTicked = untickedItemIds.length === 0;
+  let leftover = 0;
+  let billDiscountAbsorberId: string | undefined;
+
+  if (allTicked) {
+    leftover = checksumRaw - receiptTotalSatang; // always >= 0 — see comment above
+    let absorberId =
+      input.roundingAbsorberPeerId !== undefined && input.peerIds.includes(input.roundingAbsorberPeerId)
         ? input.roundingAbsorberPeerId
         : input.peerIds[0];
 
-    if (remainder < 0 && (floorTotals.get(billAbsorberId) ?? 0) + remainder < 0) {
-      let largestPeerId = billAbsorberId;
-      let largestFloor = -Infinity;
-      for (const [peerId, floorTotal] of floorTotals) {
-        if (floorTotal > largestFloor) {
-          largestFloor = floorTotal;
-          largestPeerId = peerId;
+    if (leftover > (ceilTotals.get(absorberId) ?? 0)) {
+      let largestId = absorberId;
+      let largestTotal = -Infinity;
+      for (const [peerId, total] of ceilTotals) {
+        if (total > largestTotal) {
+          largestTotal = total;
+          largestId = peerId;
         }
       }
-      billAbsorberId = largestPeerId;
+      absorberId = largestId;
     }
-
-    // Task 5 UI hook: only a nonzero remainder needs a picker — NOT the same as "SC or VAT is
-    // nonzero" (item-tier ceiling overshoot alone can make this nonzero at 0%/0%, see ADR-0011).
-    if (remainder !== 0) {
-      billLeftover = { leftoverSatang: remainder, absorberPeerId: billAbsorberId };
-    }
-
-    for (const [peerId, floorTotal] of floorTotals) {
-      const total = floorTotal + (peerId === billAbsorberId ? remainder : 0);
-      const peerSubtotalSatang = subtotalOf.get(peerId)!;
-      const peerScSatang = scOf.get(peerId)!;
-      // Known limitation (ADR-0011): when the guard above reassigns a large negative adjustment
-      // onto a peer whose own item-tier subtotal is small relative to it, their DISPLAYED
-      // vatSatang residual can come out negative even though `total` itself never does. Clamp at
-      // the display edge (UI), not here — the underlying total is always correct.
-      const peerVatSatang = total - peerSubtotalSatang - peerScSatang;
-      const peerGrossSatang = ceilToSatang(peerGrossFractions.get(peerId)!);
-
-      peerTotals[peerId] = total;
-      peerBreakdowns[peerId] = {
-        discountSatang: peerGrossSatang - peerSubtotalSatang,
-        subtotalSatang: peerSubtotalSatang,
-        serviceChargeSatang: peerScSatang,
-        vatSatang: peerVatSatang,
-      };
-      checksumSatang += total;
-    }
-  } else {
-    // Untouched: today's flat per-peer ceiling, one ceil per stage from the exact fraction sum.
-    for (const [peerId, subtotalExact] of peerSubtotalFractions) {
-      const grossExact = peerGrossFractions.get(peerId)!;
-      const withScExact = multiply(subtotalExact, scRatio);
-      const withVatExact = multiply(withScExact, vatRatio);
-
-      const peerGrossSatang = ceilToSatang(grossExact);
-      const peerSubtotalSatang = ceilToSatang(subtotalExact);
-      const peerDiscountSatang = peerGrossSatang - peerSubtotalSatang;
-      const peerScSatang = ceilToSatang(withScExact) - peerSubtotalSatang;
-      const total = ceilToSatang(withVatExact);
-      const peerVatSatang = total - peerSubtotalSatang - peerScSatang;
-
-      peerTotals[peerId] = total;
-      peerBreakdowns[peerId] = {
-        discountSatang: peerDiscountSatang,
-        subtotalSatang: peerSubtotalSatang,
-        serviceChargeSatang: peerScSatang,
-        vatSatang: peerVatSatang,
-      };
-      checksumSatang += total;
-    }
+    billDiscountAbsorberId = absorberId;
   }
+
+  let checksumSatang = 0;
+  for (const [peerId, ceilTotal] of ceilTotals) {
+    const total = ceilTotal - (peerId === billDiscountAbsorberId ? leftover : 0);
+    const peerSubtotalSatang = ceilSubtotals.get(peerId)!;
+    const peerScSatang = ceilScs.get(peerId)!;
+    // Known limitation (ADR-0011 v2): for the peer whose total absorbs the discount, the
+    // DISPLAYED vatSatang residual can come out negative even though `total` itself never does
+    // (subtotal/SC stay ceil'd independently, unaffected by the subtraction). Clamp at the
+    // display edge (UI), not here — same clamp already in place from v1, unaffected by this
+    // change since it only ever reads the sign of the final value.
+    const peerVatSatang = total - peerSubtotalSatang - peerScSatang;
+
+    peerTotals[peerId] = total;
+    peerBreakdowns[peerId] = {
+      discountSatang: ceilGrosses.get(peerId)! - peerSubtotalSatang,
+      subtotalSatang: peerSubtotalSatang,
+      serviceChargeSatang: peerScSatang,
+      vatSatang: peerVatSatang,
+    };
+    checksumSatang += total;
+  }
+
+  const billLeftover =
+    allTicked && leftover !== 0
+      ? { leftoverSatang: leftover, absorberPeerId: billDiscountAbsorberId! }
+      : undefined;
 
   return {
     peerTotals,
@@ -236,7 +193,6 @@ export function computeBill(input: BillInput): BillResult {
     serviceChargeSatang,
     vatSatang,
     peerBreakdowns,
-    itemLeftovers,
     billLeftover,
   };
 }
