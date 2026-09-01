@@ -29,8 +29,6 @@ export interface GetBillJson {
     discountPercent: number;
     discountSatang: number;
     position: number;
-    /** ADR-0011: optional for the same deploy-ordering reason as bill.roundingAbsorberPeerId. */
-    roundingAbsorberPeerId?: string | null;
   }[];
   /**
    * Server-ordered by (addedAt, id); re-sort on the same key before rendering.

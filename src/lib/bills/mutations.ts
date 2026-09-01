@@ -27,12 +27,7 @@ type BillPatch = Partial<
 type LineItemPatch = Partial<
   Pick<
     LineItemRow,
-    | "name"
-    | "unit_price_satang"
-    | "qty"
-    | "discount_percent"
-    | "discount_satang"
-    | "rounding_absorber_peer_id"
+    "name" | "unit_price_satang" | "qty" | "discount_percent" | "discount_satang"
   >
 >;
 

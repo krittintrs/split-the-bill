@@ -42,7 +42,6 @@ interface DisplayItem {
   discountPercent?: number;
   discountAmountSatang?: number;
   tickedBy: string[];
-  roundingAbsorberPeerId?: string;
 }
 
 export default function PeerBill({
@@ -138,7 +137,6 @@ export default function PeerBill({
         discountPercent: item.discountPercent,
         discountAmountSatang: item.discountSatang,
         tickedBy: tickedByItem.get(item.id) ?? [],
-        roundingAbsorberPeerId: item.roundingAbsorberPeerId ?? undefined,
       })),
     [itemsSorted, tickedByItem],
   );

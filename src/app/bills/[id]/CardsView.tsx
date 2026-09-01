@@ -15,7 +15,7 @@ interface Props {
   receiptTotalSatang: number;
   selfPeerId: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
-  onUpdateItemAbsorber: (lineItemId: string, peerId: string) => void;
+  onUpdateBillAbsorber: (peerId: string) => void;
 }
 
 /** Mobile (<lg): stacked item cards + sticky expandable totals bar. */
@@ -27,7 +27,7 @@ export default function CardsView({
   receiptTotalSatang,
   selfPeerId,
   onToggle,
-  onUpdateItemAbsorber,
+  onUpdateBillAbsorber,
 }: Props) {
   const [totalsOpen, setTotalsOpen] = useState(false);
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
@@ -54,7 +54,6 @@ export default function CardsView({
           const tickerCount = tickedPeerIds.length;
           const firstTicker = tickedPeerIds[0];
           const share = firstTicker !== undefined ? result.itemSplits[item.id]?.[firstTicker] : undefined;
-          const leftover = result.itemLeftovers[item.id];
           return (
             <div
               key={item.id}
@@ -104,17 +103,6 @@ export default function CardsView({
                   </p>
                 )
               )}
-              {leftover && (
-                <div className="mt-2">
-                  <RoundingLeftoverBadge
-                    leftoverSatang={leftover.leftoverSatang}
-                    candidateIds={tickedPeerIds}
-                    candidateNames={peerNames}
-                    absorberId={leftover.absorberPeerId}
-                    onChange={(peerId) => onUpdateItemAbsorber(item.id, peerId)}
-                  />
-                </div>
-              )}
             </div>
           );
         })}
@@ -151,6 +139,17 @@ export default function CardsView({
                 </li>
               ))}
             </ul>
+            {result.billLeftover && (
+              <div className="mt-2">
+                <RoundingLeftoverBadge
+                  leftoverSatang={result.billLeftover.leftoverSatang}
+                  candidateIds={peers.map((peer) => peer.id)}
+                  candidateNames={peerNames}
+                  absorberId={result.billLeftover.absorberPeerId}
+                  onChange={onUpdateBillAbsorber}
+                />
+              </div>
+            )}
             {result.surplusSatang !== 0 && result.untickedItemIds.length === 0 && (
               <p className="mt-2 text-xs tabular-nums text-ink-muted">
                 ส่วนต่างปัดเศษ {formatSatang(Math.abs(result.surplusSatang))}

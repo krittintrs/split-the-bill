@@ -26,7 +26,6 @@ export function mapToBillInput(
         discountPercent: item.discount_percent,
         discountAmountSatang: item.discount_satang,
         tickedBy: tickedByItem.get(item.id) ?? [],
-        roundingAbsorberPeerId: item.rounding_absorber_peer_id ?? undefined,
       })),
     peerIds: peers.map((peer) => peer.id),
     billDiscount: {

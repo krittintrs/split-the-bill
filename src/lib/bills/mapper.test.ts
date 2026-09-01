@@ -22,8 +22,8 @@ const bill: BillRow = {
 
 const items: LineItemRow[] = [
   // deliberately out of order: position decides
-  { id: "i2", bill_id: "b1", name: "Add-on", unit_price_satang: 5000, qty: 1, discount_percent: 0, discount_satang: 0, position: 2, rounding_absorber_peer_id: null },
-  { id: "i1", bill_id: "b1", name: "Katsu set", unit_price_satang: 10000, qty: 1, discount_percent: 0, discount_satang: 0, position: 1, rounding_absorber_peer_id: null },
+  { id: "i2", bill_id: "b1", name: "Add-on", unit_price_satang: 5000, qty: 1, discount_percent: 0, discount_satang: 0, position: 2 },
+  { id: "i1", bill_id: "b1", name: "Katsu set", unit_price_satang: 10000, qty: 1, discount_percent: 0, discount_satang: 0, position: 1 },
 ];
 
 const peers: PeerRow[] = [

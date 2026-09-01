@@ -5,11 +5,11 @@ import { createPortal } from "react-dom";
 import { formatSatang } from "@/lib/billing/money";
 
 /**
- * ADR-0011: a leftover badge (item-tier or bill-tier rounding remainder) that expands into a
- * picker of candidate peers plus a labeled shuffle option. Renders nothing when leftoverSatang
- * is 0 — both the item-level and bill-level callers already only pass this a nonzero leftover
- * (see BillResult.itemLeftovers / billLeftover), but the null-render stays here too so the
- * component is safe to call unconditionally.
+ * ADR-0011 v2: a badge showing the bill-wide rounding discount one named peer keeps (everyone
+ * else's independently-ceil'd total is untouched), that expands into a picker of candidate
+ * peers plus a labeled shuffle option. Renders nothing when leftoverSatang is 0 — the caller
+ * already only passes this a nonzero leftover (see BillResult.billLeftover, provably >= 0 per
+ * ADR-0011), but the null-render stays here too so the component is safe to call unconditionally.
  *
  * The expanded menu renders through a portal to document.body, positioned via the trigger
  * button's getBoundingClientRect() (fixed coordinates), NOT CSS `absolute`/`top-full`. This
@@ -86,7 +86,8 @@ export default function RoundingLeftoverBadge({
   if (leftoverSatang === 0) return null;
 
   const absorberName = candidateNames[absorberId] ?? "?";
-  const sign = leftoverSatang > 0 ? "+" : "−";
+  // billLeftover is provably >= 0 (ADR-0011): the badge always reads as a discount the
+  // named peer keeps, never an addition.
 
   function pick(peerId: string) {
     onChange(peerId);
@@ -110,7 +111,7 @@ export default function RoundingLeftoverBadge({
         className="inline-flex min-h-8 items-center gap-1 rounded-full border border-warning-ink/30 bg-warning-ink/10 px-2.5 py-1 text-xs font-medium text-warning-ink transition hover:bg-warning-ink/15 active:scale-95"
       >
         <span className="tabular-nums">
-          {sign}{formatSatang(Math.abs(leftoverSatang))} → {absorberName}
+          −{formatSatang(leftoverSatang)} → {absorberName}
         </span>
         <svg
           width="10"

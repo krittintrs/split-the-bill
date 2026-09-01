@@ -35,8 +35,6 @@ export interface LineItemRow {
   discount_percent: number;
   discount_satang: number;
   position: number;
-  /** ADR-0011: ticker who absorbs this item's own rounding leftover. */
-  rounding_absorber_peer_id: string | null;
 }
 
 export interface PeerRow {
