@@ -576,11 +576,19 @@ export default function PeerBill({
           </tr>
           <tr className="border-b border-border">
             <td className="sticky left-0 bg-surface p-3 font-semibold">ยอดต่อคน</td>
-            {peersSorted.map((peer) => (
-              <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
-                {formatSatang(result.peerTotals[peer.id] ?? 0)}
-              </td>
-            ))}
+            {peersSorted.map((peer) => {
+              const absorbsLeftover = result.billLeftover?.absorberPeerId === peer.id;
+              return (
+                <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
+                  <div className="flex flex-wrap items-center justify-center gap-1">
+                    <span>{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
+                    {absorbsLeftover && result.billLeftover && (
+                      <RoundingDiscountNote leftoverSatang={result.billLeftover.leftoverSatang} />
+                    )}
+                  </div>
+                </td>
+              );
+            })}
           </tr>
           <tr>
             <td className="sticky left-0 bg-surface p-3 font-semibold">จ่ายแล้ว</td>

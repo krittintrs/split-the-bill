@@ -39,7 +39,10 @@ export default function RoundingLeftoverBadge({
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Position the portal'd menu under the trigger, clamped so it never runs off the right edge.
-  // Runs again on the next frame once the menu itself has a measurable width (0 on first paint).
+  // Runs again on the next frame once the menu itself has a measurable size (0 on first paint).
+  // Prefers opening downward (the common case — plenty of room in a table footer row), but
+  // flips to open upward when the menu doesn't fit below and does fit above: CardsView pins
+  // this trigger inside a `fixed inset-x-0 bottom-0` bar, where there is no room below at all.
   useLayoutEffect(() => {
     if (!open) return;
     function reposition() {
@@ -47,8 +50,13 @@ export default function RoundingLeftoverBadge({
       if (!trigger) return;
       const rect = trigger.getBoundingClientRect();
       const menuWidth = menuRef.current?.offsetWidth ?? 0;
+      const menuHeight = menuRef.current?.offsetHeight ?? 0;
       const left = Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8));
-      setPos({ top: rect.bottom + 4, left });
+      const fitsBelow = rect.bottom + menuHeight + 4 <= window.innerHeight;
+      const fitsAbove = rect.top - menuHeight - 4 >= 0;
+      const openUp = !fitsBelow && fitsAbove;
+      const top = openUp ? rect.top - menuHeight - 4 : rect.bottom + 4;
+      setPos({ top, left });
     }
     reposition();
     const raf = requestAnimationFrame(reposition);
@@ -114,8 +122,8 @@ export default function RoundingLeftoverBadge({
           −{formatSatang(leftoverSatang)} → {absorberName}
         </span>
         <svg
-          width="10"
-          height="10"
+          width="14"
+          height="14"
           viewBox="0 0 12 12"
           fill="none"
           aria-hidden="true"
