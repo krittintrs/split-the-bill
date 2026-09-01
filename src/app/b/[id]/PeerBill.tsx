@@ -21,6 +21,32 @@ import { createClient } from "@/lib/supabase/client";
 
 const dateFormat = new Intl.DateTimeFormat("th-TH", { dateStyle: "long" });
 
+/**
+ * Fixed-width trailing "status slot" shared by every row variant in the ทุกคน
+ * list (self-row's invisible clone, a claimed peer's status span, an unclaimed
+ * peer's pay button) so a row's total — pinned right via the sibling `ml-auto`
+ * — always lands at the same horizontal position regardless of which status
+ * string (or none) that row happens to render. w-28 comfortably fits the
+ * widest string, "✓ จ่ายแล้ว"; centered so text sits mid-line in every variant,
+ * matching what the plain pay button already did before this existed.
+ */
+const STATUS_SLOT_CLS =
+  "inline-flex min-h-10 w-28 shrink-0 items-center justify-center rounded-full px-2 py-1 text-xs font-semibold";
+
+/** Read-only, always-visible (no hover) note on the peer who keeps the bill's
+ * rounding discount (ADR-0011) — peers never get the organizer's picker, but
+ * a few-satang gap between two otherwise-identical totals needs an explanation. */
+function RoundingDiscountNote({ leftoverSatang }: { leftoverSatang: number }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-warning-ink/30 bg-warning-ink/10 px-2 py-0.5 text-[11px] font-medium text-warning-ink"
+      title={`ได้รับส่วนลดปัดเศษ ${formatSatang(leftoverSatang)}`}
+    >
+      −{formatSatang(leftoverSatang)} ปัดเศษ
+    </span>
+  );
+}
+
 // The device-local claim ("which name is mine") lives in localStorage, read as
 // an external store so it stays SSR-safe (server snapshot = null) without a
 // setState-in-effect. claim() writes then notifies same-tab subscribers.
@@ -306,6 +332,7 @@ export default function PeerBill({
         {peersSorted.map((peer) => {
           const isClaimed = claimedId === peer.id;
           const peerTotal = result.peerTotals[peer.id] ?? 0;
+          const absorbsLeftover = result.billLeftover?.absorberPeerId === peer.id;
           if (peer.id === selfPeerId) {
             // Same row shape as its neighbours, minus every interactive part:
             // the organizer's share is context, not a debt anyone can settle.
@@ -316,18 +343,20 @@ export default function PeerBill({
                   <span className="rounded-full bg-surface-tint px-2 py-0.5 text-xs font-semibold text-primary-ink">
                     เจ้าของบิล
                   </span>
+                  {absorbsLeftover && result.billLeftover && (
+                    <RoundingDiscountNote leftoverSatang={result.billLeftover.leftoverSatang} />
+                  )}
                   <span className="ml-auto font-semibold tabular-nums">
                     {formatSatang(peerTotal)}
                   </span>
                 </div>
-                {/* Invisible clone of the neighbours' pay button. Without a
-                    second child this row's total lands ~80px right of every
-                    other total, and the row loses the button's min-h-10 floor. */}
-                <span
-                  aria-hidden
-                  className="invisible inline-flex min-h-10 items-center rounded-full px-3 py-1 text-xs font-semibold"
-                >
-                  ยังไม่จ่าย
+                {/* Fixed-width, invisible clone of the trailing status slot below
+                    (STATUS_SLOT_CLS) — every row variant (this clone, the claimed
+                    row's status span, the unclaimed row's pay button) shares that
+                    same width, so the total's horizontal position never shifts
+                    depending on which status string a given row happens to show. */}
+                <span aria-hidden className={`invisible ${STATUS_SLOT_CLS}`}>
+                  ✓ จ่ายแล้ว
                 </span>
               </li>
             );
@@ -351,6 +380,9 @@ export default function PeerBill({
                       คุณ
                     </span>
                   )}
+                  {absorbsLeftover && result.billLeftover && (
+                    <RoundingDiscountNote leftoverSatang={result.billLeftover.leftoverSatang} />
+                  )}
                   <span className="ml-auto font-semibold tabular-nums">
                     {formatSatang(peerTotal)}
                   </span>
@@ -358,13 +390,19 @@ export default function PeerBill({
                 {isClaimed ? (
                   // Claimed peer's pay control lives in the top panel; here we only
                   // echo status, and only when there is actually something to pay.
-                  (paid[peer.id] || peerTotal > 0) && (
+                  // Same fixed-width slot as the button below, so this row's total
+                  // still lines up with every other row even with no pay control.
+                  (paid[peer.id] || peerTotal > 0) ? (
                     <span
-                      className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold ${
+                      className={`${STATUS_SLOT_CLS} ${
                         paid[peer.id] ? "text-success" : "text-ink-muted"
                       }`}
                     >
                       {paid[peer.id] ? "✓ จ่ายแล้ว" : "จ่ายด้านบน"}
+                    </span>
+                  ) : (
+                    <span aria-hidden className={`invisible ${STATUS_SLOT_CLS}`}>
+                      ✓ จ่ายแล้ว
                     </span>
                   )
                 ) : (
@@ -372,7 +410,7 @@ export default function PeerBill({
                     type="button"
                     disabled={pending}
                     onClick={() => onPaid(peer.id)}
-                    className={`min-h-10 rounded-full px-3 py-1 text-xs font-semibold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`${STATUS_SLOT_CLS} transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                       paid[peer.id]
                         ? "bg-success text-white hover:opacity-90"
                         : "border border-border text-ink-muted hover:bg-surface-tint"

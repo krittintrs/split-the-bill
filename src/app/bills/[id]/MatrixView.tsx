@@ -72,6 +72,13 @@ export default function MatrixView({
           <tbody>
             {items.map((item) => {
               const unticked = result.untickedItemIds.includes(item.id);
+              const tickedPeerIds = peers
+                .filter((peer) => tickSet.has(`${item.id}:${peer.id}`))
+                .map((peer) => peer.id);
+              const tickerCount = tickedPeerIds.length;
+              const firstTicker = tickedPeerIds[0];
+              const share =
+                firstTicker !== undefined ? result.itemSplits[item.id]?.[firstTicker] : undefined;
               return (
                 <tr key={item.id} className="border-b border-border/60">
                   <td className="sticky left-0 z-10 bg-surface p-2 whitespace-nowrap">
@@ -85,6 +92,11 @@ export default function MatrixView({
                       <span className="ml-1 text-xs font-medium text-danger">
                         ยังไม่มีใครติ๊ก!
                       </span>
+                    )}
+                    {!unticked && share !== undefined && (
+                      <p className="mt-1 text-xs tabular-nums text-ink-muted">
+                        ÷ {tickerCount} = {formatSatang(share)} ต่อคน
+                      </p>
                     )}
                   </td>
                   <td className="p-2 text-right tabular-nums text-ink-muted">
@@ -122,7 +134,7 @@ export default function MatrixView({
                   −{formatSatang(result.discountSatang)}
                 </td>
                 {peers.map((peer) => (
-                  <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                  <td key={peer.id} className="p-2 text-center tabular-nums">
                     −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
                   </td>
                 ))}
@@ -134,7 +146,7 @@ export default function MatrixView({
                 {formatSatang(result.serviceChargeSatang)}
               </td>
               {peers.map((peer) => (
-                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                <td key={peer.id} className="p-2 text-center tabular-nums">
                   {formatSatang(result.peerBreakdowns[peer.id]?.serviceChargeSatang ?? 0)}
                 </td>
               ))}
@@ -143,7 +155,7 @@ export default function MatrixView({
               <td className="sticky left-0 z-10 bg-surface p-2">VAT</td>
               <td className="p-2 text-right tabular-nums">{formatSatang(result.vatSatang)}</td>
               {peers.map((peer) => (
-                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                <td key={peer.id} className="p-2 text-center tabular-nums">
                   {/* ADR-0011 known limitation: the negative-remainder guard can make a
                       non-absorber's displayed VAT residual negative even though their real
                       total never does. Clamp the display only, not the underlying math. */}
@@ -170,7 +182,7 @@ export default function MatrixView({
                 {formatSatang(result.checksumSatang)}
               </td>
               {peers.map((peer) => (
-                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                <td key={peer.id} className="p-2 text-center tabular-nums">
                   {formatSatang(result.peerTotals[peer.id] ?? 0)}
                 </td>
               ))}

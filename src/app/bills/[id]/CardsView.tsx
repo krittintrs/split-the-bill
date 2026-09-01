@@ -109,21 +109,42 @@ export default function CardsView({
       </section>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-        <button
-          type="button"
-          onClick={() => setTotalsOpen((open) => !open)}
-          aria-expanded={totalsOpen}
-          className="flex min-h-14 w-full items-center justify-between px-4 py-3 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink"
-        >
-          <span className="font-semibold tabular-nums">
-            ยอดรวม {formatSatang(result.checksumSatang)}
-          </span>
-          <span
-            className={`text-sm font-bold ${receiptStatusCls(receipt.state)}`}
+        {/* Two toggle buttons flanking the badge, not one button wrapping everything:
+            RoundingLeftoverBadge is itself a button (+ its own portal'd menu), and
+            nesting interactive elements inside a <button> is invalid HTML that
+            browsers mishandle. Either button expands the sheet; the badge in the
+            middle opens its own picker, always visible with zero taps (matches
+            MatrixView's always-visible รวมต่อคน row — the equivalent here is the
+            collapsed bar, not the expandable panel below it). */}
+        <div className="flex min-h-14 w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setTotalsOpen((open) => !open)}
+            aria-expanded={totalsOpen}
+            className="flex min-w-0 flex-1 items-center text-left transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink"
+          >
+            <span className="truncate font-semibold tabular-nums">
+              ยอดรวม {formatSatang(result.checksumSatang)}
+            </span>
+          </button>
+          {result.billLeftover && (
+            <RoundingLeftoverBadge
+              leftoverSatang={result.billLeftover.leftoverSatang}
+              candidateIds={peers.map((peer) => peer.id)}
+              candidateNames={peerNames}
+              absorberId={result.billLeftover.absorberPeerId}
+              onChange={onUpdateBillAbsorber}
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => setTotalsOpen((open) => !open)}
+            aria-expanded={totalsOpen}
+            className={`flex shrink-0 items-center gap-1 text-sm font-bold transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink ${receiptStatusCls(receipt.state)}`}
           >
             {receipt.label} {totalsOpen ? "▾" : "▴"}
-          </span>
-        </button>
+          </button>
+        </div>
         {totalsOpen && (
           <div className="max-h-[45dvh] overflow-y-auto border-t border-border px-4 py-3">
             <ul className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
@@ -139,17 +160,6 @@ export default function CardsView({
                 </li>
               ))}
             </ul>
-            {result.billLeftover && (
-              <div className="mt-2">
-                <RoundingLeftoverBadge
-                  leftoverSatang={result.billLeftover.leftoverSatang}
-                  candidateIds={peers.map((peer) => peer.id)}
-                  candidateNames={peerNames}
-                  absorberId={result.billLeftover.absorberPeerId}
-                  onChange={onUpdateBillAbsorber}
-                />
-              </div>
-            )}
             {result.surplusSatang !== 0 && result.untickedItemIds.length === 0 && (
               <p className="mt-2 text-xs tabular-nums text-ink-muted">
                 ส่วนต่างปัดเศษ {formatSatang(Math.abs(result.surplusSatang))}
