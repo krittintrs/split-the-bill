@@ -35,11 +35,24 @@ const STATUS_SLOT_CLS =
 
 /** Read-only, always-visible (no hover) note on the peer who keeps the bill's
  * rounding discount (ADR-0011) — peers never get the organizer's picker, but
- * a few-satang gap between two otherwise-identical totals needs an explanation. */
-function RoundingDiscountNote({ leftoverSatang }: { leftoverSatang: number }) {
+ * a few-satang gap between two otherwise-identical totals needs an explanation.
+ * `inverted` switches to a solid white chip for use inside a claimed peer's
+ * solid-blue header button — the default translucent-amber styling is tuned
+ * for a white/washed surface and all but disappears against `bg-primary`. */
+function RoundingDiscountNote({
+  leftoverSatang,
+  inverted = false,
+}: {
+  leftoverSatang: number;
+  inverted?: boolean;
+}) {
   return (
     <span
-      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-warning-ink/30 bg-warning-ink/10 px-2 py-0.5 text-[11px] font-medium text-warning-ink"
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+        inverted
+          ? "border-white/60 bg-white text-warning-ink"
+          : "border-warning-ink/30 bg-warning-ink/10 text-warning-ink"
+      }`}
       title={`ได้รับส่วนลดปัดเศษ ${formatSatang(leftoverSatang)}`}
     >
       −{formatSatang(leftoverSatang)} ปัดเศษ
@@ -493,7 +506,7 @@ export default function PeerBill({
                   <button
                     type="button"
                     onClick={() => claim(peer.id)}
-                    className={`inline-flex min-h-9 flex-col items-center gap-1 rounded-lg px-2 py-1 transition active:scale-95 ${
+                    className={`inline-flex min-h-9 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1 transition active:scale-95 ${
                       isClaimed
                         ? "bg-primary text-white"
                         : "text-ink-muted hover:bg-surface-tint hover:text-ink"
@@ -508,7 +521,10 @@ export default function PeerBill({
                       )}
                     </span>
                     {absorbsLeftover && result.billLeftover && (
-                      <RoundingDiscountNote leftoverSatang={result.billLeftover.leftoverSatang} />
+                      <RoundingDiscountNote
+                        leftoverSatang={result.billLeftover.leftoverSatang}
+                        inverted={isClaimed}
+                      />
                     )}
                   </button>
                 </th>
