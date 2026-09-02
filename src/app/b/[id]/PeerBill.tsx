@@ -581,6 +581,14 @@ export default function PeerBill({
             </tr>
           )}
           <tr className="border-b border-border/60 text-ink-muted">
+            <td className="sticky left-0 bg-surface p-3">รวมเป็นเงิน</td>
+            {peersSorted.map((peer) => (
+              <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                {formatSatang(result.peerBreakdowns[peer.id]?.subtotalSatang ?? 0)}
+              </td>
+            ))}
+          </tr>
+          <tr className="border-b border-border/60 text-ink-muted">
             <td className="sticky left-0 bg-surface p-3">Service charge</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center text-xs tabular-nums">

@@ -47,9 +47,11 @@ export function computeBill(input: BillInput): BillResult {
   // 5. Per-peer subtotal: item shares (after item + bill discounts), exact, no charges yet.
   //    Per-peer gross: the same even split, but on the pre-ANY-discount line total — used only
   //    to derive discountSatang below, never added into a peer's charged total.
-  //    itemSplits is DISPLAY ONLY: each cell ceil'd independently, may sum slightly above a
-  //    peer's actual total — there is no per-item rounding tier (ADR-0011 v2 dropped it; see the
-  //    ADR for why a single bill-wide adjustment no longer needs per-item attribution).
+  //    itemSplits is DISPLAY ONLY: raw pre-SC/VAT per-ticker share (matches itemShare.ts's
+  //    convention — item price after its own discount, divided by ticker count, no charges),
+  //    each cell ceil'd independently, may sum slightly above a peer's actual subtotal — there
+  //    is no per-item rounding tier (ADR-0011 v2 dropped it; see the ADR for why a single
+  //    bill-wide adjustment no longer needs per-item attribution).
   //    Unticked items contribute ฿0 and get flagged for the organizer to chase.
   const peerSubtotalFractions = new Map<string, Fraction>(
     input.peerIds.map((id) => [id, ZERO]),
@@ -74,7 +76,7 @@ export function computeBill(input: BillInput): BillResult {
       billDiscountRatio,
     );
     const perTickerGross = fraction(grossPrice, tickerCount);
-    const perTickerShare = multiply(perTickerSubtotal, multiply(scRatio, vatRatio));
+    const perTickerShare = perTickerSubtotal;
     for (const peerId of item.tickedBy) {
       peerSubtotalFractions.set(peerId, add(peerSubtotalFractions.get(peerId)!, perTickerSubtotal));
       peerGrossFractions.set(peerId, add(peerGrossFractions.get(peerId)!, perTickerGross));

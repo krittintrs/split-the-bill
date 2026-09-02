@@ -141,6 +141,17 @@ export default function MatrixView({
               </tr>
             )}
             <tr className="border-t border-border/60 text-ink-muted">
+              <td className="sticky left-0 z-10 bg-surface p-2">รวมเป็นเงิน</td>
+              <td className="p-2 text-right tabular-nums">
+                {formatSatang(result.subtotalSatang)}
+              </td>
+              {peers.map((peer) => (
+                <td key={peer.id} className="p-2 text-center tabular-nums">
+                  {formatSatang(result.peerBreakdowns[peer.id]?.subtotalSatang ?? 0)}
+                </td>
+              ))}
+            </tr>
+            <tr className="border-t border-border/60 text-ink-muted">
               <td className="sticky left-0 z-10 bg-surface p-2">Service charge</td>
               <td className="p-2 text-right tabular-nums">
                 {formatSatang(result.serviceChargeSatang)}
