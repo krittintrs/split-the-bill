@@ -502,7 +502,7 @@ export default function PeerBill({
                     <span className="inline-flex items-center gap-1">
                       {peer.name}
                       {isClaimed && (
-                        <span className="inline-flex items-center justify-center rounded-full bg-white/25 px-1.5 py-0.5 text-[11px] leading-none font-semibold">
+                        <span className="inline-flex items-center justify-center rounded-full bg-white/25 px-1.5 text-[11px] leading-5 font-semibold">
                           คุณ
                         </span>
                       )}

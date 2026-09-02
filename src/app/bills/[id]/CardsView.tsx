@@ -144,7 +144,22 @@ export default function CardsView({
             className={`flex shrink-0 items-center gap-1 text-sm font-bold transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink ${receiptStatusCls(receipt.state)}`}
           >
             {receipt.label}
-            <span className="text-lg leading-none">{totalsOpen ? "▾" : "▴"}</span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden="true"
+              className={`shrink-0 transition-transform ${totalsOpen ? "" : "rotate-180"}`}
+            >
+              <path
+                d="M2 4l4 4 4-4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         </div>
         {totalsOpen && (
