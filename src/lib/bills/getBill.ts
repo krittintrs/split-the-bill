@@ -14,6 +14,12 @@ export interface GetBillJson {
     bankName: string;
     bankAccount: string;
     accountName: string;
+    /**
+     * ADR-0011. Optional for the same deploy-before-migration reason as peers'
+     * addedAt/isSelf below: a deploy landing before its migration must degrade,
+     * not crash, so the field is typed optional even though the column is non-nullable-by-default.
+     */
+    roundingAbsorberPeerId?: string | null;
   };
   items: {
     id: string;

@@ -7,6 +7,7 @@ export function mapToBillInput(
   items: LineItemRow[],
   peers: PeerRow[],
   ticks: TickRow[],
+  selfPeerId: string | null,
 ): BillInput {
   const tickedByItem = new Map<string, string[]>();
   for (const tick of ticks) {
@@ -33,5 +34,6 @@ export function mapToBillInput(
     },
     serviceChargePercent: bill.service_charge_percent,
     vatPercent: bill.vat_percent,
+    roundingAbsorberPeerId: bill.rounding_absorber_peer_id ?? selfPeerId ?? undefined,
   };
 }

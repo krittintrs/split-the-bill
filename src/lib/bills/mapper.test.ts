@@ -17,6 +17,7 @@ const bill: BillRow = {
   bank_name: "",
   bank_account: "",
   account_name: "",
+  rounding_absorber_peer_id: null,
 };
 
 const items: LineItemRow[] = [
@@ -38,26 +39,26 @@ const ticks: TickRow[] = [
 
 describe("mapToBillInput", () => {
   it("produces a BillInput the engine accepts, with correct totals", () => {
-    const result = computeBill(mapToBillInput(bill, items, peers, ticks));
+    const result = computeBill(mapToBillInput(bill, items, peers, ticks, null));
     // i1 10000 split a+b (5000 each), i2 5000 to a
     expect(result.peerTotals).toEqual({ a: 10000, b: 5000 });
     expect(result.checksumSatang).toBe(15000);
   });
 
   it("passes zero discounts through as 0, not undefined", () => {
-    const input = mapToBillInput(bill, items, peers, ticks);
+    const input = mapToBillInput(bill, items, peers, ticks, null);
     expect(input.items[0].discountPercent).toBe(0);
     expect(input.items[0].discountAmountSatang).toBe(0);
     expect(input.billDiscount).toEqual({ percent: 0, amountSatang: 0 });
   });
 
   it("orders items by position", () => {
-    const input = mapToBillInput(bill, items, peers, ticks);
+    const input = mapToBillInput(bill, items, peers, ticks, null);
     expect(input.items.map((i) => i.id)).toEqual(["i1", "i2"]);
   });
 
   it("maps untick-ed items to an empty tickedBy", () => {
-    const input = mapToBillInput(bill, items, peers, []);
+    const input = mapToBillInput(bill, items, peers, [], null);
     expect(input.items.every((i) => i.tickedBy.length === 0)).toBe(true);
     const result = computeBill(input);
     expect(result.untickedItemIds).toEqual(["i1", "i2"]);

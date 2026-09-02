@@ -20,6 +20,7 @@ type BillPatch = Partial<
     | "bank_name"
     | "bank_account"
     | "account_name"
+    | "rounding_absorber_peer_id"
   >
 >;
 

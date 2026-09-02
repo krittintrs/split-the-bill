@@ -1,5 +1,6 @@
 "use client";
 
+import RoundingLeftoverBadge from "@/components/RoundingLeftoverBadge";
 import { formatSatang } from "@/lib/billing/money";
 import type { BillResult } from "@/lib/billing/types";
 import type { LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
@@ -15,6 +16,7 @@ interface Props {
   billDiscountSatang: number;
   selfPeerId: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
+  onUpdateBillAbsorber: (peerId: string) => void;
 }
 
 /** Desktop (>=lg): sheet-like matrix — items as rows, peers as columns. */
@@ -28,6 +30,7 @@ export default function MatrixView({
   billDiscountSatang,
   selfPeerId,
   onToggle,
+  onUpdateBillAbsorber,
 }: Props) {
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
   const receipt = receiptStatus(receiptTotalSatang, result.checksumSatang);
@@ -35,6 +38,7 @@ export default function MatrixView({
     billDiscountPercent > 0 ||
     billDiscountSatang > 0 ||
     items.some((item) => item.discount_percent > 0 || item.discount_satang > 0);
+  const peerNames = Object.fromEntries(peers.map((peer) => [peer.id, peer.name]));
 
   if (items.length === 0 || peers.length === 0) {
     return (
@@ -68,6 +72,13 @@ export default function MatrixView({
           <tbody>
             {items.map((item) => {
               const unticked = result.untickedItemIds.includes(item.id);
+              const tickedPeerIds = peers
+                .filter((peer) => tickSet.has(`${item.id}:${peer.id}`))
+                .map((peer) => peer.id);
+              const tickerCount = tickedPeerIds.length;
+              const firstTicker = tickedPeerIds[0];
+              const share =
+                firstTicker !== undefined ? result.itemSplits[item.id]?.[firstTicker] : undefined;
               return (
                 <tr key={item.id} className="border-b border-border/60">
                   <td className="sticky left-0 z-10 bg-surface p-2 whitespace-nowrap">
@@ -81,6 +92,11 @@ export default function MatrixView({
                       <span className="ml-1 text-xs font-medium text-danger">
                         ยังไม่มีใครติ๊ก!
                       </span>
+                    )}
+                    {!unticked && share !== undefined && (
+                      <p className="mt-1 text-xs tabular-nums text-ink-muted">
+                        ÷ {tickerCount} = {formatSatang(share)} ต่อคน
+                      </p>
                     )}
                   </td>
                   <td className="p-2 text-right tabular-nums text-ink-muted">
@@ -118,19 +134,30 @@ export default function MatrixView({
                   −{formatSatang(result.discountSatang)}
                 </td>
                 {peers.map((peer) => (
-                  <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                  <td key={peer.id} className="p-2 text-center tabular-nums">
                     −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
                   </td>
                 ))}
               </tr>
             )}
             <tr className="border-t border-border/60 text-ink-muted">
+              <td className="sticky left-0 z-10 bg-surface p-2">รวมเป็นเงิน</td>
+              <td className="p-2 text-right tabular-nums">
+                {formatSatang(result.subtotalSatang)}
+              </td>
+              {peers.map((peer) => (
+                <td key={peer.id} className="p-2 text-center tabular-nums">
+                  {formatSatang(result.peerBreakdowns[peer.id]?.subtotalSatang ?? 0)}
+                </td>
+              ))}
+            </tr>
+            <tr className="border-t border-border/60 text-ink-muted">
               <td className="sticky left-0 z-10 bg-surface p-2">Service charge</td>
               <td className="p-2 text-right tabular-nums">
                 {formatSatang(result.serviceChargeSatang)}
               </td>
               {peers.map((peer) => (
-                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                <td key={peer.id} className="p-2 text-center tabular-nums">
                   {formatSatang(result.peerBreakdowns[peer.id]?.serviceChargeSatang ?? 0)}
                 </td>
               ))}
@@ -139,18 +166,34 @@ export default function MatrixView({
               <td className="sticky left-0 z-10 bg-surface p-2">VAT</td>
               <td className="p-2 text-right tabular-nums">{formatSatang(result.vatSatang)}</td>
               {peers.map((peer) => (
-                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                  {formatSatang(result.peerBreakdowns[peer.id]?.vatSatang ?? 0)}
+                <td key={peer.id} className="p-2 text-center tabular-nums">
+                  {/* ADR-0011 known limitation: the negative-remainder guard can make a
+                      non-absorber's displayed VAT residual negative even though their real
+                      total never does. Clamp the display only, not the underlying math. */}
+                  {formatSatang(Math.max(0, result.peerBreakdowns[peer.id]?.vatSatang ?? 0))}
                 </td>
               ))}
             </tr>
             <tr className="border-t-2 border-ink/20 font-semibold">
-              <td className="sticky left-0 z-10 bg-surface p-2">รวมต่อคน</td>
+              <td className="sticky left-0 z-10 bg-surface p-2">
+                รวมต่อคน
+                {result.billLeftover && (
+                  <div className="mt-1">
+                    <RoundingLeftoverBadge
+                      leftoverSatang={result.billLeftover.leftoverSatang}
+                      candidateIds={peers.map((peer) => peer.id)}
+                      candidateNames={peerNames}
+                      absorberId={result.billLeftover.absorberPeerId}
+                      onChange={onUpdateBillAbsorber}
+                    />
+                  </div>
+                )}
+              </td>
               <td className="p-2 text-right tabular-nums">
                 {formatSatang(result.checksumSatang)}
               </td>
               {peers.map((peer) => (
-                <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
+                <td key={peer.id} className="p-2 text-center tabular-nums">
                   {formatSatang(result.peerTotals[peer.id] ?? 0)}
                 </td>
               ))}

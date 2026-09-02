@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import RoundingLeftoverBadge from "@/components/RoundingLeftoverBadge";
 import { formatSatang } from "@/lib/billing/money";
 import type { BillResult } from "@/lib/billing/types";
 import type { LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
@@ -14,6 +15,7 @@ interface Props {
   receiptTotalSatang: number;
   selfPeerId: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
+  onUpdateBillAbsorber: (peerId: string) => void;
 }
 
 /** Mobile (<lg): stacked item cards + sticky expandable totals bar. */
@@ -25,10 +27,12 @@ export default function CardsView({
   receiptTotalSatang,
   selfPeerId,
   onToggle,
+  onUpdateBillAbsorber,
 }: Props) {
   const [totalsOpen, setTotalsOpen] = useState(false);
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
   const receipt = receiptStatus(receiptTotalSatang, result.checksumSatang);
+  const peerNames = Object.fromEntries(peers.map((peer) => [peer.id, peer.name]));
 
   if (items.length === 0 || peers.length === 0) {
     return (
@@ -44,14 +48,12 @@ export default function CardsView({
         <h2 className="font-semibold">ใครกินอะไร</h2>
         {items.map((item) => {
           const unticked = result.untickedItemIds.includes(item.id);
-          const tickerCount = peers.filter((peer) =>
-            tickSet.has(`${item.id}:${peer.id}`),
-          ).length;
-          const firstTicker = peers.find((peer) => tickSet.has(`${item.id}:${peer.id}`));
-          const share =
-            firstTicker !== undefined
-              ? result.itemSplits[item.id]?.[firstTicker.id]
-              : undefined;
+          const tickedPeerIds = peers
+            .filter((peer) => tickSet.has(`${item.id}:${peer.id}`))
+            .map((peer) => peer.id);
+          const tickerCount = tickedPeerIds.length;
+          const firstTicker = tickedPeerIds[0];
+          const share = firstTicker !== undefined ? result.itemSplits[item.id]?.[firstTicker] : undefined;
           return (
             <div
               key={item.id}
@@ -107,21 +109,59 @@ export default function CardsView({
       </section>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-        <button
-          type="button"
-          onClick={() => setTotalsOpen((open) => !open)}
-          aria-expanded={totalsOpen}
-          className="flex min-h-14 w-full items-center justify-between px-4 py-3 transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink"
-        >
-          <span className="font-semibold tabular-nums">
-            ยอดรวม {formatSatang(result.checksumSatang)}
-          </span>
-          <span
-            className={`text-sm font-bold ${receiptStatusCls(receipt.state)}`}
+        {/* Two toggle buttons flanking the badge, not one button wrapping everything:
+            RoundingLeftoverBadge is itself a button (+ its own portal'd menu), and
+            nesting interactive elements inside a <button> is invalid HTML that
+            browsers mishandle. Either button expands the sheet; the badge in the
+            middle opens its own picker, always visible with zero taps (matches
+            MatrixView's always-visible รวมต่อคน row — the equivalent here is the
+            collapsed bar, not the expandable panel below it). */}
+        <div className="flex min-h-14 w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setTotalsOpen((open) => !open)}
+            aria-expanded={totalsOpen}
+            className="flex min-w-0 flex-1 items-center text-left transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink"
           >
-            {receipt.label} {totalsOpen ? "▾" : "▴"}
-          </span>
-        </button>
+            <span className="truncate font-semibold tabular-nums">
+              ยอดรวม {formatSatang(result.checksumSatang)}
+            </span>
+          </button>
+          {result.billLeftover && (
+            <RoundingLeftoverBadge
+              leftoverSatang={result.billLeftover.leftoverSatang}
+              candidateIds={peers.map((peer) => peer.id)}
+              candidateNames={peerNames}
+              absorberId={result.billLeftover.absorberPeerId}
+              onChange={onUpdateBillAbsorber}
+              openDirection="up"
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => setTotalsOpen((open) => !open)}
+            aria-expanded={totalsOpen}
+            className={`flex shrink-0 items-center gap-1 text-sm font-bold transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink ${receiptStatusCls(receipt.state)}`}
+          >
+            {receipt.label}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden="true"
+              className={`shrink-0 transition-transform ${totalsOpen ? "" : "rotate-180"}`}
+            >
+              <path
+                d="M2 4l4 4 4-4"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
         {totalsOpen && (
           <div className="max-h-[45dvh] overflow-y-auto border-t border-border px-4 py-3">
             <ul className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">

@@ -154,8 +154,8 @@ export default function BillEditor({
   }
 
   const result = useMemo(
-    () => computeBill(mapToBillInput(bill, items, peers, ticks)),
-    [bill, items, peers, ticks],
+    () => computeBill(mapToBillInput(bill, items, peers, ticks, selfPeerId)),
+    [bill, items, peers, ticks, selfPeerId],
   );
   const receipt = receiptStatus(bill.receipt_total_satang, result.checksumSatang);
 
@@ -202,6 +202,11 @@ export default function BillEditor({
       prev.map((item) => (item.id === itemId ? { ...item, ...patch } : item)),
     );
     runMutation(() => updateLineItem(itemId, patch));
+  }
+
+  /** ADR-0011: organizer picks which peer absorbs the bill-wide rounding leftover. */
+  function onUpdateBillAbsorber(peerId: string) {
+    saveBill({ rounding_absorber_peer_id: peerId });
   }
 
   function onRemoveItem(itemId: string) {
@@ -556,6 +561,7 @@ export default function BillEditor({
           billDiscountSatang={bill.bill_discount_satang}
           selfPeerId={selfPeerId}
           onToggle={onToggle}
+          onUpdateBillAbsorber={onUpdateBillAbsorber}
         />
       </div>
       <div className="lg:hidden">
@@ -567,6 +573,7 @@ export default function BillEditor({
           receiptTotalSatang={bill.receipt_total_satang}
           selfPeerId={selfPeerId}
           onToggle={onToggle}
+          onUpdateBillAbsorber={onUpdateBillAbsorber}
         />
       </div>
 
