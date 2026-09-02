@@ -143,7 +143,8 @@ export default function CardsView({
             aria-expanded={totalsOpen}
             className={`flex shrink-0 items-center gap-1 text-sm font-bold transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink ${receiptStatusCls(receipt.state)}`}
           >
-            {receipt.label} {totalsOpen ? "▾" : "▴"}
+            {receipt.label}
+            <span className="text-lg leading-none">{totalsOpen ? "▾" : "▴"}</span>
           </button>
         </div>
         {totalsOpen && (
