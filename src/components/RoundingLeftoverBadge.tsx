@@ -26,12 +26,19 @@ export default function RoundingLeftoverBadge({
   candidateNames,
   absorberId,
   onChange,
+  openDirection = "auto",
 }: {
   leftoverSatang: number;
   candidateIds: string[];
   candidateNames: Record<string, string>;
   absorberId: string;
   onChange: (peerId: string) => void;
+  /** "auto" (default) flips up/down based on measured viewport space — correct for a
+   * normal table row (MatrixView), which always has room below. "up" skips that
+   * measurement and always opens upward — for a trigger pinned to a bottom bar
+   * (CardsView) whose position shifts as a sheet beneath it expands/collapses,
+   * where fits-below can measure true for a beat mid-animation. */
+  openDirection?: "auto" | "up";
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -40,9 +47,12 @@ export default function RoundingLeftoverBadge({
 
   // Position the portal'd menu under the trigger, clamped so it never runs off the right edge.
   // Runs again on the next frame once the menu itself has a measurable size (0 on first paint).
-  // Prefers opening downward (the common case — plenty of room in a table footer row), but
-  // flips to open upward when the menu doesn't fit below and does fit above: CardsView pins
-  // this trigger inside a `fixed inset-x-0 bottom-0` bar, where there is no room below at all.
+  // openDirection "auto" (default) prefers opening downward (the common case — plenty of room
+  // in a table footer row), flipping to open upward only when the menu doesn't fit below and
+  // does fit above. openDirection "up" skips that fit check and always opens upward: CardsView
+  // pins this trigger inside a `fixed inset-x-0 bottom-0` bar whose vertical position shifts as
+  // the totals sheet beneath it expands/collapses, so a measured "fits below" can be stale for
+  // a beat mid-animation — that trigger should never rely on the measurement.
   useLayoutEffect(() => {
     if (!open) return;
     function reposition() {
@@ -52,16 +62,21 @@ export default function RoundingLeftoverBadge({
       const menuWidth = menuRef.current?.offsetWidth ?? 0;
       const menuHeight = menuRef.current?.offsetHeight ?? 0;
       const left = Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8));
-      const fitsBelow = rect.bottom + menuHeight + 4 <= window.innerHeight;
-      const fitsAbove = rect.top - menuHeight - 4 >= 0;
-      const openUp = !fitsBelow && fitsAbove;
+      let openUp: boolean;
+      if (openDirection === "up") {
+        openUp = true;
+      } else {
+        const fitsBelow = rect.bottom + menuHeight + 4 <= window.innerHeight;
+        const fitsAbove = rect.top - menuHeight - 4 >= 0;
+        openUp = !fitsBelow && fitsAbove;
+      }
       const top = openUp ? rect.top - menuHeight - 4 : rect.bottom + 4;
       setPos({ top, left });
     }
     reposition();
     const raf = requestAnimationFrame(reposition);
     return () => cancelAnimationFrame(raf);
-  }, [open]);
+  }, [open, openDirection]);
 
   useEffect(() => {
     if (!open) return;

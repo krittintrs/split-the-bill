@@ -472,6 +472,7 @@ export default function PeerBill({
             </th>
             {peersSorted.map((peer) => {
               const isClaimed = claimedId === peer.id;
+              const absorbsLeftover = result.billLeftover?.absorberPeerId === peer.id;
               if (peer.id === selfPeerId) {
                 // A plain span, not a disabled button: nothing here is tappable,
                 // so nothing here should look tappable.
@@ -480,6 +481,9 @@ export default function PeerBill({
                     <span className="inline-flex min-h-9 flex-col items-center justify-center rounded-lg px-2 py-1 text-ink-muted">
                       {peer.name}
                       <span className="text-[11px] font-normal">เจ้าของบิล</span>
+                      {absorbsLeftover && result.billLeftover && (
+                        <RoundingDiscountNote leftoverSatang={result.billLeftover.leftoverSatang} />
+                      )}
                     </span>
                   </th>
                 );
@@ -489,17 +493,22 @@ export default function PeerBill({
                   <button
                     type="button"
                     onClick={() => claim(peer.id)}
-                    className={`inline-flex min-h-9 items-center gap-1 rounded-lg px-2 py-1 transition active:scale-95 ${
+                    className={`inline-flex min-h-9 flex-col items-center gap-1 rounded-lg px-2 py-1 transition active:scale-95 ${
                       isClaimed
                         ? "bg-primary text-white"
                         : "text-ink-muted hover:bg-surface-tint hover:text-ink"
                     }`}
                   >
-                    {peer.name}
-                    {isClaimed && (
-                      <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-semibold">
-                        คุณ
-                      </span>
+                    <span className="inline-flex items-center gap-1">
+                      {peer.name}
+                      {isClaimed && (
+                        <span className="rounded-full bg-white/25 px-1.5 text-[11px] font-semibold">
+                          คุณ
+                        </span>
+                      )}
+                    </span>
+                    {absorbsLeftover && result.billLeftover && (
+                      <RoundingDiscountNote leftoverSatang={result.billLeftover.leftoverSatang} />
                     )}
                   </button>
                 </th>
@@ -576,19 +585,11 @@ export default function PeerBill({
           </tr>
           <tr className="border-b border-border">
             <td className="sticky left-0 bg-surface p-3 font-semibold">ยอดต่อคน</td>
-            {peersSorted.map((peer) => {
-              const absorbsLeftover = result.billLeftover?.absorberPeerId === peer.id;
-              return (
-                <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
-                  <div className="flex flex-wrap items-center justify-center gap-1">
-                    <span>{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
-                    {absorbsLeftover && result.billLeftover && (
-                      <RoundingDiscountNote leftoverSatang={result.billLeftover.leftoverSatang} />
-                    )}
-                  </div>
-                </td>
-              );
-            })}
+            {peersSorted.map((peer) => (
+              <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
+                {formatSatang(result.peerTotals[peer.id] ?? 0)}
+              </td>
+            ))}
           </tr>
           <tr>
             <td className="sticky left-0 bg-surface p-3 font-semibold">จ่ายแล้ว</td>

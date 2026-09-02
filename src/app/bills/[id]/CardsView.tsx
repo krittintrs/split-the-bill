@@ -134,6 +134,7 @@ export default function CardsView({
               candidateNames={peerNames}
               absorberId={result.billLeftover.absorberPeerId}
               onChange={onUpdateBillAbsorber}
+              openDirection="up"
             />
           )}
           <button
