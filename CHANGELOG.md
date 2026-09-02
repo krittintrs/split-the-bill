@@ -5,7 +5,7 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
-## [0.7.0] — 2026-08-31
+## [0.7.0] — 2026-09-02
 
 Down to the last satang.
 
@@ -13,10 +13,21 @@ Down to the last satang.
 
 - Peer totals now tie the receipt total exactly whenever every item is ticked — no more silent rounding windfall sitting invisibly with the organizer
 - A badge in the totals row (`รวมต่อคน`) shows exactly who keeps that small rounding discount and how much — defaults to the organizer's own row, expands into a picker (with a shuffle option, for when picking a friend feels arbitrary) to change it
+- A read-only note tells peers who's keeping the rounding discount, on both the mobile list and the desktop matrix
+- A `รวมเป็นเงิน` (subtotal) row on both desktop matrix footers, so the subtotal → Service charge → VAT → total waterfall has a visible baseline instead of jumping straight to add-on charges
+
+### Fixed
+
+- The picker's dropdown could render clipped under a later sticky table row, or off-screen entirely when opened from the mobile bottom bar — repositioned through a `document.body` portal that flips to open upward when there's no room below
+- Desktop matrix peer columns rendered a size smaller than the ฿ column, and item rows were missing the `÷n = ฿x each` line the mobile cards already had
+- The mobile totals badge was only visible inside a collapsed sheet, zero taps away in every other surface
+- Peer view: a variable-width status label ("จ่ายด้านบน" / "ยังไม่จ่าย" / "✓ จ่ายแล้ว") shifted each row's total sideways and mixed vertical alignment — now a fixed-width, centered slot
+- The organizer's `÷n = ฿x ต่อคน` line was silently baking in Service charge and VAT, while peers' own item lines stayed raw — same bill, two different numbers depending which screen you looked at. Both now show the same raw, pre-charge share
 
 ### Notes
 
 - `computeBill()` still ceils every peer's share independently (unchanged, ADR-0001) — nobody's individual math changes. Once every item is ticked, the bill-wide leftover (the sum of those independent ceilings minus the actual receipt total) is *subtracted* from one named peer instead of staying invisibly with the organizer. That leftover is provably never negative (ceiling is superadditive), so unlike an earlier iteration of this feature there's no edge case to guard against going below ฿0 except the designated peer's own total being smaller than the leftover, in which case it falls back to whichever peer owes the most. See ADR-0011 (refines ADR-0001). The canonical Katsu fixture is unaffected — every item in it has exactly one ticker, so there's nothing to round.
+- `itemSplits` (the display-only per-item share) is now defined the same way as peers' own `itemShare.ts` convention: raw, after the item's own discount, before Service charge/VAT. It was never part of `peerTotals`/checksum math, so this is a display fix only.
 
 ## [0.6.0] — 2026-08-31
 
