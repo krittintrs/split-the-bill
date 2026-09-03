@@ -84,6 +84,9 @@ function MoneyBox({
   onBlur: (e: FocusEvent<HTMLInputElement>) => void;
   widthCls?: string;
 }) {
+  // A fixed pl-9 fit "฿" (one glyph) but overflowed into the digits for a longer code like
+  // "TWD" — scale the reserved space with the symbol's own length instead of a flat class.
+  const paddingLeftPx = symbol.length * 8 + 20;
   return (
     <div className="relative">
       <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center text-sm text-ink-muted">
@@ -96,7 +99,8 @@ function MoneyBox({
         placeholder="0.00"
         onInput={onInput}
         onBlur={onBlur}
-        className={`${inputCls} ${widthCls} pl-9 text-right tabular-nums`}
+        style={{ paddingLeft: `${paddingLeftPx}px` }}
+        className={`${inputCls} ${widthCls} text-right tabular-nums`}
       />
     </div>
   );
@@ -915,6 +919,7 @@ function ItemRow({
           ราคา
           <MoneyBox
             inputRef={priceRef}
+            widthCls="w-28"
             symbol={symbol}
             defaultValue={satangToInput(item.unit_price_satang)}
             onInput={(e) => {
@@ -975,6 +980,7 @@ function ItemRow({
           รวม (ก่อนลด)
           <MoneyBox
             inputRef={totalRef}
+            widthCls="w-28"
             symbol={symbol}
             defaultValue={satangToInput(
               totalFromUnitPriceSatang(item.unit_price_satang, item.qty),

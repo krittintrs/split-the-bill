@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMinorUnits, formatSatang } from "./money";
+import { formatAmount, formatMinorUnits, formatSatang } from "./money";
 
 describe("formatSatang", () => {
   it("formats satang as baht with two decimals", () => {
@@ -24,5 +24,16 @@ describe("formatMinorUnits", () => {
   });
   it("throws on a non-integer amount", () => {
     expect(() => formatMinorUnits(100.5, "TWD")).toThrow("integer");
+  });
+});
+
+describe("formatAmount", () => {
+  it("formats the same as formatSatang/formatMinorUnits, without a currency prefix", () => {
+    expect(formatAmount(18720)).toBe("187.20");
+    expect(formatAmount(46292)).toBe("462.92");
+    expect(formatAmount(0)).toBe("0.00");
+  });
+  it("throws on a non-integer amount", () => {
+    expect(() => formatAmount(100.5)).toThrow("integer");
   });
 });

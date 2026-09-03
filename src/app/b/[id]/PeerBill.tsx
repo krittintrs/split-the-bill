@@ -12,7 +12,7 @@ import Link from "next/link";
 import PaybackControls from "./PaybackControls";
 import { computeBill } from "@/lib/billing/compute";
 import { itemShareSatang, itemTotalSatang } from "@/lib/billing/itemShare";
-import { formatMinorUnits, formatSatang } from "@/lib/billing/money";
+import { formatAmount, formatMinorUnits, formatSatang } from "@/lib/billing/money";
 import type { BillInput } from "@/lib/billing/types";
 import { fetchBill, type GetBillJson } from "@/lib/bills/getBill";
 import { setBillStatus } from "@/lib/bills/mutations";
@@ -317,13 +317,8 @@ export default function PeerBill({
                 </span>
               </div>
               <p className="text-xs text-ink-muted">
-                {share === null
-                  ? "ยังไม่มีคนติ๊ก"
-                  : `${
-                      bill.bill.purchaseCurrency
-                        ? formatMinorUnits(share, bill.bill.purchaseCurrency)
-                        : formatSatang(share)
-                    } / คน × ${item.tickedBy.length}`}
+                {/* #38: no currency prefix here -- the total right above already shows it. */}
+                {share === null ? "ยังไม่มีคนติ๊ก" : `${formatAmount(share)} / คน × ${item.tickedBy.length}`}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {peersSorted.map((peer) => {
@@ -500,7 +495,7 @@ export default function PeerBill({
       <table className="w-full min-w-[560px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-border">
-            <th className="sticky left-0 bg-surface p-3 text-left font-semibold">
+            <th className="sticky left-0 z-10 min-w-[160px] bg-surface p-3 text-left font-semibold">
               รายการ
               <span className="block text-xs font-normal text-ink-muted">
                 แตะชื่อคุณเพื่อรับ QR
@@ -561,18 +556,16 @@ export default function PeerBill({
             const itemTotal = itemTotalSatang(item);
             return (
               <tr key={item.id} className="border-b border-border">
-                <td className="sticky left-0 bg-surface p-3">
+                <td className="sticky left-0 z-10 min-w-[160px] bg-surface p-3">
                   <span className="block font-medium">{item.name || "ไม่มีชื่อเมนู"}</span>
                   <span className="block text-xs tabular-nums text-ink-muted">
                     {bill.bill.purchaseCurrency
                       ? formatMinorUnits(itemTotal, bill.bill.purchaseCurrency)
                       : formatSatang(itemTotal)}
-                    {share !== null &&
-                      ` · ${
-                        bill.bill.purchaseCurrency
-                          ? formatMinorUnits(share, bill.bill.purchaseCurrency)
-                          : formatSatang(share)
-                      }/คน`}
+                    {/* #38: the currency already shows on the total above -- repeating it
+                        here too was what forced this column to wrap line-by-line with a
+                        multi-character code. */}
+                    {share !== null && ` · ${formatAmount(share)}/คน`}
                   </span>
                 </td>
                 {peersSorted.map((peer) => {
