@@ -55,6 +55,32 @@ describe("computeBill validation (malformed input throws)", () => {
   it("rejects duplicate peer ids", () => {
     expect(() => computeBill({ ...base, peerIds: ["a", "a"] })).toThrow("duplicate peerIds");
   });
+  it("rejects purchaseCurrency without a matching FX rate", () => {
+    expect(() => computeBill({ ...base, purchaseCurrency: "TWD" })).toThrow(
+      "purchaseCurrency and fxRateNumerator/fxRateDenominator must be set together",
+    );
+  });
+  it("rejects an FX rate without a purchaseCurrency", () => {
+    expect(() =>
+      computeBill({ ...base, fxRateNumerator: 115, fxRateDenominator: 100 }),
+    ).toThrow("purchaseCurrency and fxRateNumerator/fxRateDenominator must be set together");
+  });
+  it("rejects an empty purchaseCurrency", () => {
+    expect(() =>
+      computeBill({ ...base, purchaseCurrency: "  ", fxRateNumerator: 115, fxRateDenominator: 100 }),
+    ).toThrow("purchaseCurrency must not be empty");
+  });
+  it("rejects a non-positive or non-integer FX rate", () => {
+    expect(() =>
+      computeBill({ ...base, purchaseCurrency: "TWD", fxRateNumerator: 0, fxRateDenominator: 100 }),
+    ).toThrow("fxRateNumerator must be a positive integer");
+    expect(() =>
+      computeBill({ ...base, purchaseCurrency: "TWD", fxRateNumerator: 1.5, fxRateDenominator: 100 }),
+    ).toThrow("fxRateNumerator must be a positive integer");
+    expect(() =>
+      computeBill({ ...base, purchaseCurrency: "TWD", fxRateNumerator: 115, fxRateDenominator: 0 }),
+    ).toThrow("fxRateDenominator must be a positive integer");
+  });
 });
 
 describe("computeBill graceful incomplete states", () => {

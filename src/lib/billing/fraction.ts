@@ -10,6 +10,7 @@ export function fraction(numerator: bigint, denominator: bigint = 1n): Fraction 
 }
 
 export const ZERO: Fraction = { numerator: 0n, denominator: 1n };
+export const ONE: Fraction = { numerator: 1n, denominator: 1n };
 
 export function multiply(a: Fraction, b: Fraction): Fraction {
   return {

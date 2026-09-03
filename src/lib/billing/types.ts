@@ -23,6 +23,17 @@ export interface BillInput {
    * ceiling is subtracted from their total). Falls back to peerIds[0] if unset or stale.
    */
   roundingAbsorberPeerId?: string;
+  /**
+   * #38: the receipt's own currency when it isn't THB (e.g. "TWD"), free text, one per Bill.
+   * Must be set together with fxRateNumerator/fxRateDenominator, or neither.
+   */
+  purchaseCurrency?: string;
+  /**
+   * #38: exact rate as an integer fraction — THB per 1 unit of purchaseCurrency.
+   * e.g. "1 TWD = 1.15 THB" is numerator=115, denominator=100. Never a float.
+   */
+  fxRateNumerator?: number;
+  fxRateDenominator?: number;
 }
 
 export interface PeerBreakdown {

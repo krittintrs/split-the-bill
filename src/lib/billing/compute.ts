@@ -240,6 +240,18 @@ function validate(input: BillInput): void {
       seenPeers.add(peerId);
     }
   }
+
+  // 4. FX (#38): purchaseCurrency and fxRate must both be present or both absent.
+  const hasCurrency = input.purchaseCurrency !== undefined;
+  const hasRate = input.fxRateNumerator !== undefined || input.fxRateDenominator !== undefined;
+  if (hasCurrency !== hasRate)
+    throw new Error("purchaseCurrency and fxRateNumerator/fxRateDenominator must be set together");
+  if (hasCurrency) {
+    if (input.purchaseCurrency!.trim().length === 0)
+      throw new Error("purchaseCurrency must not be empty");
+    assertPositiveInt(input.fxRateNumerator!, "fxRateNumerator");
+    assertPositiveInt(input.fxRateDenominator!, "fxRateDenominator");
+  }
 }
 
 function assertSatang(value: number, label: string): void {
@@ -250,4 +262,8 @@ function assertSatang(value: number, label: string): void {
 function assertPercent(value: number, label: string): void {
   if (!Number.isInteger(value) || value < 0 || value > 100)
     throw new Error(`${label} must be an integer 0-100`);
+}
+
+function assertPositiveInt(value: number, label: string): void {
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`${label} must be a positive integer`);
 }
