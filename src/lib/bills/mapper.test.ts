@@ -66,4 +66,36 @@ describe("mapToBillInput", () => {
     const result = computeBill(input);
     expect(result.untickedItemIds).toEqual(["i1", "i2"]);
   });
+
+  // #38: right after the organizer flips the FX toggle on, purchase_currency is "" (not yet
+  // typed) while fx_rate_numerator/denominator already hold the 1/1 placeholder — this must
+  // compute gracefully as "no FX yet", not reach computeBill with a currency that fails its
+  // own non-empty check (bug: this threw "purchaseCurrency must not be empty" in practice).
+  it("treats a blank purchase_currency as unset, even with rate fields already present", () => {
+    const midEdit: BillRow = {
+      ...bill,
+      purchase_currency: "",
+      fx_rate_numerator: 1,
+      fx_rate_denominator: 1,
+    };
+    const input = mapToBillInput(midEdit, items, peers, ticks, null);
+    expect(input.purchaseCurrency).toBeUndefined();
+    expect(input.fxRateNumerator).toBeUndefined();
+    expect(input.fxRateDenominator).toBeUndefined();
+    expect(() => computeBill(input)).not.toThrow();
+  });
+
+  it("treats a whitespace-only purchase_currency as unset too", () => {
+    const midEdit: BillRow = { ...bill, purchase_currency: "  ", fx_rate_numerator: 1, fx_rate_denominator: 1 };
+    const input = mapToBillInput(midEdit, items, peers, ticks, null);
+    expect(input.purchaseCurrency).toBeUndefined();
+  });
+
+  it("passes a real purchase_currency + rate through once actually set", () => {
+    const withFx: BillRow = { ...bill, purchase_currency: "TWD", fx_rate_numerator: 115, fx_rate_denominator: 100 };
+    const input = mapToBillInput(withFx, items, peers, ticks, null);
+    expect(input.purchaseCurrency).toBe("TWD");
+    expect(input.fxRateNumerator).toBe(115);
+    expect(input.fxRateDenominator).toBe(100);
+  });
 });

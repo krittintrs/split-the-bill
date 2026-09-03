@@ -180,6 +180,10 @@ export default function PeerBill({
     [itemsSorted, tickedByItem],
   );
 
+  // #38: a blank/whitespace-only purchaseCurrency (organizer mid-edit, toggle just flipped
+  // on) must compute gracefully as "no FX yet" — same reasoning as mapToBillInput.
+  const purchaseCurrency = bill.bill.purchaseCurrency?.trim() || undefined;
+
   const billInput: BillInput = useMemo(
     () => ({
       items: displayItems,
@@ -191,11 +195,11 @@ export default function PeerBill({
       serviceChargePercent: bill.bill.serviceChargePercent,
       vatPercent: bill.bill.vatPercent,
       roundingAbsorberPeerId: bill.bill.roundingAbsorberPeerId ?? undefined,
-      purchaseCurrency: bill.bill.purchaseCurrency ?? undefined,
-      fxRateNumerator: bill.bill.fxRateNumerator ?? undefined,
-      fxRateDenominator: bill.bill.fxRateDenominator ?? undefined,
+      purchaseCurrency,
+      fxRateNumerator: purchaseCurrency ? (bill.bill.fxRateNumerator ?? undefined) : undefined,
+      fxRateDenominator: purchaseCurrency ? (bill.bill.fxRateDenominator ?? undefined) : undefined,
     }),
-    [displayItems, peersSorted, bill.bill],
+    [displayItems, peersSorted, bill.bill, purchaseCurrency],
   );
 
   const result = useMemo(() => computeBill(billInput), [billInput]);

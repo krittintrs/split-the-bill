@@ -16,6 +16,14 @@ export function mapToBillInput(
     tickedByItem.set(tick.line_item_id, list);
   }
 
+  // #38: turning the FX toggle on writes purchase_currency = "" before the organizer types
+  // anything (with fx_rate_numerator/denominator already set to a 1/1 placeholder) — an
+  // incomplete-while-editing state, which must compute gracefully as "no FX yet" rather than
+  // reach computeBill's validate() with a currency that fails its own non-empty check. Treat
+  // a blank/whitespace-only currency as unset, and collapse the whole bundle together so a
+  // stray rate never reaches computeBill without a real currency to pair with.
+  const purchaseCurrency = bill.purchase_currency?.trim() || undefined;
+
   return {
     items: [...items]
       .sort((a, b) => a.position - b.position)
@@ -35,8 +43,8 @@ export function mapToBillInput(
     serviceChargePercent: bill.service_charge_percent,
     vatPercent: bill.vat_percent,
     roundingAbsorberPeerId: bill.rounding_absorber_peer_id ?? selfPeerId ?? undefined,
-    purchaseCurrency: bill.purchase_currency ?? undefined,
-    fxRateNumerator: bill.fx_rate_numerator ?? undefined,
-    fxRateDenominator: bill.fx_rate_denominator ?? undefined,
+    purchaseCurrency,
+    fxRateNumerator: purchaseCurrency ? (bill.fx_rate_numerator ?? undefined) : undefined,
+    fxRateDenominator: purchaseCurrency ? (bill.fx_rate_denominator ?? undefined) : undefined,
   };
 }
