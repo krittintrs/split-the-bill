@@ -123,48 +123,34 @@ export default function CardsView({
       </section>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-        {/* Two toggle buttons flanking the badge, not one button wrapping everything:
-            RoundingLeftoverBadge is itself a button (+ its own portal'd menu), and
-            nesting interactive elements inside a <button> is invalid HTML that
-            browsers mishandle. Either button expands the sheet; the badge in the
-            middle opens its own picker, always visible with zero taps (matches
-            MatrixView's always-visible รวมต่อคน row — the equivalent here is the
-            collapsed bar, not the expandable panel below it). */}
-        <div className="flex min-h-14 w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3">
+        {/* #38: total, badge, and receipt-status used to share one flex-wrap row -- with
+            longer currency-prefixed amounts that no longer fit, and flex-wrap just broke
+            them across lines unpredictably instead of failing cleanly. Two fixed rows
+            instead: total (with the expand chevron) alone on row 1, badge + status on
+            row 2. RoundingLeftoverBadge is itself a button (+ its own portal'd menu), so
+            it and the status label stay two separate toggle buttons rather than one
+            wrapping everything -- nesting interactive elements inside a <button> is
+            invalid HTML that browsers mishandle. Either toggles the sheet; the badge
+            opens its own picker, always visible with zero taps (matches MatrixView's
+            always-visible รวมต่อคน row -- the equivalent here is the collapsed bar, not
+            the expandable panel below it). */}
+        <div className="flex w-full flex-col gap-1 px-4 py-3">
           <button
             type="button"
             onClick={() => setTotalsOpen((open) => !open)}
             aria-expanded={totalsOpen}
-            className="flex min-w-0 flex-1 items-center text-left transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink"
+            className="flex min-h-7 w-full items-center justify-between gap-2 text-left transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink"
           >
             <span className="truncate font-semibold tabular-nums">
               ยอดรวม {formatSatang(result.checksumSatang)}
             </span>
-          </button>
-          {result.billLeftover && (
-            <RoundingLeftoverBadge
-              leftoverSatang={result.billLeftover.leftoverSatang}
-              candidateIds={peers.map((peer) => peer.id)}
-              candidateNames={peerNames}
-              absorberId={result.billLeftover.absorberPeerId}
-              onChange={onUpdateBillAbsorber}
-              openDirection="up"
-            />
-          )}
-          <button
-            type="button"
-            onClick={() => setTotalsOpen((open) => !open)}
-            aria-expanded={totalsOpen}
-            className={`flex shrink-0 items-center gap-1 text-sm font-bold transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink ${receiptStatusCls(receipt.state)}`}
-          >
-            {receipt.label}
             <svg
               width="16"
               height="16"
               viewBox="0 0 12 12"
               fill="none"
               aria-hidden="true"
-              className={`shrink-0 transition-transform ${totalsOpen ? "" : "rotate-180"}`}
+              className={`shrink-0 text-ink-muted transition-transform ${totalsOpen ? "" : "rotate-180"}`}
             >
               <path
                 d="M2 4l4 4 4-4"
@@ -175,9 +161,48 @@ export default function CardsView({
               />
             </svg>
           </button>
+          <div className="flex min-h-7 w-full flex-wrap items-center gap-x-2 gap-y-1">
+            {result.billLeftover && (
+              <RoundingLeftoverBadge
+                leftoverSatang={result.billLeftover.leftoverSatang}
+                candidateIds={peers.map((peer) => peer.id)}
+                candidateNames={peerNames}
+                absorberId={result.billLeftover.absorberPeerId}
+                onChange={onUpdateBillAbsorber}
+                openDirection="up"
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setTotalsOpen((open) => !open)}
+              aria-expanded={totalsOpen}
+              className={`flex items-center text-sm font-bold transition active:scale-[0.99] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-ink ${receiptStatusCls(receipt.state)}`}
+            >
+              {receipt.label}
+            </button>
+          </div>
         </div>
         {totalsOpen && (
           <div className="max-h-[45dvh] overflow-y-auto border-t border-border px-4 py-3">
+            {/* #38: only in the expanded panel, not the already-tight collapsed bar --
+                the Purchase-scale figures alongside the THB ones peers already see. */}
+            {result.purchase && (
+              <div className="mb-3 flex flex-col gap-0.5 border-b border-dashed border-border pb-3 text-xs">
+                <div className="flex justify-between tabular-nums text-ink-muted">
+                  <span>รวมตามใบเสร็จ ({result.purchase.currency})</span>
+                  <span className="text-ink">
+                    {formatMinorUnits(result.purchase.checksumSatang, result.purchase.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between tabular-nums text-ink-muted">
+                  <span>
+                    แปลงเป็นบาท (1 {result.purchase.currency} = ฿
+                    {(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()})
+                  </span>
+                  <span className="text-ink">{formatSatang(result.checksumSatang)}</span>
+                </div>
+              </div>
+            )}
             <ul className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
               {peers.map((peer) => (
                 <li key={peer.id} className="flex justify-between tabular-nums">

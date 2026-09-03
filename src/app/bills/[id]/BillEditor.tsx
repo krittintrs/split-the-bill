@@ -902,7 +902,7 @@ function ItemRow({
 
   return (
     <div className="flex flex-wrap items-end gap-2 border-b border-border pb-3 last:border-b-0 last:pb-0">
-      <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-ink-muted">
+      <label className="flex min-w-32 max-w-[220px] flex-1 flex-col gap-1 text-xs text-ink-muted">
         เมนู
         <input
           defaultValue={item.name}
@@ -1027,7 +1027,7 @@ function ItemRow({
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
           ลด
           <MoneyBox
-            widthCls="w-20"
+            widthCls="w-28"
             symbol={symbol}
             defaultValue={satangToInput(item.discount_satang)}
             onBlur={(e) => moneyBlur(e, (satang) => onUpdate(item.id, { discount_satang: satang }))}

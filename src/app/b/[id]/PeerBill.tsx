@@ -730,22 +730,27 @@ export default function PeerBill({
           unchanged) — a plain block div stacks children in source order regardless of
           the lg:grid classes, so the desktop reorder is done with lg:order-* instead of
           moving paybackPanel later in the JSX. */}
-      {/* minmax(0, ...) on both tracks, not bare fr units: a bare fr track's min-width
-          defaults to auto (its content's min-content size), so with enough peers the
-          matrix's own overflow-x-auto never engages -- the grid track just grows past
-          max-w-5xl instead. minmax(0, ...) clamps the track so the table scrolls inside
-          it, and the page width stays fixed regardless of peer count. */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
+      {/* minmax(0, ...) on the matrix track, not a bare fr unit: a bare fr track's
+          min-width defaults to auto (its content's min-content size), so with enough
+          peers the matrix's own overflow-x-auto never engages -- the grid track just
+          grows past max-w-5xl instead. minmax(0, ...) clamps the track so the table
+          scrolls inside it, and the page width stays fixed regardless of peer count.
+          The payback column is a fixed 320px, not a fraction: a QR code + two buttons
+          don't need anywhere near 1fr of a 1024px page, so a flexible track just left
+          a wide card mostly empty margin. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
         <div className="lg:order-2">{paybackPanel}</div>
         <div className="mt-4 flex flex-col gap-4 lg:order-1 lg:mt-0">
           <div className="hidden lg:block">{matrixView}</div>
           <div className="lg:hidden">{chipListView}</div>
+          {/* #38: lives under the peer table specifically (not after the whole grid),
+              so its position never depends on the payback column's height -- it used to
+              float in the gap under a shorter QR card once the matrix grew taller. */}
+          <p className="text-right text-sm font-semibold tabular-nums">
+            รวมทั้งบิล {formatSatang(result.checksumSatang)}
+          </p>
         </div>
       </div>
-
-      <p className="text-right text-sm font-semibold tabular-nums">
-        รวมทั้งบิล {formatSatang(result.checksumSatang)}
-      </p>
     </main>
   );
 }
