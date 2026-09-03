@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type FocusEvent } from "react";
+import { useMemo, useRef, useState, type FocusEvent, type FormEvent, type Ref } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -59,6 +59,45 @@ function PercentBox({
       <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-sm text-ink-muted">
         %
       </span>
+    </div>
+  );
+}
+
+/**
+ * #38: a money `<input>` with a permanent, always-visible currency prefix (not a placeholder,
+ * not a parenthetical in the label) — mirrors PercentBox's suffix, just on the leading edge.
+ * `inputRef` (not `ref`) so ItemRow can keep forwarding priceRef/totalRef for its imperative
+ * cross-field writes.
+ */
+function MoneyBox({
+  inputRef,
+  defaultValue,
+  symbol,
+  onInput,
+  onBlur,
+  widthCls = "w-24",
+}: {
+  inputRef?: Ref<HTMLInputElement>;
+  defaultValue: string;
+  symbol: string;
+  onInput?: (e: FormEvent<HTMLInputElement>) => void;
+  onBlur: (e: FocusEvent<HTMLInputElement>) => void;
+  widthCls?: string;
+}) {
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center text-sm text-ink-muted">
+        {symbol}
+      </span>
+      <input
+        ref={inputRef}
+        inputMode="decimal"
+        defaultValue={defaultValue}
+        placeholder="0.00"
+        onInput={onInput}
+        onBlur={onBlur}
+        className={`${inputCls} ${widthCls} pl-9 text-right tabular-nums`}
+      />
     </div>
   );
 }
@@ -511,7 +550,13 @@ export default function BillEditor({
           <p className="text-sm text-ink-muted">ยังไม่มีรายการ — เพิ่มเมนูจากใบเสร็จได้เลย</p>
         )}
         {items.map((item) => (
-          <ItemRow key={item.id} item={item} onUpdate={onUpdateItem} onRemove={onRemoveItem} />
+          <ItemRow
+            key={item.id}
+            item={item}
+            purchaseCurrency={bill.purchase_currency}
+            onUpdate={onUpdateItem}
+            onRemove={onRemoveItem}
+          />
         ))}
         <button
           type="button"
@@ -585,6 +630,62 @@ export default function BillEditor({
             </div>
           </label>
         </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="mb-2 font-semibold">เช็คกับใบเสร็จ</h2>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            ยอดตามใบเสร็จ ({bill.purchase_currency ?? "฿"})
+            <input
+              inputMode="decimal"
+              defaultValue={satangToInput(bill.receipt_total_satang)}
+              placeholder="0.00"
+              onBlur={(e) => moneyBlur(e, (satang) => saveBill({ receipt_total_satang: satang }))}
+              className={`${inputCls} w-36 text-right tabular-nums`}
+            />
+          </label>
+          <div className="flex min-w-48 flex-1 flex-col gap-1 border-t border-border pt-3 text-sm sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
+            {/* #38: this block verifies against the paper receipt, so it always reads in the
+                Purchase Currency (result.purchase), never the THB top-level fields — those are
+                shown separately below, already converted. */}
+            <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+              <span>รวมรายการ</span>
+              <span>{formatCheck(checkFigures.subtotalSatang)}</span>
+            </div>
+            {bill.service_charge_percent > 0 && (
+              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+                <span>+ Service charge {bill.service_charge_percent}%</span>
+                <span>{formatCheck(checkFigures.serviceChargeSatang)}</span>
+              </div>
+            )}
+            {bill.vat_percent > 0 && (
+              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+                <span>+ VAT {bill.vat_percent}%</span>
+                <span>{formatCheck(checkFigures.vatSatang)}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
+              <span>รวม</span>
+              <span>{formatCheck(checkFigures.receiptTotalSatang)}</span>
+            </div>
+            <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
+              {receipt.label}
+            </span>
+          </div>
+        </div>
+        {bill.purchase_currency !== null && result.purchase && (
+          <div className="mt-4 rounded-lg border border-dashed border-primary bg-surface-tint p-3">
+            <p className="mb-2 text-xs font-semibold text-primary-ink">
+              ยอดที่จะได้รับจริง (฿) &middot; แปลงด้วยอัตรา 1 {result.purchase.currency} = ฿
+              {(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}
+            </p>
+            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
+              <span>เช็คกับใบเสร็จ &times; อัตรา (฿)</span>
+              <span>{formatSatang(result.checksumSatang)}</span>
+            </div>
+          </div>
+        )}
       </section>
 
       <PeerPicker
@@ -735,74 +836,25 @@ export default function BillEditor({
         )}
       </section>
 
-      <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-2 font-semibold">เช็คกับใบเสร็จ</h2>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-          <label className="flex flex-col gap-1 text-xs text-ink-muted">
-            ยอดตามใบเสร็จ ({bill.purchase_currency ?? "฿"})
-            <input
-              inputMode="decimal"
-              defaultValue={satangToInput(bill.receipt_total_satang)}
-              placeholder="0.00"
-              onBlur={(e) => moneyBlur(e, (satang) => saveBill({ receipt_total_satang: satang }))}
-              className={`${inputCls} w-36 text-right tabular-nums`}
-            />
-          </label>
-          <div className="flex min-w-48 flex-1 flex-col gap-1 border-t border-border pt-3 text-sm sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
-            {/* #38: this block verifies against the paper receipt, so it always reads in the
-                Purchase Currency (result.purchase), never the THB top-level fields — those are
-                shown separately below, already converted. */}
-            <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
-              <span>รวมรายการ</span>
-              <span>{formatCheck(checkFigures.subtotalSatang)}</span>
-            </div>
-            {bill.service_charge_percent > 0 && (
-              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
-                <span>+ Service charge {bill.service_charge_percent}%</span>
-                <span>{formatCheck(checkFigures.serviceChargeSatang)}</span>
-              </div>
-            )}
-            {bill.vat_percent > 0 && (
-              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
-                <span>+ VAT {bill.vat_percent}%</span>
-                <span>{formatCheck(checkFigures.vatSatang)}</span>
-              </div>
-            )}
-            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
-              <span>รวม</span>
-              <span>{formatCheck(checkFigures.receiptTotalSatang)}</span>
-            </div>
-            <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
-              {receipt.label}
-            </span>
-          </div>
-        </div>
-        {bill.purchase_currency !== null && result.purchase && (
-          <div className="mt-4 rounded-lg border border-dashed border-primary bg-surface-tint p-3">
-            <p className="mb-2 text-xs font-semibold text-primary-ink">
-              ยอดที่จะได้รับจริง (฿) &middot; แปลงด้วยอัตรา 1 {result.purchase.currency} = ฿
-              {(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}
-            </p>
-            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
-              <span>เช็คกับใบเสร็จ &times; อัตรา (฿)</span>
-              <span>{formatSatang(result.checksumSatang)}</span>
-            </div>
-          </div>
-        )}
-      </section>
     </main>
   );
 }
 
 function ItemRow({
   item,
+  purchaseCurrency,
   onUpdate,
   onRemove,
 }: {
   item: LineItemRow;
+  /** #38: when set, the money boxes' prefix becomes this instead of ฿. */
+  purchaseCurrency: string | null;
   onUpdate: (id: string, patch: Partial<LineItemRow>) => void;
   onRemove: (id: string) => void;
 }) {
+  const symbol = purchaseCurrency ?? "฿";
+  const formatMoney = (satang: number) =>
+    purchaseCurrency ? formatMinorUnits(satang, purchaseCurrency) : formatSatang(satang);
   // Price, qty and total are three views of two stored fields, so the boxes are
   // written imperatively (same idiom as moneyBlur) rather than made controlled:
   // it keeps the derived box in step without remounting an input mid-tab.
@@ -841,7 +893,7 @@ function ItemRow({
     setRoundedUp(
       settled === typedSatang
         ? null
-        : `ปัดขึ้น: ${formatSatang(unit)} × ${qty} = ${formatSatang(settled)}`,
+        : `ปัดขึ้น: ${formatMoney(unit)} × ${qty} = ${formatMoney(settled)}`,
     );
     return unit;
   }
@@ -862,12 +914,11 @@ function ItemRow({
       {/* The three linked boxes stay together when the row wraps on a phone. */}
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          ราคา ฿
-          <input
-            ref={priceRef}
-            inputMode="decimal"
+          ราคา
+          <MoneyBox
+            inputRef={priceRef}
+            symbol={symbol}
             defaultValue={satangToInput(item.unit_price_satang)}
-            placeholder="0.00"
             onInput={(e) => {
               priceDirty.current = true;
               // Live feedback while typing. Writes only the OTHER box, never the
@@ -890,7 +941,6 @@ function ItemRow({
                 }
               })
             }
-            className={`${inputCls} w-24 text-right tabular-nums`}
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -924,14 +974,13 @@ function ItemRow({
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          รวม ฿ (ก่อนลด)
-          <input
-            ref={totalRef}
-            inputMode="decimal"
+          รวม (ก่อนลด)
+          <MoneyBox
+            inputRef={totalRef}
+            symbol={symbol}
             defaultValue={satangToInput(
               totalFromUnitPriceSatang(item.unit_price_satang, item.qty),
             )}
-            placeholder="0.00"
             onInput={(e) => {
               totalDirty.current = true;
               // Live feedback: back-derive the unit price as they type. The
@@ -953,11 +1002,10 @@ function ItemRow({
                 onUpdate(item.id, { unit_price_satang: unit });
               }
             }}
-            className={`${inputCls} w-24 text-right tabular-nums`}
           />
         </label>
       </div>
-      {/* Likewise the discount pair, so ลด ฿ never wraps away from ลด %. */}
+      {/* Likewise the discount pair, so ลด never wraps away from ลด %. */}
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
           ลด %
@@ -973,13 +1021,12 @@ function ItemRow({
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          ลด ฿
-          <input
-            inputMode="decimal"
+          ลด
+          <MoneyBox
+            widthCls="w-20"
+            symbol={symbol}
             defaultValue={satangToInput(item.discount_satang)}
-            placeholder="0.00"
             onBlur={(e) => moneyBlur(e, (satang) => onUpdate(item.id, { discount_satang: satang }))}
-            className={`${inputCls} w-20 text-right tabular-nums`}
           />
         </label>
         <button
