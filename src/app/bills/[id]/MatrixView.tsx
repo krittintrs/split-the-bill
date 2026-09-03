@@ -36,18 +36,20 @@ export default function MatrixView({
   onUpdateBillAbsorber,
 }: Props) {
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
-  // #38: receiptTotalSatang is always the Purchase Currency figure (what's on the paper
-  // receipt), so it must check against the Purchase-scale checksum, not the THB one.
-  const receipt = receiptStatus(
-    receiptTotalSatang,
-    result.purchase ? result.purchase.checksumSatang : result.checksumSatang,
-  );
   // Every footer row's price column stays in that column's own currency (Purchase Currency
   // when set, matching the item rows and header above it); the peer columns beside each row
   // stay THB always — those are the actual settlement figures, never converted back.
   const checkFigures = result.purchase ?? result;
   const formatCheck = (amountMinor: number) =>
     purchaseCurrency ? formatMinorUnits(amountMinor, purchaseCurrency) : formatSatang(amountMinor);
+  // #38: receiptTotalSatang is always the Purchase Currency figure (what's on the paper
+  // receipt), so it must check against the Purchase-scale checksum, not the THB one — and
+  // the mismatch amount must format in that same currency, not hardcode ฿.
+  const receipt = receiptStatus(
+    receiptTotalSatang,
+    result.purchase ? result.purchase.checksumSatang : result.checksumSatang,
+    formatCheck,
+  );
   const hasDiscount =
     billDiscountPercent > 0 ||
     billDiscountSatang > 0 ||

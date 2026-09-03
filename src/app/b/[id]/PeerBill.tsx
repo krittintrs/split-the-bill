@@ -362,8 +362,8 @@ export default function PeerBill({
             return (
               <li key={peer.id} className="flex items-center gap-2 py-1">
                 <div className="flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left">
-                  <span>{peerName.get(peer.id)}</span>
-                  <span className="rounded-full bg-surface-tint px-2 py-0.5 text-xs font-semibold text-primary-ink">
+                  <span className="whitespace-nowrap">{peerName.get(peer.id)}</span>
+                  <span className="whitespace-nowrap rounded-full bg-surface-tint px-2 py-0.5 text-xs font-semibold text-primary-ink">
                     เจ้าของบิล
                   </span>
                   {absorbsLeftover && result.billLeftover && (
@@ -395,11 +395,11 @@ export default function PeerBill({
                     isClaimed ? "bg-surface-tint" : "hover:bg-surface-tint"
                   }`}
                 >
-                  <span className={paid[peer.id] ? "text-ink-muted" : ""}>
+                  <span className={`whitespace-nowrap ${paid[peer.id] ? "text-ink-muted" : ""}`}>
                     {peerName.get(peer.id)}
                   </span>
                   {isClaimed && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                    <span className="whitespace-nowrap rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
                       คุณ
                     </span>
                   )}
@@ -745,8 +745,11 @@ export default function PeerBill({
           <div className="lg:hidden">{chipListView}</div>
           {/* #38: lives under the peer table specifically (not after the whole grid),
               so its position never depends on the payback column's height -- it used to
-              float in the gap under a shorter QR card once the matrix grew taller. */}
-          <p className="text-right text-sm font-semibold tabular-nums">
+              float in the gap under a shorter QR card once the matrix grew taller.
+              Left-aligned (not text-right): right-aligned text in this full-width left
+              column hugs the boundary with the payback column, reading as if it belonged
+              there instead of under the table above it. */}
+          <p className="text-sm font-semibold tabular-nums">
             รวมทั้งบิล {formatSatang(result.checksumSatang)}
           </p>
         </div>

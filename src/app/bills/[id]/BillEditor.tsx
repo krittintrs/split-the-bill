@@ -222,18 +222,20 @@ export default function BillEditor({
     () => computeBill(mapToBillInput(bill, items, peers, ticks, selfPeerId)),
     [bill, items, peers, ticks, selfPeerId],
   );
-  // #38: ยอดตามใบเสร็จ is always the Purchase Currency figure (what's on the paper receipt) —
-  // check it against the Purchase-scale checksum, not the THB one, or a TWD receipt total
-  // would be compared against a baht sum and never tie.
-  const receipt = receiptStatus(
-    bill.receipt_total_satang,
-    result.purchase ? result.purchase.checksumSatang : result.checksumSatang,
-  );
   // #38: the "matches the paper receipt" block reads Purchase-scale figures (same shape as the
   // THB ones by design — see PurchaseSideResult), formatted in that currency, not ฿.
   const checkFigures = result.purchase ?? result;
   const formatCheck = (amountMinor: number) =>
     bill.purchase_currency ? formatMinorUnits(amountMinor, bill.purchase_currency) : formatSatang(amountMinor);
+  // #38: ยอดตามใบเสร็จ is always the Purchase Currency figure (what's on the paper receipt) —
+  // check it against the Purchase-scale checksum, not the THB one, or a TWD receipt total
+  // would be compared against a baht sum and never tie. The mismatch label must format in
+  // that same currency too — it used to hardcode ฿ even when both operands were TWD.
+  const receipt = receiptStatus(
+    bill.receipt_total_satang,
+    result.purchase ? result.purchase.checksumSatang : result.checksumSatang,
+    formatCheck,
+  );
 
   /**
    * Autosave failed → surface an inline banner instead of forcing a reload.
@@ -902,7 +904,7 @@ function ItemRow({
 
   return (
     <div className="flex flex-wrap items-end gap-2 border-b border-border pb-3 last:border-b-0 last:pb-0">
-      <label className="flex min-w-32 max-w-[220px] flex-1 flex-col gap-1 text-xs text-ink-muted">
+      <label className="flex min-w-32 flex-1 flex-col gap-1 text-xs text-ink-muted">
         เมนู
         <input
           defaultValue={item.name}
@@ -1052,14 +1054,20 @@ function ItemRow({
 }
 
 /** Display-only status: the not-yet-entered state is neutral, not an error. */
-export function receiptStatus(receiptTotalSatang: number, checksumSatang: number) {
+export function receiptStatus(
+  receiptTotalSatang: number,
+  checksumSatang: number,
+  /** #38: the mismatch amount is on the same scale as both operands above — THB by
+   * default, but Purchase Currency whenever the caller is comparing FX-scale figures. */
+  format: (amountMinor: number) => string = formatSatang,
+) {
   if (receiptTotalSatang === 0)
     return { state: "empty" as const, label: "ยังไม่ได้กรอกยอดใบเสร็จ" };
   if (receiptTotalSatang === checksumSatang)
     return { state: "match" as const, label: "✓ ตรงกับใบเสร็จ" };
   return {
     state: "mismatch" as const,
-    label: `✗ ต่างจากใบเสร็จ ${formatSatang(Math.abs(checksumSatang - receiptTotalSatang))}`,
+    label: `✗ ต่างจากใบเสร็จ ${format(Math.abs(checksumSatang - receiptTotalSatang))}`,
   };
 }
 
