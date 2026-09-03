@@ -211,6 +211,13 @@ export default function PeerBill({
     bill.bill.billDiscountSatang > 0 ||
     displayItems.some((item) => (item.discountPercent ?? 0) > 0 || (item.discountAmountSatang ?? 0) > 0);
 
+  // #38: intermediate rows (discount/subtotal/SC/VAT) stay receipt-native -- the conversion
+  // only happens once, at the very end, so a peer's per-row figure here reads in Purchase
+  // Currency throughout. Only the final "ยอดต่อคน" row below converts to THB.
+  const formatCheck = (amountMinor: number) =>
+    purchaseCurrency ? formatMinorUnits(amountMinor, purchaseCurrency) : formatSatang(amountMinor);
+  const peerCheckFigures = (peerId: string) => result.purchase?.peerBreakdowns[peerId] ?? result.peerBreakdowns[peerId];
+
   async function onTick(itemId: string, peerId: string) {
     if (locked) return;
     const alreadyTicked = (tickedByItem.get(itemId) ?? []).includes(peerId);
@@ -598,7 +605,7 @@ export default function PeerBill({
               <td className="sticky left-0 bg-surface p-3">ส่วนลด</td>
               {peersSorted.map((peer) => (
                 <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                  −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
+                  −{formatCheck(peerCheckFigures(peer.id)?.discountSatang ?? 0)}
                 </td>
               ))}
             </tr>
@@ -607,7 +614,7 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3">รวมเป็นเงิน</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                {formatSatang(result.peerBreakdowns[peer.id]?.subtotalSatang ?? 0)}
+                {formatCheck(peerCheckFigures(peer.id)?.subtotalSatang ?? 0)}
               </td>
             ))}
           </tr>
@@ -615,7 +622,7 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3">Service charge</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                {formatSatang(result.peerBreakdowns[peer.id]?.serviceChargeSatang ?? 0)}
+                {formatCheck(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0)}
               </td>
             ))}
           </tr>
@@ -626,15 +633,22 @@ export default function PeerBill({
                 {/* ADR-0011 known limitation: the negative-remainder guard can make a
                     non-absorber's displayed VAT residual negative even though their real
                     total never does. Clamp the display only, not the underlying math. */}
-                {formatSatang(Math.max(0, result.peerBreakdowns[peer.id]?.vatSatang ?? 0))}
+                {formatCheck(Math.max(0, peerCheckFigures(peer.id)?.vatSatang ?? 0))}
               </td>
             ))}
           </tr>
           <tr className="border-b border-border">
             <td className="sticky left-0 bg-surface p-3 font-semibold">ยอดต่อคน</td>
             {peersSorted.map((peer) => (
-              <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
-                {formatSatang(result.peerTotals[peer.id] ?? 0)}
+              <td key={peer.id} className="p-2 text-center tabular-nums">
+                {/* #38: the one row that actually converts -- TWD (the receipt share)
+                    stacked above the bold THB figure (what they actually pay). */}
+                {result.purchase && (
+                  <span className="block text-xs font-normal text-ink-muted">
+                    {formatMinorUnits(result.purchase.peerTotals[peer.id] ?? 0, result.purchase.currency)}
+                  </span>
+                )}
+                <span className="font-semibold">{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
               </td>
             ))}
           </tr>

@@ -42,6 +42,12 @@ export default function MatrixView({
   const checkFigures = result.purchase ?? result;
   const formatCheck = (amountMinor: number) =>
     purchaseCurrency ? formatMinorUnits(amountMinor, purchaseCurrency) : formatSatang(amountMinor);
+  // #38: every intermediate row (discount/subtotal/SC/VAT) is receipt-native — the FX
+  // conversion only happens once, at the very end. So a peer's per-row figure here reads
+  // in Purchase Currency throughout, same scale as the row's own reference column beside
+  // it; only the final "รวมต่อคน" row below converts to THB, since that's the one number
+  // that actually gets paid.
+  const peerCheckFigures = (peerId: string) => result.purchase?.peerBreakdowns[peerId] ?? result.peerBreakdowns[peerId];
   // #38: receiptTotalSatang is always the Purchase Currency figure (what's on the paper
   // receipt), so it must check against the Purchase-scale checksum, not the THB one — and
   // the mismatch amount must format in that same currency, not hardcode ฿.
@@ -155,7 +161,7 @@ export default function MatrixView({
                 </td>
                 {peers.map((peer) => (
                   <td key={peer.id} className="p-2 text-center tabular-nums">
-                    −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
+                    −{formatCheck(peerCheckFigures(peer.id)?.discountSatang ?? 0)}
                   </td>
                 ))}
               </tr>
@@ -167,7 +173,7 @@ export default function MatrixView({
               </td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
-                  {formatSatang(result.peerBreakdowns[peer.id]?.subtotalSatang ?? 0)}
+                  {formatCheck(peerCheckFigures(peer.id)?.subtotalSatang ?? 0)}
                 </td>
               ))}
             </tr>
@@ -178,7 +184,7 @@ export default function MatrixView({
               </td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
-                  {formatSatang(result.peerBreakdowns[peer.id]?.serviceChargeSatang ?? 0)}
+                  {formatCheck(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0)}
                 </td>
               ))}
             </tr>
@@ -190,7 +196,7 @@ export default function MatrixView({
                   {/* ADR-0011 known limitation: the negative-remainder guard can make a
                       non-absorber's displayed VAT residual negative even though their real
                       total never does. Clamp the display only, not the underlying math. */}
-                  {formatSatang(Math.max(0, result.peerBreakdowns[peer.id]?.vatSatang ?? 0))}
+                  {formatCheck(Math.max(0, peerCheckFigures(peer.id)?.vatSatang ?? 0))}
                 </td>
               ))}
             </tr>
@@ -214,7 +220,15 @@ export default function MatrixView({
               </td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
-                  {formatSatang(result.peerTotals[peer.id] ?? 0)}
+                  {/* #38: the one row where the conversion actually happened -- TWD (what
+                      the receipt said their share was) stacked above the bold THB figure
+                      (what they actually pay). Every row above this stays single-currency. */}
+                  {result.purchase && (
+                    <span className="block text-xs font-normal text-ink-muted">
+                      {formatMinorUnits(result.purchase.peerTotals[peer.id] ?? 0, result.purchase.currency)}
+                    </span>
+                  )}
+                  <span className="font-semibold">{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
                 </td>
               ))}
             </tr>

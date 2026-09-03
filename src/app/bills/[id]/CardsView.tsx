@@ -207,16 +207,25 @@ export default function CardsView({
                 </div>
               </div>
             )}
-            <ul className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
+            <ul className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-3">
               {peers.map((peer) => (
-                <li key={peer.id} className="flex justify-between tabular-nums">
-                  <span>
+                <li key={peer.id} className="flex items-baseline justify-between gap-2 tabular-nums">
+                  <span className="truncate">
                     {peer.name}
                     {peer.id === selfPeerId && (
                       <span className="ml-1 text-xs text-primary-ink">(คุณ)</span>
                     )}
                   </span>
-                  <span>{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
+                  <span className="text-right">
+                    {/* #38: TWD (the receipt share) above the bold THB figure they pay --
+                        same stacking as the peer table's own รวมต่อคน row. */}
+                    {result.purchase && (
+                      <span className="block text-xs font-normal text-ink-muted">
+                        {formatMinorUnits(result.purchase.peerTotals[peer.id] ?? 0, result.purchase.currency)}
+                      </span>
+                    )}
+                    <span className="font-medium">{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
+                  </span>
                 </li>
               ))}
             </ul>
