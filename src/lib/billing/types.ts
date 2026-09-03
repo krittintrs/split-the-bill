@@ -45,6 +45,28 @@ export interface PeerBreakdown {
   vatSatang: number;
 }
 
+/**
+ * #38: mirrors the top-level BillResult money fields, but in the Bill's Purchase Currency
+ * before the FX Rate is applied. Field names keep the "Satang" suffix even though the unit
+ * is the Purchase Currency's own minor unit (not THB satang) — reusing PeerBreakdown/the same
+ * shape avoids a second parallel type family for a structure that never actually diverges.
+ */
+export interface PurchaseSideResult {
+  currency: string;
+  rateNumerator: number;
+  rateDenominator: number;
+  peerTotals: Record<string, number>;
+  checksumSatang: number;
+  receiptTotalSatang: number;
+  surplusSatang: number;
+  discountSatang: number;
+  subtotalSatang: number;
+  serviceChargeSatang: number;
+  vatSatang: number;
+  peerBreakdowns: Record<string, PeerBreakdown>;
+  billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
+}
+
 export interface BillResult {
   /** The money truth: exact pipeline sum, ceil'd ONCE per peer (ADR-0001). */
   peerTotals: Record<string, number>;
@@ -75,4 +97,6 @@ export interface BillResult {
    * see compute.ts). Absent (undefined) whenever any item is unticked or nothing to round.
    */
   billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
+  /** #38: present only when the Bill has a Purchase Currency + FX Rate. */
+  purchase: PurchaseSideResult | undefined;
 }

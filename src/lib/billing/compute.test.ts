@@ -610,3 +610,72 @@ describe("ADR-0011 v2: single bill-wide rounding discount", () => {
     expect(r.billLeftover).toBeUndefined();
   });
 });
+
+describe("computeBill with a Purchase Currency + FX Rate (#38)", () => {
+  it("produces both a Purchase-scale and a THB-scale settlement, each tying exactly", () => {
+    const bill: BillInput = {
+      items: [{ id: "i1", unitPriceSatang: 10000, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+      roundingAbsorberPeerId: "a",
+      purchaseCurrency: "TWD",
+      fxRateNumerator: 115,
+      fxRateDenominator: 100,
+    };
+    const r = computeBill(bill);
+
+    // Purchase side (TWD): NT$100.00 ÷ 3 → ceil 33.34 each → checksum 100.02 vs
+    // receipt 100.00 → leftover 0.02 off the absorber (identical mechanism to ADR-0011,
+    // unaffected by FX — same worked example as ADR-0011's own doc, just at ×100 scale).
+    expect(r.purchase).toEqual({
+      currency: "TWD",
+      rateNumerator: 115,
+      rateDenominator: 100,
+      peerTotals: { a: 3332, b: 3334, c: 3334 },
+      checksumSatang: 10000,
+      receiptTotalSatang: 10000,
+      surplusSatang: 0,
+      discountSatang: 0,
+      subtotalSatang: 10000,
+      serviceChargeSatang: 0,
+      vatSatang: 0,
+      // Peer "a" absorbs the leftover: total drops to 3332, but its OWN independent ceiling
+      // (subtotalSatang, unaffected by the subtraction — ADR-0011) stays 3334, so the displayed
+      // vatSatang residual (total − subtotal − SC) goes negative. Documented ADR-0011 behavior,
+      // not a bug: peerTotals itself (checked below) is never negative.
+      peerBreakdowns: {
+        a: { discountSatang: 0, subtotalSatang: 3334, serviceChargeSatang: 0, vatSatang: -2 },
+        b: { discountSatang: 0, subtotalSatang: 3334, serviceChargeSatang: 0, vatSatang: 0 },
+        c: { discountSatang: 0, subtotalSatang: 3334, serviceChargeSatang: 0, vatSatang: 0 },
+      },
+      billLeftover: { leftoverSatang: 2, absorberPeerId: "a" },
+    });
+
+    // THB side (top level): same three exact fractions × 1.15 → 38.34 each → checksum
+    // 115.02 vs receipt (100.00 × 1.15 = 115.00) → leftover 0.02 off the same absorber.
+    expect(r.peerTotals).toEqual({ a: 3832, b: 3834, c: 3834 });
+    expect(r.checksumSatang).toBe(11500);
+    expect(r.receiptTotalSatang).toBe(11500);
+    expect(r.surplusSatang).toBe(0);
+    expect(r.billLeftover).toEqual({ leftoverSatang: 2, absorberPeerId: "a" });
+    // Same negative-residual note as the purchase side above, at THB scale.
+    expect(r.peerBreakdowns.a).toEqual({
+      discountSatang: 0,
+      subtotalSatang: 3834,
+      serviceChargeSatang: 0,
+      vatSatang: -2,
+    });
+  });
+
+  it("leaves purchase undefined and every other field unchanged with no Purchase Currency", () => {
+    const withoutFx: BillInput = {
+      items: [{ id: "i1", unitPriceSatang: 10000, qty: 1, tickedBy: ["a", "b", "c"] }],
+      peerIds: ["a", "b", "c"],
+      serviceChargePercent: 0,
+      vatPercent: 0,
+      roundingAbsorberPeerId: "a",
+    };
+    expect(computeBill(withoutFx).purchase).toBeUndefined();
+  });
+});
