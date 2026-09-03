@@ -35,5 +35,8 @@ export function mapToBillInput(
     serviceChargePercent: bill.service_charge_percent,
     vatPercent: bill.vat_percent,
     roundingAbsorberPeerId: bill.rounding_absorber_peer_id ?? selfPeerId ?? undefined,
+    purchaseCurrency: bill.purchase_currency ?? undefined,
+    fxRateNumerator: bill.fx_rate_numerator ?? undefined,
+    fxRateDenominator: bill.fx_rate_denominator ?? undefined,
   };
 }

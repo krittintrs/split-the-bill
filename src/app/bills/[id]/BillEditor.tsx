@@ -86,6 +86,28 @@ function moneyBlur(
   save(satang);
 }
 
+/** #38: render the stored numerator/denominator fraction as a plain decimal string. */
+function fxRateToInput(numerator: number | null, denominator: number | null): string {
+  if (numerator === null || denominator === null || denominator === 0) return "";
+  return String(numerator / denominator);
+}
+
+/** #38: parse a typed decimal rate (e.g. "1.15") into an exact integer fraction. */
+function rateBlur(
+  e: FocusEvent<HTMLInputElement>,
+  cb: (numerator: number, denominator: number) => void,
+): void {
+  const raw = e.target.value.trim();
+  if (raw === "") return;
+  const match = /^(\d+)(?:\.(\d+))?$/.exec(raw);
+  if (!match) return;
+  const [, whole, frac = ""] = match;
+  const numerator = Number(whole + frac);
+  const denominator = 10 ** frac.length;
+  if (numerator <= 0) return;
+  cb(numerator, denominator);
+}
+
 interface SaveError {
   message: string;
   retry: () => void;
@@ -419,6 +441,59 @@ export default function BillEditor({
         </label>
       </section>
 
+      <section className="flex flex-col gap-3 rounded-xl border-2 border-primary bg-surface p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">บิลนี้จ่ายเป็นเงินต่างประเทศ</h2>
+            <p className="text-xs text-ink-muted">
+              ใส่ราคาจากใบเสร็จตามสกุลเงินจริง แล้วแปลงเป็นบาทให้เพื่อนจ่ายกลับ
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={bill.purchase_currency !== null}
+            onChange={(e) =>
+              saveBill(
+                e.target.checked
+                  ? { purchase_currency: "", fx_rate_numerator: 1, fx_rate_denominator: 1 }
+                  : { purchase_currency: null, fx_rate_numerator: null, fx_rate_denominator: null },
+              )
+            }
+            className="h-6 w-11 accent-primary"
+            aria-label="เปิดใช้งานสกุลเงินต่างประเทศ"
+          />
+        </div>
+        {bill.purchase_currency !== null && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-xs text-ink-muted">
+              สกุลเงินต้นทาง
+              <input
+                key={`currency-${bill.purchase_currency}`}
+                defaultValue={bill.purchase_currency ?? ""}
+                placeholder="เช่น TWD"
+                onBlur={(e) => {
+                  const value = e.target.value.trim().toUpperCase();
+                  if (value !== bill.purchase_currency) saveBill({ purchase_currency: value });
+                }}
+                className={inputCls}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-ink-muted">
+              อัตราแลกเปลี่ยน (1 {bill.purchase_currency || "หน่วย"} = ? ฿)
+              <input
+                key={`rate-${bill.fx_rate_numerator}-${bill.fx_rate_denominator}`}
+                inputMode="decimal"
+                defaultValue={fxRateToInput(bill.fx_rate_numerator, bill.fx_rate_denominator)}
+                placeholder="1.15"
+                onBlur={(e) => rateBlur(e, (n, d) => saveBill({ fx_rate_numerator: n, fx_rate_denominator: d }))}
+                className={`${inputCls} tabular-nums`}
+              />
+              <span className="text-[11px] text-ink-muted">กรอกเอง ไม่ดึงอัตราสดจากอินเทอร์เน็ต</span>
+            </label>
+          </div>
+        )}
+      </section>
+
       <section className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
         <h2 className="font-semibold">รายการอาหาร</h2>
         {items.length === 0 && (
@@ -501,47 +576,6 @@ export default function BillEditor({
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-surface p-4">
-        <h2 className="mb-2 font-semibold">เช็คกับใบเสร็จ</h2>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-          <label className="flex flex-col gap-1 text-xs text-ink-muted">
-            ยอดตามใบเสร็จ ฿
-            <input
-              inputMode="decimal"
-              defaultValue={satangToInput(bill.receipt_total_satang)}
-              placeholder="0.00"
-              onBlur={(e) => moneyBlur(e, (satang) => saveBill({ receipt_total_satang: satang }))}
-              className={`${inputCls} w-36 text-right tabular-nums`}
-            />
-          </label>
-          <div className="flex min-w-48 flex-1 flex-col gap-1 border-t border-border pt-3 text-sm sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
-            <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
-              <span>รวมรายการ</span>
-              <span>{formatSatang(result.subtotalSatang)}</span>
-            </div>
-            {bill.service_charge_percent > 0 && (
-              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
-                <span>+ Service charge {bill.service_charge_percent}%</span>
-                <span>{formatSatang(result.serviceChargeSatang)}</span>
-              </div>
-            )}
-            {bill.vat_percent > 0 && (
-              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
-                <span>+ VAT {bill.vat_percent}%</span>
-                <span>{formatSatang(result.vatSatang)}</span>
-              </div>
-            )}
-            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
-              <span>รวม</span>
-              <span>{formatSatang(result.receiptTotalSatang)}</span>
-            </div>
-            <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
-              {receipt.label}
-            </span>
-          </div>
-        </div>
-      </section>
-
       <PeerPicker
         peersOnBill={peers}
         recentPeers={recentPeers}
@@ -560,6 +594,7 @@ export default function BillEditor({
           billDiscountPercent={bill.bill_discount_percent}
           billDiscountSatang={bill.bill_discount_satang}
           selfPeerId={selfPeerId}
+          purchaseCurrency={bill.purchase_currency}
           onToggle={onToggle}
           onUpdateBillAbsorber={onUpdateBillAbsorber}
         />
@@ -572,6 +607,7 @@ export default function BillEditor({
           result={result}
           receiptTotalSatang={bill.receipt_total_satang}
           selfPeerId={selfPeerId}
+          purchaseCurrency={bill.purchase_currency}
           onToggle={onToggle}
           onUpdateBillAbsorber={onUpdateBillAbsorber}
         />
@@ -685,6 +721,59 @@ export default function BillEditor({
             </Link>{" "}
             เอาเครื่องหมายถูกออกเพื่อแก้เฉพาะบิลนี้
           </p>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="mb-2 font-semibold">เช็คกับใบเสร็จ</h2>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            ยอดตามใบเสร็จ ({bill.purchase_currency ?? "฿"})
+            <input
+              inputMode="decimal"
+              defaultValue={satangToInput(bill.receipt_total_satang)}
+              placeholder="0.00"
+              onBlur={(e) => moneyBlur(e, (satang) => saveBill({ receipt_total_satang: satang }))}
+              className={`${inputCls} w-36 text-right tabular-nums`}
+            />
+          </label>
+          <div className="flex min-w-48 flex-1 flex-col gap-1 border-t border-border pt-3 text-sm sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
+            <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+              <span>รวมรายการ</span>
+              <span>{formatSatang(result.subtotalSatang)}</span>
+            </div>
+            {bill.service_charge_percent > 0 && (
+              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+                <span>+ Service charge {bill.service_charge_percent}%</span>
+                <span>{formatSatang(result.serviceChargeSatang)}</span>
+              </div>
+            )}
+            {bill.vat_percent > 0 && (
+              <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
+                <span>+ VAT {bill.vat_percent}%</span>
+                <span>{formatSatang(result.vatSatang)}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
+              <span>รวม</span>
+              <span>{formatSatang(result.receiptTotalSatang)}</span>
+            </div>
+            <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
+              {receipt.label}
+            </span>
+          </div>
+        </div>
+        {bill.purchase_currency !== null && result.purchase && (
+          <div className="mt-4 rounded-lg border border-dashed border-primary bg-surface-tint p-3">
+            <p className="mb-2 text-xs font-semibold text-primary-ink">
+              ยอดที่จะได้รับจริง (฿) &middot; แปลงด้วยอัตรา 1 {result.purchase.currency} = ฿
+              {(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}
+            </p>
+            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
+              <span>เช็คกับใบเสร็จ &times; อัตรา (฿)</span>
+              <span>{formatSatang(result.checksumSatang)}</span>
+            </div>
+          </div>
         )}
       </section>
     </main>

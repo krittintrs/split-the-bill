@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import RoundingLeftoverBadge from "@/components/RoundingLeftoverBadge";
-import { formatSatang } from "@/lib/billing/money";
+import { formatMinorUnits, formatSatang } from "@/lib/billing/money";
 import type { BillResult } from "@/lib/billing/types";
 import type { LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
 import { receiptStatus, receiptStatusCls } from "./BillEditor";
@@ -14,6 +14,8 @@ interface Props {
   result: BillResult;
   receiptTotalSatang: number;
   selfPeerId: string | null;
+  /** #38: when set, item prices/shares render in this currency instead of ฿ (always THB). */
+  purchaseCurrency: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
   onUpdateBillAbsorber: (peerId: string) => void;
 }
@@ -26,6 +28,7 @@ export default function CardsView({
   result,
   receiptTotalSatang,
   selfPeerId,
+  purchaseCurrency,
   onToggle,
   onUpdateBillAbsorber,
 }: Props) {
@@ -71,7 +74,9 @@ export default function CardsView({
                   )}
                 </span>
                 <span className="tabular-nums text-ink-muted">
-                  {formatSatang(item.unit_price_satang * item.qty)}
+                  {purchaseCurrency
+                    ? formatMinorUnits(item.unit_price_satang * item.qty, purchaseCurrency)
+                    : formatSatang(item.unit_price_satang * item.qty)}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -99,7 +104,9 @@ export default function CardsView({
               ) : (
                 share !== undefined && (
                   <p className="mt-2 text-xs tabular-nums text-ink-muted">
-                    ÷ {tickerCount} = {formatSatang(share)} ต่อคน
+                    ÷ {tickerCount} ={" "}
+                    {purchaseCurrency ? formatMinorUnits(share, purchaseCurrency) : formatSatang(share)}{" "}
+                    ต่อคน
                   </p>
                 )
               )}

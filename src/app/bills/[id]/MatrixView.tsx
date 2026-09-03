@@ -1,7 +1,7 @@
 "use client";
 
 import RoundingLeftoverBadge from "@/components/RoundingLeftoverBadge";
-import { formatSatang } from "@/lib/billing/money";
+import { formatMinorUnits, formatSatang } from "@/lib/billing/money";
 import type { BillResult } from "@/lib/billing/types";
 import type { LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
 import { receiptStatus, receiptStatusCls } from "./BillEditor";
@@ -15,6 +15,8 @@ interface Props {
   billDiscountPercent: number;
   billDiscountSatang: number;
   selfPeerId: string | null;
+  /** #38: when set, item prices/shares render in this currency instead of ฿ (always THB). */
+  purchaseCurrency: string | null;
   onToggle: (lineItemId: string, peerId: string) => void;
   onUpdateBillAbsorber: (peerId: string) => void;
 }
@@ -29,6 +31,7 @@ export default function MatrixView({
   billDiscountPercent,
   billDiscountSatang,
   selfPeerId,
+  purchaseCurrency,
   onToggle,
   onUpdateBillAbsorber,
 }: Props) {
@@ -58,7 +61,7 @@ export default function MatrixView({
               <th className="sticky left-0 z-10 bg-surface p-2 text-left font-semibold">
                 เมนู
               </th>
-              <th className="p-2 text-right font-semibold">฿</th>
+              <th className="p-2 text-right font-semibold">{purchaseCurrency ?? "฿"}</th>
               {peers.map((peer) => (
                 <th key={peer.id} className="min-w-14 p-2 text-center font-semibold">
                   {peer.name}
@@ -95,12 +98,16 @@ export default function MatrixView({
                     )}
                     {!unticked && share !== undefined && (
                       <p className="mt-1 text-xs tabular-nums text-ink-muted">
-                        ÷ {tickerCount} = {formatSatang(share)} ต่อคน
+                        ÷ {tickerCount} ={" "}
+                        {purchaseCurrency ? formatMinorUnits(share, purchaseCurrency) : formatSatang(share)}{" "}
+                        ต่อคน
                       </p>
                     )}
                   </td>
                   <td className="p-2 text-right tabular-nums text-ink-muted">
-                    {formatSatang(item.unit_price_satang * item.qty)}
+                    {purchaseCurrency
+                      ? formatMinorUnits(item.unit_price_satang * item.qty, purchaseCurrency)
+                      : formatSatang(item.unit_price_satang * item.qty)}
                   </td>
                   {peers.map((peer) => {
                     const ticked = tickSet.has(`${item.id}:${peer.id}`);
