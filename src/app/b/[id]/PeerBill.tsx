@@ -683,7 +683,7 @@ export default function PeerBill({
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 pb-10">
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 pb-10">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{bill.bill.restaurant || "บิลมื้อนี้"}</h1>
@@ -737,7 +737,12 @@ export default function PeerBill({
           unchanged) — a plain block div stacks children in source order regardless of
           the lg:grid classes, so the desktop reorder is done with lg:order-* instead of
           moving paybackPanel later in the JSX. */}
-      <div className="lg:grid lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-6">
+      {/* minmax(0, ...) on both tracks, not bare fr units: a bare fr track's min-width
+          defaults to auto (its content's min-content size), so with enough peers the
+          matrix's own overflow-x-auto never engages -- the grid track just grows past
+          max-w-5xl instead. minmax(0, ...) clamps the track so the table scrolls inside
+          it, and the page width stays fixed regardless of peer count. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
         <div className="lg:order-2">{paybackPanel}</div>
         <div className="mt-4 flex flex-col gap-4 lg:order-1 lg:mt-0">
           <div className="hidden lg:block">{matrixView}</div>
