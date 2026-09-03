@@ -12,7 +12,7 @@ import Link from "next/link";
 import PaybackControls from "./PaybackControls";
 import { computeBill } from "@/lib/billing/compute";
 import { itemShareSatang, itemTotalSatang } from "@/lib/billing/itemShare";
-import { formatSatang } from "@/lib/billing/money";
+import { formatMinorUnits, formatSatang } from "@/lib/billing/money";
 import type { BillInput } from "@/lib/billing/types";
 import { fetchBill, type GetBillJson } from "@/lib/bills/getBill";
 import { setBillStatus } from "@/lib/bills/mutations";
@@ -191,6 +191,9 @@ export default function PeerBill({
       serviceChargePercent: bill.bill.serviceChargePercent,
       vatPercent: bill.bill.vatPercent,
       roundingAbsorberPeerId: bill.bill.roundingAbsorberPeerId ?? undefined,
+      purchaseCurrency: bill.bill.purchaseCurrency ?? undefined,
+      fxRateNumerator: bill.bill.fxRateNumerator ?? undefined,
+      fxRateDenominator: bill.bill.fxRateDenominator ?? undefined,
     }),
     [displayItems, peersSorted, bill.bill],
   );
@@ -303,12 +306,20 @@ export default function PeerBill({
             <li key={item.id} className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="font-medium">{item.name || "ไม่มีชื่อเมนู"}</span>
-                <span className="tabular-nums text-ink-muted">{formatSatang(itemTotal)}</span>
+                <span className="tabular-nums text-ink-muted">
+                  {bill.bill.purchaseCurrency
+                    ? formatMinorUnits(itemTotal, bill.bill.purchaseCurrency)
+                    : formatSatang(itemTotal)}
+                </span>
               </div>
               <p className="text-xs text-ink-muted">
                 {share === null
                   ? "ยังไม่มีคนติ๊ก"
-                  : `${formatSatang(share)} / คน × ${item.tickedBy.length}`}
+                  : `${
+                      bill.bill.purchaseCurrency
+                        ? formatMinorUnits(share, bill.bill.purchaseCurrency)
+                        : formatSatang(share)
+                    } / คน × ${item.tickedBy.length}`}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {peersSorted.map((peer) => {
@@ -451,6 +462,14 @@ export default function PeerBill({
                       <b className="text-ink">{formatSatang(breakdown.vatSatang)}</b>
                     </div>
                   )}
+                  {result.purchase && (
+                    <p className="mt-1 text-[11px] text-ink-muted">
+                      แปลงจาก{" "}
+                      {formatMinorUnits(result.purchase.peerTotals[peer.id] ?? 0, result.purchase.currency)}{" "}
+                      &middot; อัตรา 1 {result.purchase.currency} = ฿
+                      {(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}
+                    </p>
+                  )}
                 </div>
               )}
             </li>
@@ -541,8 +560,15 @@ export default function PeerBill({
                 <td className="sticky left-0 bg-surface p-3">
                   <span className="block font-medium">{item.name || "ไม่มีชื่อเมนู"}</span>
                   <span className="block text-xs tabular-nums text-ink-muted">
-                    {formatSatang(itemTotal)}
-                    {share !== null && ` · ${formatSatang(share)}/คน`}
+                    {bill.bill.purchaseCurrency
+                      ? formatMinorUnits(itemTotal, bill.bill.purchaseCurrency)
+                      : formatSatang(itemTotal)}
+                    {share !== null &&
+                      ` · ${
+                        bill.bill.purchaseCurrency
+                          ? formatMinorUnits(share, bill.bill.purchaseCurrency)
+                          : formatSatang(share)
+                      }/คน`}
                   </span>
                 </td>
                 {peersSorted.map((peer) => {
@@ -688,16 +714,32 @@ export default function PeerBill({
         </div>
       </header>
 
+      {bill.bill.purchaseCurrency && (
+        <p className="rounded-xl bg-surface-tint p-3 text-sm font-medium text-primary-ink">
+          บิลนี้จ่ายเป็น {bill.bill.purchaseCurrency} &middot; แปลงเป็นบาทด้วยอัตรา 1{" "}
+          {bill.bill.purchaseCurrency} = ฿
+          {((bill.bill.fxRateNumerator ?? 1) / (bill.bill.fxRateDenominator ?? 1)).toString()}
+        </p>
+      )}
+
       {locked && (
         <p className="rounded-xl bg-surface-tint p-3 text-sm text-primary-ink">
           สรุปยอดแล้ว บิลพร้อมเก็บเงิน กด &quot;จ่ายแล้ว&quot; ได้เลย
         </p>
       )}
 
-      {paybackPanel}
-
-      <div className="hidden lg:block">{matrixView}</div>
-      <div className="lg:hidden">{chipListView}</div>
+      {/* #38: matrix/cards sit left and the payback panel sits right at lg:, but the
+          payback panel must stay FIRST in the DOM below lg: (today's stacked order,
+          unchanged) — a plain block div stacks children in source order regardless of
+          the lg:grid classes, so the desktop reorder is done with lg:order-* instead of
+          moving paybackPanel later in the JSX. */}
+      <div className="lg:grid lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-6">
+        <div className="lg:order-2">{paybackPanel}</div>
+        <div className="mt-4 flex flex-col gap-4 lg:order-1 lg:mt-0">
+          <div className="hidden lg:block">{matrixView}</div>
+          <div className="lg:hidden">{chipListView}</div>
+        </div>
+      </div>
 
       <p className="text-right text-sm font-semibold tabular-nums">
         รวมทั้งบิล {formatSatang(result.checksumSatang)}
