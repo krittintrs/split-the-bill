@@ -34,7 +34,14 @@ export default function CardsView({
 }: Props) {
   const [totalsOpen, setTotalsOpen] = useState(false);
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
-  const receipt = receiptStatus(receiptTotalSatang, result.checksumSatang);
+  // #38: receiptTotalSatang is always the Purchase Currency figure (what's on the paper
+  // receipt), so it must check against the Purchase-scale checksum, not the THB one.
+  // "ยอดรวม" below stays THB deliberately — it's the Checksum by CONTEXT.md's definition,
+  // the settleable figure, not tied to a currency-labeled column the way MatrixView's is.
+  const receipt = receiptStatus(
+    receiptTotalSatang,
+    result.purchase ? result.purchase.checksumSatang : result.checksumSatang,
+  );
   const peerNames = Object.fromEntries(peers.map((peer) => [peer.id, peer.name]));
 
   if (items.length === 0 || peers.length === 0) {

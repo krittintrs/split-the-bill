@@ -7,7 +7,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import KebabMenu, { kebabItemCls } from "@/components/KebabMenu";
 import { computeBill } from "@/lib/billing/compute";
 import { totalFromUnitPriceSatang, unitPriceFromTotalSatang } from "@/lib/billing/lineEntry";
-import { formatSatang } from "@/lib/billing/money";
+import { formatMinorUnits, formatSatang } from "@/lib/billing/money";
 import { mapToBillInput } from "@/lib/bills/mapper";
 import {
   addLineItem,
@@ -179,7 +179,18 @@ export default function BillEditor({
     () => computeBill(mapToBillInput(bill, items, peers, ticks, selfPeerId)),
     [bill, items, peers, ticks, selfPeerId],
   );
-  const receipt = receiptStatus(bill.receipt_total_satang, result.checksumSatang);
+  // #38: ยอดตามใบเสร็จ is always the Purchase Currency figure (what's on the paper receipt) —
+  // check it against the Purchase-scale checksum, not the THB one, or a TWD receipt total
+  // would be compared against a baht sum and never tie.
+  const receipt = receiptStatus(
+    bill.receipt_total_satang,
+    result.purchase ? result.purchase.checksumSatang : result.checksumSatang,
+  );
+  // #38: the "matches the paper receipt" block reads Purchase-scale figures (same shape as the
+  // THB ones by design — see PurchaseSideResult), formatted in that currency, not ฿.
+  const checkFigures = result.purchase ?? result;
+  const formatCheck = (amountMinor: number) =>
+    bill.purchase_currency ? formatMinorUnits(amountMinor, bill.purchase_currency) : formatSatang(amountMinor);
 
   /**
    * Autosave failed → surface an inline banner instead of forcing a reload.
@@ -738,25 +749,28 @@ export default function BillEditor({
             />
           </label>
           <div className="flex min-w-48 flex-1 flex-col gap-1 border-t border-border pt-3 text-sm sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
+            {/* #38: this block verifies against the paper receipt, so it always reads in the
+                Purchase Currency (result.purchase), never the THB top-level fields — those are
+                shown separately below, already converted. */}
             <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
               <span>รวมรายการ</span>
-              <span>{formatSatang(result.subtotalSatang)}</span>
+              <span>{formatCheck(checkFigures.subtotalSatang)}</span>
             </div>
             {bill.service_charge_percent > 0 && (
               <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
                 <span>+ Service charge {bill.service_charge_percent}%</span>
-                <span>{formatSatang(result.serviceChargeSatang)}</span>
+                <span>{formatCheck(checkFigures.serviceChargeSatang)}</span>
               </div>
             )}
             {bill.vat_percent > 0 && (
               <div className="flex justify-between gap-4 tabular-nums text-ink-muted">
                 <span>+ VAT {bill.vat_percent}%</span>
-                <span>{formatSatang(result.vatSatang)}</span>
+                <span>{formatCheck(checkFigures.vatSatang)}</span>
               </div>
             )}
             <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
               <span>รวม</span>
-              <span>{formatSatang(result.receiptTotalSatang)}</span>
+              <span>{formatCheck(checkFigures.receiptTotalSatang)}</span>
             </div>
             <span className={`font-bold ${receiptStatusCls(receipt.state)}`}>
               {receipt.label}

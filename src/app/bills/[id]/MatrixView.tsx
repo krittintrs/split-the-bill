@@ -36,7 +36,18 @@ export default function MatrixView({
   onUpdateBillAbsorber,
 }: Props) {
   const tickSet = new Set(ticks.map((tick) => `${tick.line_item_id}:${tick.peer_id}`));
-  const receipt = receiptStatus(receiptTotalSatang, result.checksumSatang);
+  // #38: receiptTotalSatang is always the Purchase Currency figure (what's on the paper
+  // receipt), so it must check against the Purchase-scale checksum, not the THB one.
+  const receipt = receiptStatus(
+    receiptTotalSatang,
+    result.purchase ? result.purchase.checksumSatang : result.checksumSatang,
+  );
+  // Every footer row's price column stays in that column's own currency (Purchase Currency
+  // when set, matching the item rows and header above it); the peer columns beside each row
+  // stay THB always — those are the actual settlement figures, never converted back.
+  const checkFigures = result.purchase ?? result;
+  const formatCheck = (amountMinor: number) =>
+    purchaseCurrency ? formatMinorUnits(amountMinor, purchaseCurrency) : formatSatang(amountMinor);
   const hasDiscount =
     billDiscountPercent > 0 ||
     billDiscountSatang > 0 ||
@@ -138,7 +149,7 @@ export default function MatrixView({
               <tr className="border-t border-border/60 text-ink-muted">
                 <td className="sticky left-0 z-10 bg-surface p-2">ส่วนลด</td>
                 <td className="p-2 text-right tabular-nums">
-                  −{formatSatang(result.discountSatang)}
+                  −{formatCheck(checkFigures.discountSatang)}
                 </td>
                 {peers.map((peer) => (
                   <td key={peer.id} className="p-2 text-center tabular-nums">
@@ -150,7 +161,7 @@ export default function MatrixView({
             <tr className="border-t border-border/60 text-ink-muted">
               <td className="sticky left-0 z-10 bg-surface p-2">รวมเป็นเงิน</td>
               <td className="p-2 text-right tabular-nums">
-                {formatSatang(result.subtotalSatang)}
+                {formatCheck(checkFigures.subtotalSatang)}
               </td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
@@ -161,7 +172,7 @@ export default function MatrixView({
             <tr className="border-t border-border/60 text-ink-muted">
               <td className="sticky left-0 z-10 bg-surface p-2">Service charge</td>
               <td className="p-2 text-right tabular-nums">
-                {formatSatang(result.serviceChargeSatang)}
+                {formatCheck(checkFigures.serviceChargeSatang)}
               </td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
@@ -171,7 +182,7 @@ export default function MatrixView({
             </tr>
             <tr className="border-t border-border/60 text-ink-muted">
               <td className="sticky left-0 z-10 bg-surface p-2">VAT</td>
-              <td className="p-2 text-right tabular-nums">{formatSatang(result.vatSatang)}</td>
+              <td className="p-2 text-right tabular-nums">{formatCheck(checkFigures.vatSatang)}</td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
                   {/* ADR-0011 known limitation: the negative-remainder guard can make a
@@ -197,7 +208,7 @@ export default function MatrixView({
                 )}
               </td>
               <td className="p-2 text-right tabular-nums">
-                {formatSatang(result.checksumSatang)}
+                {formatCheck(checkFigures.checksumSatang)}
               </td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
