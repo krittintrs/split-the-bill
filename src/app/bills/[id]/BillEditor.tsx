@@ -579,13 +579,12 @@ export default function BillEditor({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
-            ส่วนลดบิล ฿
-            <input
-              inputMode="decimal"
+            ส่วนลดบิล
+            <MoneyBox
+              widthCls="w-full"
+              symbol={bill.purchase_currency ?? "฿"}
               defaultValue={satangToInput(bill.bill_discount_satang)}
-              placeholder="0.00"
               onBlur={(e) => moneyBlur(e, (satang) => saveBill({ bill_discount_satang: satang }))}
-              className={`${inputCls} w-full text-right tabular-nums`}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
@@ -636,13 +635,12 @@ export default function BillEditor({
         <h2 className="mb-2 font-semibold">เช็คกับใบเสร็จ</h2>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
           <label className="flex flex-col gap-1 text-xs text-ink-muted">
-            ยอดตามใบเสร็จ ({bill.purchase_currency ?? "฿"})
-            <input
-              inputMode="decimal"
+            ยอดตามใบเสร็จ
+            <MoneyBox
+              widthCls="w-36"
+              symbol={bill.purchase_currency ?? "฿"}
               defaultValue={satangToInput(bill.receipt_total_satang)}
-              placeholder="0.00"
               onBlur={(e) => moneyBlur(e, (satang) => saveBill({ receipt_total_satang: satang }))}
-              className={`${inputCls} w-36 text-right tabular-nums`}
             />
           </label>
           <div className="flex min-w-48 flex-1 flex-col gap-1 border-t border-border pt-3 text-sm sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
