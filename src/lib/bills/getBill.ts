@@ -20,6 +20,10 @@ export interface GetBillJson {
      * not crash, so the field is typed optional even though the column is non-nullable-by-default.
      */
     roundingAbsorberPeerId?: string | null;
+    /** #38. Both-or-neither; absent/null = pure THB. */
+    purchaseCurrency?: string | null;
+    fxRateNumerator?: number | null;
+    fxRateDenominator?: number | null;
   };
   items: {
     id: string;

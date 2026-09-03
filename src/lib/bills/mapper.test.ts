@@ -18,6 +18,9 @@ const bill: BillRow = {
   bank_account: "",
   account_name: "",
   rounding_absorber_peer_id: null,
+  purchase_currency: null,
+  fx_rate_numerator: null,
+  fx_rate_denominator: null,
 };
 
 const items: LineItemRow[] = [
