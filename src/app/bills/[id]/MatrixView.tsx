@@ -48,6 +48,10 @@ export default function MatrixView({
   // it; only the final "รวมต่อคน" row below converts to THB, since that's the one number
   // that actually gets paid.
   const peerCheckFigures = (peerId: string) => result.purchase?.peerBreakdowns[peerId] ?? result.peerBreakdowns[peerId];
+  const peerCheckTotal = (peerId: string) => result.purchase?.peerTotals[peerId] ?? result.peerTotals[peerId] ?? 0;
+  const rateText = result.purchase
+    ? `1 ${result.purchase.currency} = ฿${(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}`
+    : "";
   // #38: receiptTotalSatang is always the Purchase Currency figure (what's on the paper
   // receipt), so it must check against the Purchase-scale checksum, not the THB one — and
   // the mismatch amount must format in that same currency, not hardcode ฿.
@@ -73,6 +77,11 @@ export default function MatrixView({
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
       <h2 className="font-semibold">ใครกินอะไร</h2>
+      {result.purchase && (
+        <p className="text-xs text-ink-muted">
+          ตารางนี้แสดงเป็น {result.purchase.currency} ตามใบเสร็จ
+        </p>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] border-collapse text-sm">
           <thead>
@@ -203,7 +212,10 @@ export default function MatrixView({
             <tr className="border-t-2 border-ink/20 font-semibold">
               <td className="sticky left-0 z-10 bg-surface p-2">
                 รวมต่อคน
-                {result.billLeftover && (
+                {/* #38: no rounding chip here when FX is on -- leftoverSatang is always THB,
+                    which doesn't belong on this still-receipt-native row. It moves to
+                    ยอดที่ต้องจ่าย below, the row that's actually in that currency. */}
+                {result.billLeftover && !result.purchase && (
                   <div className="mt-1">
                     <RoundingLeftoverBadge
                       leftoverSatang={result.billLeftover.leftoverSatang}
@@ -220,18 +232,44 @@ export default function MatrixView({
               </td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
-                  {/* #38: the one row where the conversion actually happened -- TWD (what
-                      the receipt said their share was) stacked above the bold THB figure
-                      (what they actually pay). Every row above this stays single-currency. */}
-                  {result.purchase && (
-                    <span className="block text-xs font-normal text-ink-muted">
-                      {formatMinorUnits(result.purchase.peerTotals[peer.id] ?? 0, result.purchase.currency)}
-                    </span>
-                  )}
-                  <span className="font-semibold">{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
+                  {formatCheck(peerCheckTotal(peer.id))}
                 </td>
               ))}
             </tr>
+            {result.purchase && (
+              <>
+                <tr aria-hidden="true">
+                  <td colSpan={2 + peers.length} className="h-2 border-none p-0" />
+                </tr>
+                <tr className="bg-surface-tint font-semibold text-primary-ink">
+                  <td className="sticky left-0 z-10 bg-surface-tint p-2">
+                    <span className="inline-flex items-baseline gap-1.5">
+                      ยอดที่ต้องจ่าย
+                      <span className="text-xs font-normal opacity-80">({rateText})</span>
+                    </span>
+                    {result.billLeftover && (
+                      <div className="mt-1">
+                        <RoundingLeftoverBadge
+                          leftoverSatang={result.billLeftover.leftoverSatang}
+                          candidateIds={peers.map((peer) => peer.id)}
+                          candidateNames={peerNames}
+                          absorberId={result.billLeftover.absorberPeerId}
+                          onChange={onUpdateBillAbsorber}
+                        />
+                      </div>
+                    )}
+                  </td>
+                  <td className="bg-surface-tint p-2 text-right tabular-nums">
+                    {formatSatang(result.checksumSatang)}
+                  </td>
+                  {peers.map((peer) => (
+                    <td key={peer.id} className="bg-surface-tint p-2 text-center tabular-nums">
+                      {formatSatang(result.peerTotals[peer.id] ?? 0)}
+                    </td>
+                  ))}
+                </tr>
+              </>
+            )}
           </tfoot>
         </table>
       </div>

@@ -216,16 +216,10 @@ export default function CardsView({
                       <span className="ml-1 text-xs text-primary-ink">(คุณ)</span>
                     )}
                   </span>
-                  <span className="text-right">
-                    {/* #38: TWD (the receipt share) above the bold THB figure they pay --
-                        same stacking as the peer table's own รวมต่อคน row. */}
-                    {result.purchase && (
-                      <span className="block text-xs font-normal text-ink-muted">
-                        {formatMinorUnits(result.purchase.peerTotals[peer.id] ?? 0, result.purchase.currency)}
-                      </span>
-                    )}
-                    <span className="font-medium">{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
-                  </span>
+                  {/* #38: bold THB only -- the block above already states the TWD total and
+                      the conversion rate once, so repeating TWD on every peer line here was
+                      redundant with it. */}
+                  <span className="font-medium">{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
                 </li>
               ))}
             </ul>

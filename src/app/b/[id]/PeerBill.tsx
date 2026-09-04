@@ -217,6 +217,10 @@ export default function PeerBill({
   const formatCheck = (amountMinor: number) =>
     purchaseCurrency ? formatMinorUnits(amountMinor, purchaseCurrency) : formatSatang(amountMinor);
   const peerCheckFigures = (peerId: string) => result.purchase?.peerBreakdowns[peerId] ?? result.peerBreakdowns[peerId];
+  const peerCheckTotal = (peerId: string) => result.purchase?.peerTotals[peerId] ?? result.peerTotals[peerId] ?? 0;
+  const rateText = result.purchase
+    ? `1 ${result.purchase.currency} = ฿${(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}`
+    : "";
 
   async function onTick(itemId: string, peerId: string) {
     if (locked) return;
@@ -452,29 +456,32 @@ export default function PeerBill({
               </div>
               {isClaimed && breakdown && (
                 <div className="mt-1 flex flex-col gap-0.5 border-t border-dashed border-border pt-1 text-xs text-ink-muted">
+                  {/* #38: these lines stay receipt-native (Purchase Currency when FX is on) --
+                      the conversion only happens once, in ยอดที่ต้องจ่าย below. */}
                   <div className="flex justify-between">
                     <span>รวมของคุณ</span>
-                    <b className="text-ink">{formatSatang(breakdown.subtotalSatang)}</b>
+                    <b className="text-ink">{formatCheck(peerCheckFigures(peer.id)?.subtotalSatang ?? 0)}</b>
                   </div>
-                  {breakdown.serviceChargeSatang > 0 && (
+                  {(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0) > 0 && (
                     <div className="flex justify-between">
                       <span>+ Service charge</span>
-                      <b className="text-ink">{formatSatang(breakdown.serviceChargeSatang)}</b>
+                      <b className="text-ink">{formatCheck(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0)}</b>
                     </div>
                   )}
-                  {breakdown.vatSatang > 0 && (
+                  {(peerCheckFigures(peer.id)?.vatSatang ?? 0) > 0 && (
                     <div className="flex justify-between">
                       <span>+ VAT</span>
-                      <b className="text-ink">{formatSatang(breakdown.vatSatang)}</b>
+                      <b className="text-ink">{formatCheck(peerCheckFigures(peer.id)?.vatSatang ?? 0)}</b>
                     </div>
                   )}
                   {result.purchase && (
-                    <p className="mt-1 text-[11px] text-ink-muted">
-                      แปลงจาก{" "}
-                      {formatMinorUnits(result.purchase.peerTotals[peer.id] ?? 0, result.purchase.currency)}{" "}
-                      &middot; อัตรา 1 {result.purchase.currency} = ฿
-                      {(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}
-                    </p>
+                    <div className="mt-1 flex flex-col gap-0.5 border-t border-dashed border-border pt-1">
+                      <div className="flex justify-between font-semibold text-ink">
+                        <span>ยอดที่ต้องจ่าย</span>
+                        <span>{formatSatang(peerTotal)}</span>
+                      </div>
+                      <p className="text-right text-[11px] text-ink-muted">{rateText}</p>
+                    </div>
                   )}
                 </div>
               )}
@@ -498,7 +505,13 @@ export default function PeerBill({
   );
 
   const matrixView = (
-    <section className="overflow-x-auto rounded-xl border border-border bg-surface">
+    <section className="rounded-xl border border-border bg-surface p-3">
+      {result.purchase && (
+        <p className="mb-2 text-xs text-ink-muted">
+          ตารางนี้แสดงเป็น {result.purchase.currency} ตามใบเสร็จ
+        </p>
+      )}
+      <div className="overflow-x-auto">
       <table className="w-full min-w-[560px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-border">
@@ -640,18 +653,31 @@ export default function PeerBill({
           <tr className="border-b border-border">
             <td className="sticky left-0 bg-surface p-3 font-semibold">ยอดต่อคน</td>
             {peersSorted.map((peer) => (
-              <td key={peer.id} className="p-2 text-center tabular-nums">
-                {/* #38: the one row that actually converts -- TWD (the receipt share)
-                    stacked above the bold THB figure (what they actually pay). */}
-                {result.purchase && (
-                  <span className="block text-xs font-normal text-ink-muted">
-                    {formatMinorUnits(result.purchase.peerTotals[peer.id] ?? 0, result.purchase.currency)}
-                  </span>
-                )}
-                <span className="font-semibold">{formatSatang(result.peerTotals[peer.id] ?? 0)}</span>
+              <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
+                {formatCheck(peerCheckTotal(peer.id))}
               </td>
             ))}
           </tr>
+          {result.purchase && (
+            <>
+              <tr aria-hidden="true">
+                <td colSpan={1 + peersSorted.length} className="h-2 border-none p-0" />
+              </tr>
+              <tr className="border-b border-border bg-surface-tint font-semibold text-primary-ink">
+                <td className="sticky left-0 z-10 bg-surface-tint p-3">
+                  <span className="inline-flex items-baseline gap-1.5">
+                    ยอดที่ต้องจ่าย
+                    <span className="text-xs font-normal opacity-80">({rateText})</span>
+                  </span>
+                </td>
+                {peersSorted.map((peer) => (
+                  <td key={peer.id} className="bg-surface-tint p-2 text-center tabular-nums">
+                    {formatSatang(result.peerTotals[peer.id] ?? 0)}
+                  </td>
+                ))}
+              </tr>
+            </>
+          )}
           <tr>
             <td className="sticky left-0 bg-surface p-3 font-semibold">จ่ายแล้ว</td>
             {peersSorted.map((peer) =>
@@ -686,6 +712,7 @@ export default function PeerBill({
           </tr>
         </tfoot>
       </table>
+      </div>
     </section>
   );
 
