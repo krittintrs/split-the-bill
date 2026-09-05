@@ -678,18 +678,9 @@ export default function BillEditor({
             </span>
           </div>
         </div>
-        {bill.purchase_currency !== null && result.purchase && (
-          <div className="mt-4 rounded-lg border border-dashed border-primary bg-surface-tint p-3">
-            <p className="mb-2 text-xs font-semibold text-primary-ink">
-              ยอดที่จะได้รับจริง (฿) &middot; แปลงด้วยอัตรา 1 {result.purchase.currency} = ฿
-              {(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}
-            </p>
-            <div className="flex justify-between gap-4 font-bold tabular-nums text-ink">
-              <span>เช็คกับใบเสร็จ &times; อัตรา (฿)</span>
-              <span>{formatSatang(result.checksumSatang)}</span>
-            </div>
-          </div>
-        )}
+        {/* #38: the converted ฿ total used to repeat here in its own box. The "ใครกินอะไร"
+            matrix below now pins its reference column (ยอดที่ต้องจ่าย row), so that same
+            figure stays visible while scrolling instead of only living in a separate box. */}
       </section>
 
       <PeerPicker

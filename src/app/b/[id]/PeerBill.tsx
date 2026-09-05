@@ -216,6 +216,11 @@ export default function PeerBill({
   // Currency throughout. Only the final "ยอดต่อคน" row below converts to THB.
   const formatCheck = (amountMinor: number) =>
     purchaseCurrency ? formatMinorUnits(amountMinor, purchaseCurrency) : formatSatang(amountMinor);
+  // #38: desktop matrix only -- its header + caption already state the currency once, so
+  // its cells go bare (formatAmount) instead of repeating "TWD" per cell like formatCheck
+  // above still does for the mobile breakdown card, which has no such header nearby.
+  const formatMatrixCell = (amountMinor: number) =>
+    purchaseCurrency ? formatAmount(amountMinor) : formatSatang(amountMinor);
   const peerCheckFigures = (peerId: string) => result.purchase?.peerBreakdowns[peerId] ?? result.peerBreakdowns[peerId];
   const peerCheckTotal = (peerId: string) => result.purchase?.peerTotals[peerId] ?? result.peerTotals[peerId] ?? 0;
   const rateText = result.purchase
@@ -579,12 +584,7 @@ export default function PeerBill({
                 <td className="sticky left-0 z-10 min-w-[160px] bg-surface p-3">
                   <span className="block font-medium">{item.name || "ไม่มีชื่อเมนู"}</span>
                   <span className="block text-xs tabular-nums text-ink-muted">
-                    {bill.bill.purchaseCurrency
-                      ? formatMinorUnits(itemTotal, bill.bill.purchaseCurrency)
-                      : formatSatang(itemTotal)}
-                    {/* #38: the currency already shows on the total above -- repeating it
-                        here too was what forced this column to wrap line-by-line with a
-                        multi-character code. */}
+                    {formatMatrixCell(itemTotal)}
                     {share !== null && ` · ${formatAmount(share)}/คน`}
                   </span>
                 </td>
@@ -618,7 +618,7 @@ export default function PeerBill({
               <td className="sticky left-0 bg-surface p-3">ส่วนลด</td>
               {peersSorted.map((peer) => (
                 <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                  −{formatCheck(peerCheckFigures(peer.id)?.discountSatang ?? 0)}
+                  −{formatMatrixCell(peerCheckFigures(peer.id)?.discountSatang ?? 0)}
                 </td>
               ))}
             </tr>
@@ -627,7 +627,7 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3">รวมเป็นเงิน</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                {formatCheck(peerCheckFigures(peer.id)?.subtotalSatang ?? 0)}
+                {formatMatrixCell(peerCheckFigures(peer.id)?.subtotalSatang ?? 0)}
               </td>
             ))}
           </tr>
@@ -635,7 +635,7 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3">Service charge</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                {formatCheck(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0)}
+                {formatMatrixCell(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0)}
               </td>
             ))}
           </tr>
@@ -646,7 +646,7 @@ export default function PeerBill({
                 {/* ADR-0011 known limitation: the negative-remainder guard can make a
                     non-absorber's displayed VAT residual negative even though their real
                     total never does. Clamp the display only, not the underlying math. */}
-                {formatCheck(Math.max(0, peerCheckFigures(peer.id)?.vatSatang ?? 0))}
+                {formatMatrixCell(Math.max(0, peerCheckFigures(peer.id)?.vatSatang ?? 0))}
               </td>
             ))}
           </tr>
@@ -654,7 +654,7 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3 font-semibold">ยอดต่อคน</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
-                {formatCheck(peerCheckTotal(peer.id))}
+                {formatMatrixCell(peerCheckTotal(peer.id))}
               </td>
             ))}
           </tr>
@@ -665,7 +665,9 @@ export default function PeerBill({
               </tr>
               <tr className="border-b border-border bg-surface-tint font-semibold text-primary-ink">
                 <td className="sticky left-0 z-10 bg-surface-tint p-3">
-                  <span className="inline-flex items-baseline gap-1.5">
+                  {/* #38: whitespace-nowrap pins this column to fit "label + rate" on one
+                      line -- the fix for the wrap bug, not a guessed min-width. */}
+                  <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
                     ยอดที่ต้องจ่าย
                     <span className="text-xs font-normal opacity-80">({rateText})</span>
                   </span>

@@ -1,7 +1,8 @@
 "use client";
 
 import RoundingLeftoverBadge from "@/components/RoundingLeftoverBadge";
-import { formatMinorUnits, formatSatang } from "@/lib/billing/money";
+import { useMeasuredWidth } from "@/hooks/useMeasuredWidth";
+import { formatAmount, formatSatang } from "@/lib/billing/money";
 import type { BillResult } from "@/lib/billing/types";
 import type { LineItemRow, PeerRow, TickRow } from "@/lib/bills/types";
 import { receiptStatus, receiptStatusCls } from "./BillEditor";
@@ -40,8 +41,11 @@ export default function MatrixView({
   // when set, matching the item rows and header above it); the peer columns beside each row
   // stay THB always — those are the actual settlement figures, never converted back.
   const checkFigures = result.purchase ?? result;
+  // #38: bare number when FX is on -- the header and caption already state the currency
+  // once, so repeating "TWD" on every cell (formatMinorUnits) was the exact redundancy
+  // flagged from testing. formatSatang stays untouched when FX is off (pre-#38 behavior).
   const formatCheck = (amountMinor: number) =>
-    purchaseCurrency ? formatMinorUnits(amountMinor, purchaseCurrency) : formatSatang(amountMinor);
+    purchaseCurrency ? formatAmount(amountMinor) : formatSatang(amountMinor);
   // #38: every intermediate row (discount/subtotal/SC/VAT) is receipt-native — the FX
   // conversion only happens once, at the very end. So a peer's per-row figure here reads
   // in Purchase Currency throughout, same scale as the row's own reference column beside
@@ -65,6 +69,13 @@ export default function MatrixView({
     billDiscountSatang > 0 ||
     items.some((item) => item.discount_percent > 0 || item.discount_satang > 0);
   const peerNames = Object.fromEntries(peers.map((peer) => [peer.id, peer.name]));
+  // #38: the reference/currency column is pinned right after the sticky item-name column so
+  // it stays visible while scrolling to tick far-right peers, instead of a separate box
+  // repeating the same total. Its width varies with item names, so the offset is measured
+  // (see useMeasuredWidth), not a guessed constant.
+  const [firstColRef, firstColWidth] = useMeasuredWidth<HTMLTableCellElement>();
+  const refColCls = "sticky z-10 text-right tabular-nums";
+  const refColStyle = { left: firstColWidth };
 
   if (items.length === 0 || peers.length === 0) {
     return (
@@ -86,10 +97,12 @@ export default function MatrixView({
         <table className="w-full min-w-[560px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="sticky left-0 z-10 bg-surface p-2 text-left font-semibold">
+              <th ref={firstColRef} className="sticky left-0 z-10 bg-surface p-2 text-left font-semibold">
                 เมนู
               </th>
-              <th className="p-2 text-right font-semibold">{purchaseCurrency ?? "฿"}</th>
+              <th className={`${refColCls} bg-surface p-2 font-semibold`} style={refColStyle}>
+                {purchaseCurrency ?? "฿"}
+              </th>
               {peers.map((peer) => (
                 <th key={peer.id} className="min-w-14 p-2 text-center font-semibold">
                   {peer.name}
@@ -126,16 +139,12 @@ export default function MatrixView({
                     )}
                     {!unticked && share !== undefined && (
                       <p className="mt-1 text-xs tabular-nums text-ink-muted">
-                        ÷ {tickerCount} ={" "}
-                        {purchaseCurrency ? formatMinorUnits(share, purchaseCurrency) : formatSatang(share)}{" "}
-                        ต่อคน
+                        ÷ {tickerCount} = {formatCheck(share)} ต่อคน
                       </p>
                     )}
                   </td>
-                  <td className="p-2 text-right tabular-nums text-ink-muted">
-                    {purchaseCurrency
-                      ? formatMinorUnits(item.unit_price_satang * item.qty, purchaseCurrency)
-                      : formatSatang(item.unit_price_satang * item.qty)}
+                  <td className={`${refColCls} bg-surface p-2 text-ink-muted`} style={refColStyle}>
+                    {formatCheck(item.unit_price_satang * item.qty)}
                   </td>
                   {peers.map((peer) => {
                     const ticked = tickSet.has(`${item.id}:${peer.id}`);
@@ -165,7 +174,7 @@ export default function MatrixView({
             {hasDiscount && (
               <tr className="border-t border-border/60 text-ink-muted">
                 <td className="sticky left-0 z-10 bg-surface p-2">ส่วนลด</td>
-                <td className="p-2 text-right tabular-nums">
+                <td className={`${refColCls} bg-surface p-2`} style={refColStyle}>
                   −{formatCheck(checkFigures.discountSatang)}
                 </td>
                 {peers.map((peer) => (
@@ -177,7 +186,7 @@ export default function MatrixView({
             )}
             <tr className="border-t border-border/60 text-ink-muted">
               <td className="sticky left-0 z-10 bg-surface p-2">รวมเป็นเงิน</td>
-              <td className="p-2 text-right tabular-nums">
+              <td className={`${refColCls} bg-surface p-2`} style={refColStyle}>
                 {formatCheck(checkFigures.subtotalSatang)}
               </td>
               {peers.map((peer) => (
@@ -188,7 +197,7 @@ export default function MatrixView({
             </tr>
             <tr className="border-t border-border/60 text-ink-muted">
               <td className="sticky left-0 z-10 bg-surface p-2">Service charge</td>
-              <td className="p-2 text-right tabular-nums">
+              <td className={`${refColCls} bg-surface p-2`} style={refColStyle}>
                 {formatCheck(checkFigures.serviceChargeSatang)}
               </td>
               {peers.map((peer) => (
@@ -199,7 +208,7 @@ export default function MatrixView({
             </tr>
             <tr className="border-t border-border/60 text-ink-muted">
               <td className="sticky left-0 z-10 bg-surface p-2">VAT</td>
-              <td className="p-2 text-right tabular-nums">{formatCheck(checkFigures.vatSatang)}</td>
+              <td className={`${refColCls} bg-surface p-2`} style={refColStyle}>{formatCheck(checkFigures.vatSatang)}</td>
               {peers.map((peer) => (
                 <td key={peer.id} className="p-2 text-center tabular-nums">
                   {/* ADR-0011 known limitation: the negative-remainder guard can make a
@@ -227,7 +236,7 @@ export default function MatrixView({
                   </div>
                 )}
               </td>
-              <td className="p-2 text-right tabular-nums">
+              <td className={`${refColCls} bg-surface p-2`} style={refColStyle}>
                 {formatCheck(checkFigures.checksumSatang)}
               </td>
               {peers.map((peer) => (
@@ -243,7 +252,11 @@ export default function MatrixView({
                 </tr>
                 <tr className="bg-surface-tint font-semibold text-primary-ink">
                   <td className="sticky left-0 z-10 bg-surface-tint p-2">
-                    <span className="inline-flex items-baseline gap-1.5">
+                    {/* #38: whitespace-nowrap pins this column to fit "label + rate" on one
+                        line -- the actual fix for the wrap bug, not a guessed min-width. The
+                        pinned reference column right after it (refColStyle) rides along at
+                        whatever width this ends up needing. */}
+                    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
                       ยอดที่ต้องจ่าย
                       <span className="text-xs font-normal opacity-80">({rateText})</span>
                     </span>
@@ -259,7 +272,7 @@ export default function MatrixView({
                       </div>
                     )}
                   </td>
-                  <td className="bg-surface-tint p-2 text-right tabular-nums">
+                  <td className={`${refColCls} bg-surface-tint p-2`} style={refColStyle}>
                     {formatSatang(result.checksumSatang)}
                   </td>
                   {peers.map((peer) => (
