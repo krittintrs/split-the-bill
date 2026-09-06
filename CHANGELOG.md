@@ -5,15 +5,30 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-09-06
+
+Pay in the currency on the receipt, settle in บาท.
+
 ### Added
 
 - A Bill can now optionally carry a Purchase Currency (e.g. TWD from a trip) and a manually-entered FX Rate — organizer types item prices exactly as printed on the foreign receipt, peers still pay back in THB via PromptPay (#38)
-- The เช็คกับใบเสร็จ section shows two independent ties when a Purchase Currency is set: the paper-receipt check (Purchase Currency) and the conversion check (Receipt Total × Rate, in THB) — both use the existing single rounding-absorber picker, no second control
-- The organizer's matrix and cards views, and the peer view, show item prices and per-item shares in the Purchase Currency, with a note bar telling peers the rate used and their own total's converted-from figure
+- The organizer's matrix/cards and the peer view read receipt-native throughout when FX is on — item prices, discounts, subtotal, service charge, VAT, and the running per-peer total all stay in the Purchase Currency, reconciling straight down against the receipt — with a single highlighted `ยอดที่ต้องจ่าย` row doing the one THB conversion that actually settles debts, rate and rounding-leftover chip both on it
+- The matrix's reference/currency column now pins next to the sticky item-name column, so the running total stays visible while scrolling to tick far-right peers on a wide or many-peer bill (`useMeasuredWidth`, a new `ResizeObserver`-backed hook — the offset is measured live, not a guessed pixel constant)
+- New solid `--color-warning-bg` design token: the rounding-leftover badge and the peer view's read-only rounding note both switch to it from a translucent fill, so the chip reads the same color regardless of what surface it sits on
 
 ### Fixed
 
-- (in the same change) The Purchase Currency checksum initially compared against the wrong scale (THB instead of Purchase Currency) in three places — caught in review before merge, never shipped
+- The Purchase Currency checksum initially compared against the wrong scale (THB instead of Purchase Currency) in three places — caught in review before merge, never shipped
+- Per-cell currency-code repetition (e.g. `TWD 462.92` on every single cell) once the column header and a table caption already state the currency once
+- The receipt-check card's separate "converted total" box duplicated the matrix's own total — removed once the matrix's reference column stayed visible on its own (see Added)
+- The highlighted total row's label + FX rate could wrap across two or three lines on a bill with many peer columns — root cause was the label having no `whitespace-nowrap`, not a layout choice; same fix applied to the rounding-leftover chip's own text, which had the identical gap when no FX rate was present to force the column wide enough
+- `useMeasuredWidth` silently shrank its measured width by exactly one cell's padding shortly after mount — its `ResizeObserver` callback read the entry's content-box `contentRect` while the initial measurement used border-box `getBoundingClientRect()`; both now agree
+- The horizontal scrollbar on both matrix tables sat flush against the last row with no breathing room
+
+### Notes
+
+- `computeBill()`'s existing exact-fraction pipeline is extracted into one `settleAtScale()` helper, parameterized by a ratio, and called twice from the same fractions: once at identity (the Purchase-Currency figures, unaffected) and once with the FX Rate folded in (the THB figures that actually settle debts and drive the QR). No new rounding tier, no second absorber selector — ADR-0011's existing single `roundingAbsorberPeerId` control is reused for the THB-scale leftover.
+- The canonical Katsu CSV fixture is unaffected: it carries no Purchase Currency, so `BillResult.purchase` stays `undefined` and every figure is byte-for-byte what the engine already produced.
 
 ## [0.7.0] — 2026-09-02
 
