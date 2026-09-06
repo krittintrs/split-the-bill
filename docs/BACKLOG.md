@@ -28,7 +28,7 @@
 
 ### Later / maybe
 - Peer accounts (claim your name across organizers, see your own debts)
-- Multi-currency
+- ~~Multi-currency~~ — one rate per Bill shipping as #38; per-item rate override split out as [#39](https://github.com/krittintrs/split-the-bill/issues/39) (needs its own grill: reopens the single-absorber/dual-checksum design #38's Task 2 relies on)
 - Settle-up optimization across mutual debts within the group
 
 ## Removed / Done

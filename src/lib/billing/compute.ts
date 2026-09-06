@@ -1,4 +1,4 @@
-import { add, ceilToSatang, fraction, multiply, ZERO, type Fraction } from "./fraction";
+import { add, ceilToSatang, fraction, multiply, ONE, ZERO, type Fraction } from "./fraction";
 import type { BillInput, BillResult, PeerBreakdown } from "./types";
 
 export function computeBill(input: BillInput): BillResult {
@@ -84,28 +84,113 @@ export function computeBill(input: BillInput): BillResult {
     }
   }
 
-  // 6. Bill-level pipeline: whole bill through subtotal → +SC → +VAT, ceiling once per stage;
-  //    VAT is the residual so the three displayed lines always sum exactly to the total.
-  //    discountSatang here is the bill-wide gross (all items, exact integer, no discount) minus
-  //    the settled subtotal — informational, not part of the subtotal/SC/VAT chain.
-  const subtotalExactBill = multiply(subtotal, billDiscountRatio);
+  // 6. Settle at two scales: identity (Purchase Currency, unaffected by FX) and, when a
+  //    Purchase Currency is set, the FX Rate (THB — the only scale that ever settles a debt).
+  //    Same mechanism both times (ADR-0011's single absorber), just fed a different ratio.
+  const hasFx = input.purchaseCurrency !== undefined;
+  const fxRatio = hasFx
+    ? fraction(BigInt(input.fxRateNumerator!), BigInt(input.fxRateDenominator!))
+    : ONE;
+
+  const common = {
+    subtotal,
+    grossBillSatang,
+    billDiscountRatio,
+    scRatio,
+    vatRatio,
+    peerIds: input.peerIds,
+    peerSubtotalFractions,
+    peerGrossFractions,
+    untickedItemIds,
+    roundingAbsorberPeerId: input.roundingAbsorberPeerId,
+  };
+  const purchaseSide = settleAtScale({ ...common, ratio: ONE });
+  const thbSide = hasFx ? settleAtScale({ ...common, ratio: fxRatio }) : purchaseSide;
+
+  return {
+    peerTotals: thbSide.peerTotals,
+    checksumSatang: thbSide.checksumSatang,
+    receiptTotalSatang: thbSide.receiptTotalSatang,
+    surplusSatang: thbSide.surplusSatang,
+    itemSplits,
+    untickedItemIds,
+    discountSatang: thbSide.discountSatang,
+    subtotalSatang: thbSide.subtotalSatang,
+    serviceChargeSatang: thbSide.serviceChargeSatang,
+    vatSatang: thbSide.vatSatang,
+    peerBreakdowns: thbSide.peerBreakdowns,
+    billLeftover: thbSide.billLeftover,
+    purchase: hasFx
+      ? {
+          currency: input.purchaseCurrency!,
+          rateNumerator: input.fxRateNumerator!,
+          rateDenominator: input.fxRateDenominator!,
+          ...purchaseSide,
+        }
+      : undefined,
+  };
+}
+
+interface SettleArgs {
+  subtotal: Fraction;
+  grossBillSatang: bigint;
+  billDiscountRatio: Fraction;
+  scRatio: Fraction;
+  vatRatio: Fraction;
+  ratio: Fraction;
+  peerIds: string[];
+  peerSubtotalFractions: Map<string, Fraction>;
+  peerGrossFractions: Map<string, Fraction>;
+  untickedItemIds: string[];
+  roundingAbsorberPeerId: string | undefined;
+}
+
+interface SettledScale {
+  peerTotals: Record<string, number>;
+  checksumSatang: number;
+  receiptTotalSatang: number;
+  surplusSatang: number;
+  discountSatang: number;
+  subtotalSatang: number;
+  serviceChargeSatang: number;
+  vatSatang: number;
+  peerBreakdowns: Record<string, PeerBreakdown>;
+  billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
+}
+
+/**
+ * ADR-0011's mechanism (per-peer independent ceiling + one absorbed leftover), generalized
+ * with a `ratio` multiplied in before every ceiling (#38). `ratio = ONE` reproduces exactly
+ * what this engine computed before #38 existed — this is the whole regression guarantee.
+ */
+function settleAtScale(args: SettleArgs): SettledScale {
+  const {
+    subtotal,
+    grossBillSatang,
+    billDiscountRatio,
+    scRatio,
+    vatRatio,
+    ratio,
+    peerIds,
+    peerSubtotalFractions,
+    peerGrossFractions,
+    untickedItemIds,
+    roundingAbsorberPeerId,
+  } = args;
+
+  // Bill-level: whole bill through ×billDiscount → ×ratio → +SC → +VAT, ceiling once per stage.
+  const grossBillExactBill = multiply(fraction(grossBillSatang), ratio);
+  const subtotalExactBill = multiply(multiply(subtotal, billDiscountRatio), ratio);
   const withScExactBill = multiply(subtotalExactBill, scRatio);
   const withVatExactBill = multiply(withScExactBill, vatRatio);
   const subtotalSatang = ceilToSatang(subtotalExactBill);
-  const discountSatang = Number(grossBillSatang) - subtotalSatang;
+  const discountSatang = ceilToSatang(grossBillExactBill) - subtotalSatang;
   const serviceChargeSatang = ceilToSatang(withScExactBill) - subtotalSatang;
   const receiptTotalSatang = ceilToSatang(withVatExactBill);
   const vatSatang = receiptTotalSatang - subtotalSatang - serviceChargeSatang;
 
-  // 7. Stage each peer through subtotal → +SC → +VAT, ceiling once per stage (ADR-0001,
-  //    unchanged, identical for every peer whether or not every item is ticked — no peer is
-  //    ever touched here). ADR-0011 v2: once every item is ticked, the bill-wide leftover
-  //    (checksum of these independent ceilings minus the receipt total) is SUBTRACTED from one
-  //    named peer instead of silently staying with the organizer as an invisible windfall. That
-  //    leftover is always >= 0 — ceiling is superadditive (ceil(a)+ceil(b) >= ceil(a+b) always)
-  //    — so unlike v1's bill tier this can never go negative; the only remaining guard is that
-  //    the designated peer's own ceil'd total might be smaller than the leftover, in which case
-  //    fall back to whichever peer has the largest total.
+  // Per-peer: stage each peer's exact share through ×ratio → +SC → +VAT, ceiling once per
+  // stage (ADR-0001), then subtract the bill-wide leftover from one designated peer (ADR-0011).
   const peerTotals: Record<string, number> = {};
   const peerBreakdowns: Record<string, PeerBreakdown> = {};
   const ceilTotals = new Map<string, number>();
@@ -114,8 +199,9 @@ export function computeBill(input: BillInput): BillResult {
   const ceilGrosses = new Map<string, number>();
   let checksumRaw = 0;
 
-  for (const [peerId, subtotalExact] of peerSubtotalFractions) {
-    const grossExact = peerGrossFractions.get(peerId)!;
+  for (const peerId of peerIds) {
+    const subtotalExact = multiply(peerSubtotalFractions.get(peerId)!, ratio);
+    const grossExact = multiply(peerGrossFractions.get(peerId)!, ratio);
     const withScExact = multiply(subtotalExact, scRatio);
     const withVatExact = multiply(withScExact, vatRatio);
 
@@ -138,9 +224,9 @@ export function computeBill(input: BillInput): BillResult {
   if (allTicked) {
     leftover = checksumRaw - receiptTotalSatang; // always >= 0 — see comment above
     let absorberId =
-      input.roundingAbsorberPeerId !== undefined && input.peerIds.includes(input.roundingAbsorberPeerId)
-        ? input.roundingAbsorberPeerId
-        : input.peerIds[0];
+      roundingAbsorberPeerId !== undefined && peerIds.includes(roundingAbsorberPeerId)
+        ? roundingAbsorberPeerId
+        : peerIds[0];
 
     if (leftover > (ceilTotals.get(absorberId) ?? 0)) {
       let largestId = absorberId;
@@ -188,8 +274,6 @@ export function computeBill(input: BillInput): BillResult {
     checksumSatang,
     receiptTotalSatang,
     surplusSatang: checksumSatang - receiptTotalSatang,
-    itemSplits,
-    untickedItemIds,
     discountSatang,
     subtotalSatang,
     serviceChargeSatang,
@@ -240,6 +324,18 @@ function validate(input: BillInput): void {
       seenPeers.add(peerId);
     }
   }
+
+  // 4. FX (#38): purchaseCurrency and fxRate must both be present or both absent.
+  const hasCurrency = input.purchaseCurrency !== undefined;
+  const hasRate = input.fxRateNumerator !== undefined || input.fxRateDenominator !== undefined;
+  if (hasCurrency !== hasRate)
+    throw new Error("purchaseCurrency and fxRateNumerator/fxRateDenominator must be set together");
+  if (hasCurrency) {
+    if (input.purchaseCurrency!.trim().length === 0)
+      throw new Error("purchaseCurrency must not be empty");
+    assertPositiveInt(input.fxRateNumerator!, "fxRateNumerator");
+    assertPositiveInt(input.fxRateDenominator!, "fxRateDenominator");
+  }
 }
 
 function assertSatang(value: number, label: string): void {
@@ -250,4 +346,8 @@ function assertSatang(value: number, label: string): void {
 function assertPercent(value: number, label: string): void {
   if (!Number.isInteger(value) || value < 0 || value > 100)
     throw new Error(`${label} must be an integer 0-100`);
+}
+
+function assertPositiveInt(value: number, label: string): void {
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`${label} must be a positive integer`);
 }

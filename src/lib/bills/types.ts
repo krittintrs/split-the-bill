@@ -15,6 +15,10 @@ export interface BillRow {
   account_name: string;
   /** ADR-0011: peer who absorbs the bill-wide rounding leftover. */
   rounding_absorber_peer_id: string | null;
+  /** #38: both-or-neither with fx_rate_numerator/fx_rate_denominator; null = pure THB. */
+  purchase_currency: string | null;
+  fx_rate_numerator: number | null;
+  fx_rate_denominator: number | null;
 }
 
 export interface ProfileRow {

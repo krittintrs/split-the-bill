@@ -21,6 +21,9 @@ type BillPatch = Partial<
     | "bank_account"
     | "account_name"
     | "rounding_absorber_peer_id"
+    | "purchase_currency"
+    | "fx_rate_numerator"
+    | "fx_rate_denominator"
   >
 >;
 

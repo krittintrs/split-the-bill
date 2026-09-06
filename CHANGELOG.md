@@ -5,6 +5,16 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+### Added
+
+- A Bill can now optionally carry a Purchase Currency (e.g. TWD from a trip) and a manually-entered FX Rate — organizer types item prices exactly as printed on the foreign receipt, peers still pay back in THB via PromptPay (#38)
+- The เช็คกับใบเสร็จ section shows two independent ties when a Purchase Currency is set: the paper-receipt check (Purchase Currency) and the conversion check (Receipt Total × Rate, in THB) — both use the existing single rounding-absorber picker, no second control
+- The organizer's matrix and cards views, and the peer view, show item prices and per-item shares in the Purchase Currency, with a note bar telling peers the rate used and their own total's converted-from figure
+
+### Fixed
+
+- (in the same change) The Purchase Currency checksum initially compared against the wrong scale (THB instead of Purchase Currency) in three places — caught in review before merge, never shipped
+
 ## [0.7.0] — 2026-09-02
 
 Down to the last satang.

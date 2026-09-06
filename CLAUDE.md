@@ -8,7 +8,7 @@ This project follows the Solo Builder Model: one person + AI agents covering eve
 
 - **Modification Constraint:** Always remember NOT to modify things not asked for. If not sure, ask.
 - **All bill math lives in `src/lib/billing/` as pure functions** (discount application, service charge, VAT, per-person split, checksum, unpaid rollup). No money arithmetic in components, API routes, or the DB. This is the layer that must never silently break.
-- **Money is integer satang everywhere** (store, compute, transfer). Convert to ฿ decimal only at the display edge. Never do float arithmetic on money.
+- **Money is integer minor-units everywhere, never a float.** THB satang is the only currency that ever settles a debt (store, compute, transfer, convert to ฿ decimal only at the display edge). A Bill's optional Purchase Currency amounts (see `CONTEXT.md`) are integer minor-units too, converted to THB satang exactly once via the Bill's FX Rate.
 - **Two access modes, one rule:** organizer data is protected by Supabase RLS on `auth.uid()`; peers get capability-URL access only (unguessable bill ID, no accounts). Nothing peer-facing may require login.
 - **Supabase is the single source of truth for bill state.** Clients read/subscribe (Realtime) and mutate through defined mutations; no duplicated client-side shadow state.
 - **Responsive UI, mobile and desktop both first-class.** Every screen must work one-handed on a phone AND comfortably on desktop (peers open links from Slack on either); neither is "the enhancement".

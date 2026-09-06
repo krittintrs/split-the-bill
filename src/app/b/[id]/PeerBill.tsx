@@ -12,7 +12,7 @@ import Link from "next/link";
 import PaybackControls from "./PaybackControls";
 import { computeBill } from "@/lib/billing/compute";
 import { itemShareSatang, itemTotalSatang } from "@/lib/billing/itemShare";
-import { formatSatang } from "@/lib/billing/money";
+import { formatAmount, formatMinorUnits, formatSatang } from "@/lib/billing/money";
 import type { BillInput } from "@/lib/billing/types";
 import { fetchBill, type GetBillJson } from "@/lib/bills/getBill";
 import { setBillStatus } from "@/lib/bills/mutations";
@@ -51,7 +51,7 @@ function RoundingDiscountNote({
       className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium ${
         inverted
           ? "border-white/60 bg-white text-warning-ink"
-          : "border-warning-ink/30 bg-warning-ink/10 text-warning-ink"
+          : "border-warning-ink/30 bg-warning-bg text-warning-ink"
       }`}
       title={`ได้รับส่วนลดปัดเศษ ${formatSatang(leftoverSatang)}`}
     >
@@ -180,6 +180,10 @@ export default function PeerBill({
     [itemsSorted, tickedByItem],
   );
 
+  // #38: a blank/whitespace-only purchaseCurrency (organizer mid-edit, toggle just flipped
+  // on) must compute gracefully as "no FX yet" — same reasoning as mapToBillInput.
+  const purchaseCurrency = bill.bill.purchaseCurrency?.trim() || undefined;
+
   const billInput: BillInput = useMemo(
     () => ({
       items: displayItems,
@@ -191,8 +195,11 @@ export default function PeerBill({
       serviceChargePercent: bill.bill.serviceChargePercent,
       vatPercent: bill.bill.vatPercent,
       roundingAbsorberPeerId: bill.bill.roundingAbsorberPeerId ?? undefined,
+      purchaseCurrency,
+      fxRateNumerator: purchaseCurrency ? (bill.bill.fxRateNumerator ?? undefined) : undefined,
+      fxRateDenominator: purchaseCurrency ? (bill.bill.fxRateDenominator ?? undefined) : undefined,
     }),
-    [displayItems, peersSorted, bill.bill],
+    [displayItems, peersSorted, bill.bill, purchaseCurrency],
   );
 
   const result = useMemo(() => computeBill(billInput), [billInput]);
@@ -203,6 +210,22 @@ export default function PeerBill({
     bill.bill.billDiscountPercent > 0 ||
     bill.bill.billDiscountSatang > 0 ||
     displayItems.some((item) => (item.discountPercent ?? 0) > 0 || (item.discountAmountSatang ?? 0) > 0);
+
+  // #38: intermediate rows (discount/subtotal/SC/VAT) stay receipt-native -- the conversion
+  // only happens once, at the very end, so a peer's per-row figure here reads in Purchase
+  // Currency throughout. Only the final "ยอดต่อคน" row below converts to THB.
+  const formatCheck = (amountMinor: number) =>
+    purchaseCurrency ? formatMinorUnits(amountMinor, purchaseCurrency) : formatSatang(amountMinor);
+  // #38: desktop matrix only -- its header + caption already state the currency once, so
+  // its cells go bare (formatAmount) instead of repeating "TWD" per cell like formatCheck
+  // above still does for the mobile breakdown card, which has no such header nearby.
+  const formatMatrixCell = (amountMinor: number) =>
+    purchaseCurrency ? formatAmount(amountMinor) : formatSatang(amountMinor);
+  const peerCheckFigures = (peerId: string) => result.purchase?.peerBreakdowns[peerId] ?? result.peerBreakdowns[peerId];
+  const peerCheckTotal = (peerId: string) => result.purchase?.peerTotals[peerId] ?? result.peerTotals[peerId] ?? 0;
+  const rateText = result.purchase
+    ? `1 ${result.purchase.currency} = ฿${(result.purchase.rateNumerator / result.purchase.rateDenominator).toString()}`
+    : "";
 
   async function onTick(itemId: string, peerId: string) {
     if (locked) return;
@@ -303,12 +326,15 @@ export default function PeerBill({
             <li key={item.id} className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="font-medium">{item.name || "ไม่มีชื่อเมนู"}</span>
-                <span className="tabular-nums text-ink-muted">{formatSatang(itemTotal)}</span>
+                <span className="tabular-nums text-ink-muted">
+                  {bill.bill.purchaseCurrency
+                    ? formatMinorUnits(itemTotal, bill.bill.purchaseCurrency)
+                    : formatSatang(itemTotal)}
+                </span>
               </div>
               <p className="text-xs text-ink-muted">
-                {share === null
-                  ? "ยังไม่มีคนติ๊ก"
-                  : `${formatSatang(share)} / คน × ${item.tickedBy.length}`}
+                {/* #38: no currency prefix here -- the total right above already shows it. */}
+                {share === null ? "ยังไม่มีคนติ๊ก" : `${formatAmount(share)} / คน × ${item.tickedBy.length}`}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {peersSorted.map((peer) => {
@@ -352,8 +378,8 @@ export default function PeerBill({
             return (
               <li key={peer.id} className="flex items-center gap-2 py-1">
                 <div className="flex flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left">
-                  <span>{peerName.get(peer.id)}</span>
-                  <span className="rounded-full bg-surface-tint px-2 py-0.5 text-xs font-semibold text-primary-ink">
+                  <span className="whitespace-nowrap">{peerName.get(peer.id)}</span>
+                  <span className="whitespace-nowrap rounded-full bg-surface-tint px-2 py-0.5 text-xs font-semibold text-primary-ink">
                     เจ้าของบิล
                   </span>
                   {absorbsLeftover && result.billLeftover && (
@@ -385,11 +411,11 @@ export default function PeerBill({
                     isClaimed ? "bg-surface-tint" : "hover:bg-surface-tint"
                   }`}
                 >
-                  <span className={paid[peer.id] ? "text-ink-muted" : ""}>
+                  <span className={`whitespace-nowrap ${paid[peer.id] ? "text-ink-muted" : ""}`}>
                     {peerName.get(peer.id)}
                   </span>
                   {isClaimed && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
+                    <span className="whitespace-nowrap rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">
                       คุณ
                     </span>
                   )}
@@ -435,20 +461,31 @@ export default function PeerBill({
               </div>
               {isClaimed && breakdown && (
                 <div className="mt-1 flex flex-col gap-0.5 border-t border-dashed border-border pt-1 text-xs text-ink-muted">
+                  {/* #38: these lines stay receipt-native (Purchase Currency when FX is on) --
+                      the conversion only happens once, in ยอดที่ต้องจ่าย below. */}
                   <div className="flex justify-between">
                     <span>รวมของคุณ</span>
-                    <b className="text-ink">{formatSatang(breakdown.subtotalSatang)}</b>
+                    <b className="text-ink">{formatCheck(peerCheckFigures(peer.id)?.subtotalSatang ?? 0)}</b>
                   </div>
-                  {breakdown.serviceChargeSatang > 0 && (
+                  {(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0) > 0 && (
                     <div className="flex justify-between">
                       <span>+ Service charge</span>
-                      <b className="text-ink">{formatSatang(breakdown.serviceChargeSatang)}</b>
+                      <b className="text-ink">{formatCheck(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0)}</b>
                     </div>
                   )}
-                  {breakdown.vatSatang > 0 && (
+                  {(peerCheckFigures(peer.id)?.vatSatang ?? 0) > 0 && (
                     <div className="flex justify-between">
                       <span>+ VAT</span>
-                      <b className="text-ink">{formatSatang(breakdown.vatSatang)}</b>
+                      <b className="text-ink">{formatCheck(peerCheckFigures(peer.id)?.vatSatang ?? 0)}</b>
+                    </div>
+                  )}
+                  {result.purchase && (
+                    <div className="mt-1 flex flex-col gap-0.5 border-t border-dashed border-border pt-1">
+                      <div className="flex justify-between font-semibold text-ink">
+                        <span>ยอดที่ต้องจ่าย</span>
+                        <span>{formatSatang(peerTotal)}</span>
+                      </div>
+                      <p className="text-right text-[11px] text-ink-muted">{rateText}</p>
                     </div>
                   )}
                 </div>
@@ -473,11 +510,17 @@ export default function PeerBill({
   );
 
   const matrixView = (
-    <section className="overflow-x-auto rounded-xl border border-border bg-surface">
+    <section className="rounded-xl border border-border bg-surface p-3">
+      {result.purchase && (
+        <p className="mb-2 text-xs text-ink-muted">
+          ตารางนี้แสดงเป็น {result.purchase.currency} ตามใบเสร็จ
+        </p>
+      )}
+      <div className="overflow-x-auto pb-2">
       <table className="w-full min-w-[560px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-border">
-            <th className="sticky left-0 bg-surface p-3 text-left font-semibold">
+            <th className="sticky left-0 z-10 min-w-[160px] bg-surface p-3 text-left font-semibold">
               รายการ
               <span className="block text-xs font-normal text-ink-muted">
                 แตะชื่อคุณเพื่อรับ QR
@@ -538,11 +581,11 @@ export default function PeerBill({
             const itemTotal = itemTotalSatang(item);
             return (
               <tr key={item.id} className="border-b border-border">
-                <td className="sticky left-0 bg-surface p-3">
+                <td className="sticky left-0 z-10 min-w-[160px] bg-surface p-3">
                   <span className="block font-medium">{item.name || "ไม่มีชื่อเมนู"}</span>
                   <span className="block text-xs tabular-nums text-ink-muted">
-                    {formatSatang(itemTotal)}
-                    {share !== null && ` · ${formatSatang(share)}/คน`}
+                    {formatMatrixCell(itemTotal)}
+                    {share !== null && ` · ${formatAmount(share)}/คน`}
                   </span>
                 </td>
                 {peersSorted.map((peer) => {
@@ -575,7 +618,7 @@ export default function PeerBill({
               <td className="sticky left-0 bg-surface p-3">ส่วนลด</td>
               {peersSorted.map((peer) => (
                 <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                  −{formatSatang(result.peerBreakdowns[peer.id]?.discountSatang ?? 0)}
+                  −{formatMatrixCell(peerCheckFigures(peer.id)?.discountSatang ?? 0)}
                 </td>
               ))}
             </tr>
@@ -584,7 +627,7 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3">รวมเป็นเงิน</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                {formatSatang(result.peerBreakdowns[peer.id]?.subtotalSatang ?? 0)}
+                {formatMatrixCell(peerCheckFigures(peer.id)?.subtotalSatang ?? 0)}
               </td>
             ))}
           </tr>
@@ -592,7 +635,7 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3">Service charge</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center text-xs tabular-nums">
-                {formatSatang(result.peerBreakdowns[peer.id]?.serviceChargeSatang ?? 0)}
+                {formatMatrixCell(peerCheckFigures(peer.id)?.serviceChargeSatang ?? 0)}
               </td>
             ))}
           </tr>
@@ -603,7 +646,7 @@ export default function PeerBill({
                 {/* ADR-0011 known limitation: the negative-remainder guard can make a
                     non-absorber's displayed VAT residual negative even though their real
                     total never does. Clamp the display only, not the underlying math. */}
-                {formatSatang(Math.max(0, result.peerBreakdowns[peer.id]?.vatSatang ?? 0))}
+                {formatMatrixCell(Math.max(0, peerCheckFigures(peer.id)?.vatSatang ?? 0))}
               </td>
             ))}
           </tr>
@@ -611,10 +654,32 @@ export default function PeerBill({
             <td className="sticky left-0 bg-surface p-3 font-semibold">ยอดต่อคน</td>
             {peersSorted.map((peer) => (
               <td key={peer.id} className="p-2 text-center font-semibold tabular-nums">
-                {formatSatang(result.peerTotals[peer.id] ?? 0)}
+                {formatMatrixCell(peerCheckTotal(peer.id))}
               </td>
             ))}
           </tr>
+          {result.purchase && (
+            <>
+              <tr aria-hidden="true">
+                <td colSpan={1 + peersSorted.length} className="h-2 border-none p-0" />
+              </tr>
+              <tr className="border-b border-border bg-surface-tint font-semibold text-primary-ink">
+                <td className="sticky left-0 z-10 bg-surface-tint p-3">
+                  {/* #38: whitespace-nowrap pins this column to fit "label + rate" on one
+                      line -- the fix for the wrap bug, not a guessed min-width. */}
+                  <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+                    ยอดที่ต้องจ่าย
+                    <span className="text-xs font-normal opacity-80">({rateText})</span>
+                  </span>
+                </td>
+                {peersSorted.map((peer) => (
+                  <td key={peer.id} className="bg-surface-tint p-2 text-center tabular-nums">
+                    {formatSatang(result.peerTotals[peer.id] ?? 0)}
+                  </td>
+                ))}
+              </tr>
+            </>
+          )}
           <tr>
             <td className="sticky left-0 bg-surface p-3 font-semibold">จ่ายแล้ว</td>
             {peersSorted.map((peer) =>
@@ -649,11 +714,12 @@ export default function PeerBill({
           </tr>
         </tfoot>
       </table>
+      </div>
     </section>
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 pb-10">
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 pb-10">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{bill.bill.restaurant || "บิลมื้อนี้"}</h1>
@@ -688,20 +754,49 @@ export default function PeerBill({
         </div>
       </header>
 
+      {bill.bill.purchaseCurrency && (
+        <p className="rounded-xl bg-surface-tint p-3 text-sm font-medium text-primary-ink">
+          บิลนี้จ่ายเป็น {bill.bill.purchaseCurrency} &middot; แปลงเป็นบาทด้วยอัตรา 1{" "}
+          {bill.bill.purchaseCurrency} = ฿
+          {((bill.bill.fxRateNumerator ?? 1) / (bill.bill.fxRateDenominator ?? 1)).toString()}
+        </p>
+      )}
+
       {locked && (
         <p className="rounded-xl bg-surface-tint p-3 text-sm text-primary-ink">
           สรุปยอดแล้ว บิลพร้อมเก็บเงิน กด &quot;จ่ายแล้ว&quot; ได้เลย
         </p>
       )}
 
-      {paybackPanel}
-
-      <div className="hidden lg:block">{matrixView}</div>
-      <div className="lg:hidden">{chipListView}</div>
-
-      <p className="text-right text-sm font-semibold tabular-nums">
-        รวมทั้งบิล {formatSatang(result.checksumSatang)}
-      </p>
+      {/* #38: matrix/cards sit left and the payback panel sits right at lg:, but the
+          payback panel must stay FIRST in the DOM below lg: (today's stacked order,
+          unchanged) — a plain block div stacks children in source order regardless of
+          the lg:grid classes, so the desktop reorder is done with lg:order-* instead of
+          moving paybackPanel later in the JSX. */}
+      {/* minmax(0, ...) on the matrix track, not a bare fr unit: a bare fr track's
+          min-width defaults to auto (its content's min-content size), so with enough
+          peers the matrix's own overflow-x-auto never engages -- the grid track just
+          grows past max-w-5xl instead. minmax(0, ...) clamps the track so the table
+          scrolls inside it, and the page width stays fixed regardless of peer count.
+          The payback column is a fixed 320px, not a fraction: a QR code + two buttons
+          don't need anywhere near 1fr of a 1024px page, so a flexible track just left
+          a wide card mostly empty margin. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
+        <div className="lg:order-2">{paybackPanel}</div>
+        <div className="mt-4 flex flex-col gap-4 lg:order-1 lg:mt-0">
+          <div className="hidden lg:block">{matrixView}</div>
+          <div className="lg:hidden">{chipListView}</div>
+          {/* #38: lives under the peer table specifically (not after the whole grid),
+              so its position never depends on the payback column's height -- it used to
+              float in the gap under a shorter QR card once the matrix grew taller.
+              Left-aligned (not text-right): right-aligned text in this full-width left
+              column hugs the boundary with the payback column, reading as if it belonged
+              there instead of under the table above it. */}
+          <p className="text-sm font-semibold tabular-nums">
+            รวมทั้งบิล {formatSatang(result.checksumSatang)}
+          </p>
+        </div>
+      </div>
     </main>
   );
 }

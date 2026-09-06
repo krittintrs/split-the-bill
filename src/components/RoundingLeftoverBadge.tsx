@@ -131,9 +131,12 @@ export default function RoundingLeftoverBadge({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="inline-flex min-h-8 items-center gap-1 rounded-full border border-warning-ink/30 bg-warning-ink/10 px-2.5 py-1 text-xs font-medium text-warning-ink transition hover:bg-warning-ink/15 active:scale-95"
+        className="inline-flex min-h-8 items-center gap-1 rounded-full border border-warning-ink/30 bg-warning-bg px-2.5 py-1 text-xs font-medium text-warning-ink transition hover:bg-warning-ink/15 active:scale-95"
       >
-        <span className="tabular-nums">
+        {/* #38: whitespace-nowrap so this chip's own text can never wrap internally --
+            without it, a table column narrower than the chip (e.g. no FX rate to widen
+            the label above it) was free to squeeze this onto 2 lines. */}
+        <span className="tabular-nums whitespace-nowrap">
           −{formatSatang(leftoverSatang)} → {absorberName}
         </span>
         <svg

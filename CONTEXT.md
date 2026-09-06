@@ -65,14 +65,25 @@ _Avoid_: SC (in UI copy), tip
 Percentage added after Service Charge (typically 0/7%).
 
 **Peer Total**:
-What one Peer owes: their share of ticked items, then Service Charge, then VAT, rounded up to the satang.
+What one Peer owes, in THB satang: their share of ticked items, then Service Charge, then VAT, then FX Rate (if the Bill has a Purchase Currency), rounded up once. Always the number that actually settles the debt (drives the PromptPay QR and Paid Flag), never the Purchase Currency figure.
 _Avoid_: price per person, share
 
 **Checksum**:
-The sum of all Peer Totals, shown for verification against the Receipt Total.
+The sum of all Peer Totals, in THB satang, shown for verification against the Receipt Total (× FX Rate, if the Bill has a Purchase Currency). Ties exactly via the Rounding Absorber (ADR-0011).
 
 **Receipt Total**:
-The amount actually printed on the restaurant receipt, optionally entered by the Organizer.
+The amount actually printed on the restaurant receipt, optionally entered by the Organizer, in the Bill's Purchase Currency (THB when none is set).
+
+**Purchase Currency**:
+The currency actually printed on the restaurant receipt when it isn't THB (e.g. TWD), set once per Bill as a free-text label, editable until Locked. Optional — a Bill with none is pure THB, unchanged from before this concept existed. Never mixed within one Bill: one receipt, one currency (a multi-currency trip is multiple Bills, each with its own Peer Total, Checksum, Receipt Total). Always treated as 2-decimal-place minor units, the same shape as satang, even for currencies that don't really have a subunit (e.g. JPY) — no live rate lookup, no currency metadata table.
+_Avoid_: source currency, foreign currency
+
+**FX Rate**:
+The manually-entered conversion rate on a Bill with a Purchase Currency: THB per 1 unit of that currency (e.g. 1 TWD = 1.15 THB), multiplying a Purchase Currency amount into THB. Stored and applied as an exact fraction, never a float. Editable until Locked, same as Service Charge and VAT — changing it live-reflows every Peer Total and QR. There is no other settlement currency: PromptPay only ever pays out in THB, so nothing but Purchase Currency is ever selectable.
+_Avoid_: exchange rate (fine in conversation, but code and UI copy say FX Rate), conversion rate
+
+**Purchase Subtotal / Purchase Checksum**:
+The same Subtotal / Checksum figures, but in the Bill's Purchase Currency, before the FX Rate is applied — the "does my math match the paper receipt" check, independent of and in addition to the THB Checksum's "did the conversion tie out" check. Only meaningful when the Bill has a Purchase Currency; identical to the THB figures otherwise.
 _Avoid_: bill total, grand total
 
 ### Payback

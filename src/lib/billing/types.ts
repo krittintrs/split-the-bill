@@ -23,6 +23,17 @@ export interface BillInput {
    * ceiling is subtracted from their total). Falls back to peerIds[0] if unset or stale.
    */
   roundingAbsorberPeerId?: string;
+  /**
+   * #38: the receipt's own currency when it isn't THB (e.g. "TWD"), free text, one per Bill.
+   * Must be set together with fxRateNumerator/fxRateDenominator, or neither.
+   */
+  purchaseCurrency?: string;
+  /**
+   * #38: exact rate as an integer fraction — THB per 1 unit of purchaseCurrency.
+   * e.g. "1 TWD = 1.15 THB" is numerator=115, denominator=100. Never a float.
+   */
+  fxRateNumerator?: number;
+  fxRateDenominator?: number;
 }
 
 export interface PeerBreakdown {
@@ -32,6 +43,28 @@ export interface PeerBreakdown {
   subtotalSatang: number;
   serviceChargeSatang: number;
   vatSatang: number;
+}
+
+/**
+ * #38: mirrors the top-level BillResult money fields, but in the Bill's Purchase Currency
+ * before the FX Rate is applied. Field names keep the "Satang" suffix even though the unit
+ * is the Purchase Currency's own minor unit (not THB satang) — reusing PeerBreakdown/the same
+ * shape avoids a second parallel type family for a structure that never actually diverges.
+ */
+export interface PurchaseSideResult {
+  currency: string;
+  rateNumerator: number;
+  rateDenominator: number;
+  peerTotals: Record<string, number>;
+  checksumSatang: number;
+  receiptTotalSatang: number;
+  surplusSatang: number;
+  discountSatang: number;
+  subtotalSatang: number;
+  serviceChargeSatang: number;
+  vatSatang: number;
+  peerBreakdowns: Record<string, PeerBreakdown>;
+  billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
 }
 
 export interface BillResult {
@@ -64,4 +97,6 @@ export interface BillResult {
    * see compute.ts). Absent (undefined) whenever any item is unticked or nothing to round.
    */
   billLeftover: { leftoverSatang: number; absorberPeerId: string } | undefined;
+  /** #38: present only when the Bill has a Purchase Currency + FX Rate. */
+  purchase: PurchaseSideResult | undefined;
 }
