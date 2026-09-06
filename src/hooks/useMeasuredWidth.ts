@@ -20,11 +20,16 @@ export function useMeasuredWidth<T extends HTMLElement>() {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    setWidth(el.getBoundingClientRect().width);
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry) setWidth(entry.contentRect.width);
-    });
+    // #38: always re-read getBoundingClientRect() here, never the observer entry's own
+    // contentRect -- contentRect is the content box (padding excluded), while the initial
+    // measurement below is the border box (padding included). ResizeObserver always fires
+    // once more asynchronously right after observe() starts, so mixing the two silently
+    // shrank the measured width by exactly the cell's padding shortly after mount.
+    function measure() {
+      if (el) setWidth(el.getBoundingClientRect().width);
+    }
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
   }, []);

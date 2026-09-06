@@ -51,7 +51,7 @@ function RoundingDiscountNote({
       className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium ${
         inverted
           ? "border-white/60 bg-white text-warning-ink"
-          : "border-warning-ink/30 bg-warning-ink/10 text-warning-ink"
+          : "border-warning-ink/30 bg-warning-bg text-warning-ink"
       }`}
       title={`ได้รับส่วนลดปัดเศษ ${formatSatang(leftoverSatang)}`}
     >
@@ -516,7 +516,7 @@ export default function PeerBill({
           ตารางนี้แสดงเป็น {result.purchase.currency} ตามใบเสร็จ
         </p>
       )}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto pb-2">
       <table className="w-full min-w-[560px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-border">

@@ -93,7 +93,7 @@ export default function MatrixView({
           ตารางนี้แสดงเป็น {result.purchase.currency} ตามใบเสร็จ
         </p>
       )}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto pb-2">
         <table className="w-full min-w-[560px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border">
