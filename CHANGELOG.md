@@ -5,6 +5,10 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+### Fixed
+
+- Ticking an item in the organizer's bill editor no longer fails silently on a dropped connection — a network-only save error now retries automatically, and if it still can't save, only that one tick reverts with a small mark on it, instead of the whole editor showing a page-wide error (#42)
+
 ## [0.8.0] — 2026-09-06
 
 Pay in the currency on the receipt, settle in บาท.
