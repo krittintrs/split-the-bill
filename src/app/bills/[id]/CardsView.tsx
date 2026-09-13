@@ -115,7 +115,7 @@ export default function CardsView({
                       {failed && (
                         <span
                           aria-hidden="true"
-                          className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white"
+                          className="absolute -right-1.5 -top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-danger text-xs font-bold text-white"
                         >
                           !
                         </span>
