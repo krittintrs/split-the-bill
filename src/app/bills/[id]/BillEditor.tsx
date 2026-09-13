@@ -186,6 +186,10 @@ export default function BillEditor({
   const [saved, setSaved] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // A tick that ultimately failed to save (after retries) gets marked right on
+  // its own button -- a small, frequent action shouldn't trip the page-wide
+  // saveError banner meant for larger edits (#42).
+  const [failedTickKeys, setFailedTickKeys] = useState<Set<string>>(new Set());
   // "Follow profile" only makes sense once the profile has something to follow.
   // An empty profile disables the toggle entirely — otherwise ticking it would
   // silently wipe the bill's payment info (and every peer's QR) with blanks.
@@ -315,6 +319,7 @@ export default function BillEditor({
   }
 
   function onToggle(lineItemId: string, peerId: string) {
+    const key = `${lineItemId}:${peerId}`;
     const ticked = ticks.some(
       (tick) => tick.line_item_id === lineItemId && tick.peer_id === peerId,
     );
@@ -325,7 +330,29 @@ export default function BillEditor({
           )
         : [...prev, { line_item_id: lineItemId, peer_id: peerId }],
     );
-    runMutation(() => toggleTick(lineItemId, peerId, !ticked));
+    // Tapping again (retrying) should look like a fresh attempt, not still-broken.
+    setFailedTickKeys((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    toggleTick(lineItemId, peerId, !ticked)
+      .then(() => setSaved(true))
+      .catch(() => {
+        // toggleTick already retried internally; this only fires once that's
+        // exhausted (or on a real, non-network error). Revert just this tick --
+        // the opposite of the optimistic flip above -- and mark it, instead of
+        // the page-wide saveError banner.
+        setTicks((prev) =>
+          ticked
+            ? [...prev, { line_item_id: lineItemId, peer_id: peerId }]
+            : prev.filter(
+                (tick) => !(tick.line_item_id === lineItemId && tick.peer_id === peerId),
+              ),
+        );
+        setFailedTickKeys((prev) => new Set(prev).add(key));
+      });
   }
 
   function onPublish() {
@@ -702,6 +729,7 @@ export default function BillEditor({
           billDiscountSatang={bill.bill_discount_satang}
           selfPeerId={selfPeerId}
           purchaseCurrency={bill.purchase_currency}
+          failedTickKeys={failedTickKeys}
           onToggle={onToggle}
           onUpdateBillAbsorber={onUpdateBillAbsorber}
         />
@@ -715,6 +743,7 @@ export default function BillEditor({
           receiptTotalSatang={bill.receipt_total_satang}
           selfPeerId={selfPeerId}
           purchaseCurrency={bill.purchase_currency}
+          failedTickKeys={failedTickKeys}
           onToggle={onToggle}
           onUpdateBillAbsorber={onUpdateBillAbsorber}
         />

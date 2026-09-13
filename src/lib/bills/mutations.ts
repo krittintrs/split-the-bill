@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { withNetworkRetry } from "./retry";
 import type { BillRow, LineItemRow, PeerRow } from "./types";
 
 /**
@@ -157,18 +158,20 @@ export async function toggleTick(
   peerId: string,
   ticked: boolean,
 ): Promise<void> {
-  const supabase = createClient();
-  if (ticked) {
-    const { error } = await supabase
-      .from("ticks")
-      .upsert({ line_item_id: lineItemId, peer_id: peerId });
-    if (error) fail("toggleTick (tick)", error);
-  } else {
-    const { error } = await supabase
-      .from("ticks")
-      .delete()
-      .eq("line_item_id", lineItemId)
-      .eq("peer_id", peerId);
-    if (error) fail("toggleTick (untick)", error);
-  }
+  await withNetworkRetry(async () => {
+    const supabase = createClient();
+    if (ticked) {
+      const { error } = await supabase
+        .from("ticks")
+        .upsert({ line_item_id: lineItemId, peer_id: peerId });
+      if (error) fail("toggleTick (tick)", error);
+    } else {
+      const { error } = await supabase
+        .from("ticks")
+        .delete()
+        .eq("line_item_id", lineItemId)
+        .eq("peer_id", peerId);
+      if (error) fail("toggleTick (untick)", error);
+    }
+  });
 }

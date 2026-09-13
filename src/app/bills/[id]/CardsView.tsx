@@ -16,6 +16,9 @@ interface Props {
   selfPeerId: string | null;
   /** #38: when set, item prices/shares render in this currency instead of ฿ (always THB). */
   purchaseCurrency: string | null;
+  /** Keys (`${lineItemId}:${peerId}`) whose last save attempt failed after
+   *  retries -- marked directly on that tick's own button (#42). */
+  failedTickKeys: Set<string>;
   onToggle: (lineItemId: string, peerId: string) => void;
   onUpdateBillAbsorber: (peerId: string) => void;
 }
@@ -29,6 +32,7 @@ export default function CardsView({
   receiptTotalSatang,
   selfPeerId,
   purchaseCurrency,
+  failedTickKeys,
   onToggle,
   onUpdateBillAbsorber,
 }: Props) {
@@ -93,19 +97,29 @@ export default function CardsView({
               <div className="flex flex-wrap gap-2">
                 {peers.map((peer) => {
                   const ticked = tickSet.has(`${item.id}:${peer.id}`);
+                  const failed = failedTickKeys.has(`${item.id}:${peer.id}`);
                   return (
                     <button
                       key={peer.id}
                       type="button"
                       onClick={() => onToggle(item.id, peer.id)}
                       aria-pressed={ticked}
-                      className={`min-h-11 rounded-full px-4 py-2 text-sm transition active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink ${
+                      title={failed ? "บันทึกไม่สำเร็จ กดอีกครั้งเพื่อลองใหม่" : undefined}
+                      className={`relative min-h-11 rounded-full px-4 py-2 text-sm transition active:scale-95 focus-visible:outline-2 focus-visible:outline-primary-ink ${
                         ticked
                           ? "bg-primary font-bold text-white hover:bg-primary-deep"
                           : "bg-surface-tint font-medium text-primary-ink hover:bg-border"
-                      }`}
+                      } ${failed ? "ring-2 ring-danger" : ""}`}
                     >
                       {peer.name}
+                      {failed && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -right-1.5 -top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-danger text-xs font-bold text-white"
+                        >
+                          !
+                        </span>
+                      )}
                     </button>
                   );
                 })}

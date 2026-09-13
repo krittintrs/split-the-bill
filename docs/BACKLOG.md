@@ -17,6 +17,8 @@
 - Export bill / history to CSV (parity with the old Sheet)
 
 ### Polish
+- Peer-facing tick save (`PeerBill.tsx`'s `onTick`/`onPaid`, `src/lib/bills/peer.ts`'s `setTick`/`setPaid`) has the same no-retry-on-network-blip gap #42 fixed for the organizer editor, though it already does a `refetch()`-based rollback (silent, no visible mark) — extend the same `withNetworkRetry` + localized failure indicator there
+- #42 review nits, not gating: the failed-tick badge isn't reflected in `aria-label`/accessible name (only a non-live-region `title`); a rapid re-tap during an in-flight retry window (~900ms) can leave `ticks` state one tap out of sync in a narrow race; `withNetworkRetry`'s retry timer has no unmount guard (harmless discarded state update, possible dev-console noise) — pairs with #36's visual-feedback audit
 - Dark mode — v1 ships light-only (DESIGN.md); needs a full dark ramp of the cyan tokens
 - Per-peer pipeline breakdown rows under the desktop matrix (subtotal → discount → SC → VAT → total, like the old Sheet) — needs the engine to expose intermediate values (ADR-0004 says derive, so new grill required)
 - Initial-only peer chips when a bill has >8 peers (name chips wrap fine below that)
