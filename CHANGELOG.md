@@ -5,6 +5,8 @@ Versions follow [semver](https://semver.org); v1.0.0 = the team uses it for a re
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-09-13
+
 ### Fixed
 
 - Ticking an item in the organizer's bill editor no longer fails silently on a dropped connection — a network-only save error now retries automatically, and if it still can't save, only that one tick reverts with a small mark on it, instead of the whole editor showing a page-wide error (#42)
